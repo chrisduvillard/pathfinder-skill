@@ -1,6 +1,8 @@
-# Repo Adjutant Skill
+# Pathfinder Skill
 
-Repo Adjutant is a portable agent skill for turning an unfamiliar repository into a concrete, bounded implementation goal.
+> Map the codebase. Pick the path. Forge the goal.
+
+Pathfinder is a portable agent skill for turning an unfamiliar repository into a concrete, bounded implementation goal.
 
 It tells Claude Code or Codex to:
 
@@ -14,23 +16,23 @@ It tells Claude Code or Codex to:
 
 ## Install for Claude Code
 
-Copy the entire `repo-adjutant/` directory, including `SKILL.md` and `references/`, to either a project-level or personal skills folder:
+Copy the entire `pathfinder/` directory, including `SKILL.md` and `references/`, to either a project-level or personal skills folder:
 
 ```text
-<repo>/.claude/skills/repo-adjutant/
-~/.claude/skills/repo-adjutant/
+<repo>/.claude/skills/pathfinder/
+~/.claude/skills/pathfinder/
 ```
 
 Claude Code skills can be invoked directly as slash commands. No separate slash-command wrapper is required.
 
 ```text
-/repo-adjutant
+/pathfinder
 ```
 
 You can also invoke it in natural language:
 
 ```text
-Use the repo-adjutant skill on this repository. Start the full Repo Adjutant process.
+Use the pathfinder skill on this repository. Start the full Pathfinder process.
 ```
 
 ## Install for Codex
@@ -38,22 +40,22 @@ Use the repo-adjutant skill on this repository. Start the full Repo Adjutant pro
 If your Codex setup supports Agent Skills, copy the entire skill directory to your Codex skills folder, commonly:
 
 ```text
-~/.codex/skills/repo-adjutant/
+~/.codex/skills/pathfinder/
 ```
 
 Then invoke it with:
 
 ```text
-Use the repo-adjutant skill on this repository. Start the full Repo Adjutant process.
+Use the pathfinder skill on this repository. Start the full Pathfinder process.
 ```
 
-If your Codex runtime does not auto-discover skills, include `repo-adjutant/SKILL.md` as context and use the same invocation.
+If your Codex runtime does not auto-discover skills, include `pathfinder/SKILL.md` as context and use the same invocation.
 
 ## Claude Code `/goal` compatibility
 
 `/goal` requires Claude Code v2.1.139 or newer.
 
-Repo Adjutant always saves both:
+Pathfinder always saves both:
 
 - a ready-to-copy `/goal <condition>` command for Claude Code v2.1.139+
 - an equivalent `Implementation Goal` Markdown block for Codex, older Claude Code versions, or environments where slash commands cannot be executed directly
@@ -62,7 +64,7 @@ The generated condition is designed to be evaluator-aware: it requires the imple
 
 ## Safety model
 
-Repo Adjutant treats target repositories as untrusted input.
+Pathfinder treats target repositories as untrusted input.
 
 During discovery it should not run repo-defined scripts, install dependencies, run migrations, execute tests, or perform external side effects unless the user explicitly approves that class of execution. It also avoids opening `.env*`, credential stores, private keys, certificates, and secret-manager outputs.
 
@@ -71,7 +73,7 @@ Artifacts are local process notes. They should not be committed or pushed unless
 ## Included files
 
 ```text
-repo-adjutant/
+pathfinder/
   SKILL.md
   LICENSE
   README.md

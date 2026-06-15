@@ -1,18 +1,20 @@
 ---
-name: repo-adjutant
+name: pathfinder
 description: Use when the user wants an agent to explore an unfamiliar repository, synthesize candidate work, ask structured direction questions, and generate a bounded Claude Code /goal or equivalent implementation goal.
 license: MIT
 ---
 
-# Repo Adjutant
+# Pathfinder
+
+Map the codebase. Pick the path. Forge the goal.
 
 Use this skill when the user wants an agent to understand an unfamiliar codebase, propose possible work, ask structured multiple-choice questions, then create a Claude Code `/goal` command or equivalent implementation prompt.
 
-The user should not need to micro-manage repository exploration. Your job is to act as an adjutant: gather intelligence, organize choices, and convert the user’s decisions into a precise, bounded, verifiable execution goal.
+The user should not need to micro-manage repository exploration. Your job is to act as a pathfinder: gather intelligence, organize choices, and convert the user’s decisions into a precise, bounded, verifiable execution goal.
 
 ## Supported invocation
 
-If the user says “Use the repo-adjutant skill on this repository,” “Start the full Repo Adjutant process,” or similar, immediately begin Phase 0 using the current repository. Do not ask for clarification unless no repository or working directory can be identified.
+If the user says “Use the pathfinder skill on this repository,” “Start the full Pathfinder process,” or similar, immediately begin Phase 0 using the current repository. Do not ask for clarification unless no repository or working directory can be identified.
 
 A full process normally requires at least one user response after the question funnel. On the first run, complete discovery, scout briefs, synthesis, and numbered questions, then stop for the user’s answers unless the user has explicitly supplied defaults or selected autopilot.
 
@@ -76,13 +78,13 @@ At the start, determine the repository root with an equivalent of `git rev-parse
 Record baseline `git status --short` before creating artifacts. Then create a dedicated folder:
 
 ```text
-.agent-work/repo-adjutant/YYYYMMDD-HHMM-<short-task-slug>/
+.agent-work/pathfinder/YYYYMMDD-HHMM-<short-task-slug>/
 ```
 
 If `.agent-work/` is not appropriate for the repository, use:
 
 ```text
-.agent-workspace/repo-adjutant/YYYYMMDD-HHMM-<short-task-slug>/
+.agent-workspace/pathfinder/YYYYMMDD-HHMM-<short-task-slug>/
 ```
 
 Write all process artifacts there. Do not modify production code during the discovery and interview phases.

@@ -1,8 +1,14 @@
-# Repo Adjutant Skill Version
+# Pathfinder Skill Version
 
 Generated: 2026-06-15 15:24:25
 
-Version: 2.1.1
+Version: 2.2.0
+
+Changes in v2.2.0:
+- Renamed the skill from Repo Adjutant to Pathfinder.
+- Renamed the command from `/repo-adjutant` to `/pathfinder`.
+- Updated install paths, artifact paths, docs, and invocation examples.
+- Added the tagline: “Map the codebase. Pick the path. Forge the goal.”
 
 Changes in v2.1.1:
 - Added MIT license metadata and repository `LICENSE` file.
@@ -11,8 +17,8 @@ Changes in v2.1:
 - Hardened prompt-injection and untrusted-repository handling.
 - Added explicit secret redaction and artifact hygiene rules.
 - Added Claude Code `/goal` version gate: v2.1.139 or newer.
-- Added direct `/repo-adjutant` invocation guidance.
-- Added exact "Start the full Repo Adjutant process" handling.
+- Added direct `/pathfinder` invocation guidance.
+- Added exact "Start the full Pathfinder process" handling.
 - Added repo-root detection, safe work-folder handling, and local ignore guidance.
 - Added ranked candidate-goal menu before the question funnel.
 - Added fast-path question funnel for agent-recommendation mode.

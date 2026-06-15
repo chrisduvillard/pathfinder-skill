@@ -1,4 +1,4 @@
-# Claude Code /goal Best Practices for Repo Adjutant
+# Claude Code /goal Best Practices for Pathfinder
 
 Use this reference when generating `06-goal-command.md`.
 

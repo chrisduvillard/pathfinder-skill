@@ -1,7 +1,7 @@
-# Repo Adjutant Artifact Structure
+# Pathfinder Artifact Structure
 
 ```text
-.agent-work/repo-adjutant/YYYYMMDD-HHMM-<short-task-slug>/
+.agent-work/pathfinder/YYYYMMDD-HHMM-<short-task-slug>/
   00-session.md
   01-blind-discovery.md
   02-scout-briefs/
