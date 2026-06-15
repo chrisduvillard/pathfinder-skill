@@ -1,8 +1,14 @@
 <div align="center">
 
+<img src="assets/pathfinder-hero.svg" alt="Pathfinder mapping a codebase into a clear implementation goal" width="920">
+
 # Pathfinder
 
 **Map a repo. Pick the next move. Write the goal.**
+
+<img alt="Skill: Pathfinder" src="https://img.shields.io/badge/skill-pathfinder-2DD4BF?style=for-the-badge&labelColor=0F172A">
+<img alt="Claude Code goal ready" src="https://img.shields.io/badge/Claude_Code-%2Fgoal-F59E0B?style=for-the-badge&labelColor=0F172A">
+<img alt="Codex ready" src="https://img.shields.io/badge/Codex-ready-38BDF8?style=for-the-badge&labelColor=0F172A">
 
 `/pathfinder`
 

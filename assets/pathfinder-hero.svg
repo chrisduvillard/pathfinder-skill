@@ -1,0 +1,96 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Pathfinder hero illustration</title>
+  <desc id="desc">A colorful compass path crossing a stylized code map, showing Pathfinder turning repository discovery into a clear implementation goal.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.52" stop-color="#0D1B2F"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(862 250) rotate(138) scale(620 360)">
+      <stop stop-color="#2DD4BF" stop-opacity="0.42"/>
+      <stop offset="0.42" stop-color="#F59E0B" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#07111F" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="route" x1="208" y1="441" x2="1084" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="0.38" stop-color="#FACC15"/>
+      <stop offset="0.72" stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="598" y1="326" x2="740" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="1" stop-color="#2DD4BF"/>
+    </linearGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.17 0 0 0 0 0.83 0 0 0 0 0.75 0 0 0 0.72 0"/>
+      <feBlend in="SourceGraphic" mode="screen"/>
+    </filter>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" stroke="#94A3B8" stroke-opacity="0.07" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="640" rx="36" fill="url(#bg)"/>
+  <rect width="1280" height="640" rx="36" fill="url(#aura)"/>
+  <rect x="24" y="24" width="1232" height="592" rx="28" fill="url(#grid)" stroke="#334155" stroke-opacity="0.55"/>
+
+  <g opacity="0.52">
+    <path d="M87 158C200 89 289 91 382 148C476 206 568 203 664 139C769 69 868 88 963 151C1050 209 1131 222 1204 171" stroke="#38BDF8" stroke-opacity="0.24" stroke-width="2"/>
+    <path d="M72 508C181 451 278 462 366 522C468 592 579 572 675 502C772 431 870 415 975 470C1056 512 1139 511 1211 466" stroke="#F59E0B" stroke-opacity="0.20" stroke-width="2"/>
+  </g>
+
+  <g opacity="0.96">
+    <rect x="96" y="106" width="292" height="164" rx="22" fill="#0F172A" fill-opacity="0.76" stroke="#334155"/>
+    <circle cx="128" cy="138" r="7" fill="#F97316"/>
+    <circle cx="152" cy="138" r="7" fill="#FACC15"/>
+    <circle cx="176" cy="138" r="7" fill="#2DD4BF"/>
+    <path d="M128 178H276" stroke="#E2E8F0" stroke-opacity="0.78" stroke-width="10" stroke-linecap="round"/>
+    <path d="M128 210H326" stroke="#2DD4BF" stroke-opacity="0.86" stroke-width="10" stroke-linecap="round"/>
+    <path d="M128 242H246" stroke="#38BDF8" stroke-opacity="0.80" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.96">
+    <rect x="890" y="360" width="294" height="166" rx="22" fill="#0F172A" fill-opacity="0.78" stroke="#334155"/>
+    <path d="M927 406H1068" stroke="#FACC15" stroke-opacity="0.92" stroke-width="10" stroke-linecap="round"/>
+    <path d="M927 438H1140" stroke="#2DD4BF" stroke-opacity="0.86" stroke-width="10" stroke-linecap="round"/>
+    <path d="M927 470H1032" stroke="#F97316" stroke-opacity="0.86" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="1136" cy="408" r="17" fill="#2DD4BF" fill-opacity="0.16" stroke="#2DD4BF"/>
+    <path d="M1127 408L1134 415L1147 399" stroke="#99F6E4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <path d="M190 438C292 349 403 466 503 360C610 246 704 263 795 298C897 338 941 210 1088 176" stroke="#0B1020" stroke-opacity="0.85" stroke-width="22" stroke-linecap="round"/>
+  <path d="M190 438C292 349 403 466 503 360C610 246 704 263 795 298C897 338 941 210 1088 176" stroke="url(#route)" stroke-width="11" stroke-linecap="round" filter="url(#softGlow)"/>
+  <path d="M190 438C292 349 403 466 503 360C610 246 704 263 795 298C897 338 941 210 1088 176" stroke="#FFF7ED" stroke-opacity="0.62" stroke-width="2" stroke-linecap="round" stroke-dasharray="18 26"/>
+
+  <g>
+    <circle cx="190" cy="438" r="24" fill="#F97316" stroke="#FED7AA" stroke-width="5"/>
+    <circle cx="503" cy="360" r="24" fill="#FACC15" stroke="#FEF3C7" stroke-width="5"/>
+    <circle cx="795" cy="298" r="24" fill="#2DD4BF" stroke="#CCFBF1" stroke-width="5"/>
+    <circle cx="1088" cy="176" r="24" fill="#38BDF8" stroke="#E0F2FE" stroke-width="5"/>
+  </g>
+
+  <g transform="translate(640 316)">
+    <circle r="118" fill="#020617" fill-opacity="0.72" stroke="#475569" stroke-width="2"/>
+    <circle r="92" fill="#0F172A" fill-opacity="0.82" stroke="#2DD4BF" stroke-opacity="0.72" stroke-width="2"/>
+    <path d="M0 -78L22 -20L78 0L22 20L0 78L-22 20L-78 0L-22 -20L0 -78Z" stroke="#94A3B8" stroke-opacity="0.34" stroke-width="2"/>
+    <path d="M-20 46L21 -18L84 -70L43 -6L-20 46Z" fill="url(#needle)" stroke="#FFF7ED" stroke-opacity="0.75" stroke-width="2"/>
+    <path d="M20 -46L-21 18L-84 70L-43 6L20 -46Z" fill="#1E293B" stroke="#64748B" stroke-width="2"/>
+    <circle r="10" fill="#FFF7ED"/>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24" font-weight="700">
+    <text x="96" y="548" fill="#F8FAFC">PATHFINDER</text>
+    <text x="96" y="582" fill="#2DD4BF">discover</text>
+    <text x="226" y="582" fill="#FACC15">choose</text>
+    <text x="324" y="582" fill="#38BDF8">goal</text>
+  </g>
+
+  <g font-family="ui-sans-serif, Inter, Arial, sans-serif" font-size="19" fill="#CBD5E1">
+    <text x="162" y="332">blind scan</text>
+    <text x="455" y="310">scout briefs</text>
+    <text x="760" y="250">best path</text>
+    <text x="1012" y="132">/goal</text>
+  </g>
+</svg>
