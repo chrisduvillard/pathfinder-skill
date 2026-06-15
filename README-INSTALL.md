@@ -2,7 +2,22 @@
 
 This file is kept for users who open the original install note directly. The main repository README has the same information plus the safety model.
 
-## Install for Claude Code
+## Install with Claude Code `/plugin`
+
+```text
+/plugin marketplace add chrisduvillard/pathfinder-skill
+/plugin install pathfinder@pathfinder
+```
+
+Then invoke the namespaced plugin skill:
+
+```text
+/pathfinder:pathfinder
+```
+
+Claude Code namespaces plugin skills as `/plugin-name:skill-name` to avoid collisions.
+
+## Manual Claude Code install
 
 Copy the entire `pathfinder/` directory, including `SKILL.md` and `references/`, to one of:
 

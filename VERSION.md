@@ -1,14 +1,19 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-15 15:24:25
+Generated: 2026-06-15 21:46:31 CEST
 
-Version: 2.2.0
+Version: 2.3.0
+
+Changes in v2.3.0:
+- Added Claude Code plugin marketplace support with `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.
+- Added `/plugin marketplace add chrisduvillard/pathfinder-skill` installation instructions.
+- Documented namespaced plugin invocation: `/pathfinder:pathfinder`.
 
 Changes in v2.2.0:
 - Renamed the skill from Repo Adjutant to Pathfinder.
 - Renamed the command from `/repo-adjutant` to `/pathfinder`.
 - Updated install paths, artifact paths, docs, and invocation examples.
-- Added the tagline: “Map the codebase. Pick the path. Forge the goal.”
+- Added the tagline: "Map the codebase. Pick the path. Forge the goal."
 
 Changes in v2.1.1:
 - Added MIT license metadata and repository `LICENSE` file.

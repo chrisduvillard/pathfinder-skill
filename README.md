@@ -1,15 +1,14 @@
 <div align="center">
 
-
 # Pathfinder
 
 **Map a repo. Pick the next move. Write the goal.**
 
 <img alt="Skill: Pathfinder" src="https://img.shields.io/badge/skill-pathfinder-2DD4BF?style=for-the-badge&labelColor=0F172A">
-<img alt="Claude Code goal ready" src="https://img.shields.io/badge/Claude_Code-%2Fgoal-F59E0B?style=for-the-badge&labelColor=0F172A">
+<img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude_Code-plugin-F59E0B?style=for-the-badge&labelColor=0F172A">
 <img alt="Codex ready" src="https://img.shields.io/badge/Codex-ready-38BDF8?style=for-the-badge&labelColor=0F172A">
 
-`/pathfinder`
+`/pathfinder:pathfinder` via plugin · `/pathfinder` manually
 
 </div>
 
@@ -17,7 +16,20 @@ Pathfinder is a small agent skill for Claude Code and Codex.
 
 It reads an unfamiliar repository, finds useful work, asks a few focused questions, then writes a clear implementation goal you can run or hand to another agent.
 
-## Use it
+## Install with Claude Code `/plugin`
+
+```text
+/plugin marketplace add chrisduvillard/pathfinder-skill
+/plugin install pathfinder@pathfinder
+```
+
+Then run the namespaced plugin skill:
+
+```text
+/pathfinder:pathfinder
+```
+
+## Manual install
 
 Copy the skill folder:
 
