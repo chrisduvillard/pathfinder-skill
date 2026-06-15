@@ -52,19 +52,20 @@ codex plugin add pathfinder@pathfinder
 
 ## 🔭 How it works
 
-```
-   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-   │  1. DISCOVER │ → │  2. SCOUT    │ → │  3. SYNTHESIZE│ → │  4. ASK      │
-   │  read code,  │   │  brief each  │   │  rank the    │   │  a few sharp │
-   │  not docs    │   │  domain      │   │  next moves  │   │  questions   │
-   └──────────────┘   └──────────────┘   └──────────────┘   └──────┬───────┘
-                                                                    │
-                                                                    ▼
-                                                          ┌──────────────────┐
-                                                          │  5. FORGE /goal  │
-                                                          │  bounded · proven │
-                                                          │  ready to run     │
-                                                          └──────────────────┘
+```mermaid
+flowchart LR
+    A["<b>1 · DISCOVER</b><br/><i>read code, not docs</i>"]
+    B["<b>2 · SCOUT</b><br/><i>brief each domain</i>"]
+    C["<b>3 · SYNTHESIZE</b><br/><i>rank the next moves</i>"]
+    D["<b>4 · ASK</b><br/><i>a few sharp questions</i>"]
+    E["<b>5 · FORGE /goal</b><br/><i>bounded · proven · ready to run</i>"]
+
+    A --> B --> C --> D --> E
+
+    classDef step fill:#0F172A,stroke:#2DD4BF,stroke-width:2px,color:#E6EDF3;
+    classDef forge fill:#0F172A,stroke:#F59E0B,stroke-width:2px,color:#FBBF24;
+    class A,B,C,D step;
+    class E forge;
 ```
 
 Pathfinder builds understanding from **actual code, tests, configs, routes, and schemas** before it ever opens a README. Then it converts your decisions into one precise execution goal.
