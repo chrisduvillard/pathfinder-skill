@@ -1,8 +1,16 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-15 21:46:31 CEST
+Generated: 2026-06-15 22:58:55 CEST
 
-Version: 2.4.0
+Version: 2.5.0
+
+Changes in v2.5.0:
+- Reworked the Phase 5 question funnel into two user-selectable interview modes.
+- Express mode preserves the original compact single-shot question.
+- Deep dive mode adds a conditioned drill-down: intent (L0), domain (L1), surface (L2), exact target (L3), boundaries (L4), then execution mode, capped at five levels.
+- Deep dive options are generated from the scout briefs, with a live narrowing trail, a goal-readiness confidence signal, adaptive stopping, an always-present agent recommendation, and escape/go-back options at every level.
+- Phase 4 synthesis now emits a per-domain surface index and scout ownership to feed the drill-down.
+- Artifacts record the chosen mode and the full narrowing path.
 
 Changes in v2.4.0:
 - Added Codex plugin support with `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json`.

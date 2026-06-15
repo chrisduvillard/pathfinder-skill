@@ -12,6 +12,13 @@ Use this skill when the user wants an agent to understand an unfamiliar codebase
 
 The user should not need to micro-manage repository exploration. Your job is to act as a pathfinder: gather intelligence, organize choices, and convert the user’s decisions into a precise, bounded, verifiable execution goal.
 
+The interview that pinpoints the work comes in two user-selectable modes (see Phase 5):
+
+- **Express**: one compact question. Fastest, best when the target is already fairly clear.
+- **Deep dive**: a short guided drill-down from broad intent to the exact target, narrowing one level at a time. Best when the repo is large or several targets are plausible.
+
+Both modes always suggest answers, always offer an agent recommendation, and always leave an escape to describe something else.
+
 ## Supported invocation
 
 If the user says “Use the pathfinder skill on this repository,” “Start the full Pathfinder process,” or similar, immediately begin Phase 0 using the current repository. Do not ask for clarification unless no repository or working directory can be identified.
@@ -270,7 +277,8 @@ Create `03-synthesis.md` with:
 - Highest ROI opportunities.
 - Recommended work tracks.
 - Verification commands discovered from manifests/configs/CI, with source, whether they require executing repo code, and the safest narrow command for a likely target.
-- Top 5 candidate implementation goals. For each candidate include measurable end state, likely files/folders, impact, effort, risk, verification commands, protected areas, and confidence.
+- Top 5 candidate implementation goals. For each candidate include measurable end state, likely files/folders, impact, effort, risk, verification commands, protected areas, confidence, and which scout owns it.
+- A per-domain surface index to feed the Deep dive funnel: for each scout domain that has candidates, list the concrete surfaces (routes, modules, services, components, pipelines, tests) and, where known, the exact behavior/function/symptom under each. This is the branching material the drill-down questions draw on.
 - Areas that should be protected.
 - Unknowns that need user input.
 
@@ -278,26 +286,171 @@ Use practical language. Do not produce a generic audit.
 
 ## Phase 5: Question funnel, big picture to detail
 
-Ask the user multiple-choice questions. Start broad, then narrow.
+The goal of this phase is to pinpoint the exact work to do, then convert it into a measurable `/goal`. Pathfinder offers two interview modes. The user always chooses which one runs.
 
-Rules:
+Universal rules that apply to both modes:
 
-- Ask questions based on actual codebase findings.
-- Start from the Top 5 candidate implementation goals in `03-synthesis.md`; let the user select, combine, reject, or choose agent recommendation.
-- Include “agent recommendation” options.
-- Keep most questions multiple-choice.
-- Allow the user to answer with numbers.
-- Ask only what is needed to create a strong goal.
-- Save the questions to `04-question-funnel.md`.
-- After the user answers, save their answers to `05-user-answers.md`.
+- Every question must offer suggested answers. Use 3 to 6 numbered, repo-grounded options. Never ask an open question without options.
+- Every question must include an explicit `Agent recommends:` line naming the agent's current best pick, so choosing it is informed rather than blind.
+- Every question must include two escapes: a `None of these, let me describe it` free-text option and a `Go back` option.
+- The user may answer with a number, a short combination, or free text.
+- Ground all options in actual findings from `01-blind-discovery.md`, the scout briefs, and the Top 5 candidate goals in `03-synthesis.md`. Do not invent generic menus when concrete findings exist.
+- Save every question asked to `04-question-funnel.md` and every answer to `05-user-answers.md`. Record the chosen mode and, for Deep dive, the full narrowing path.
+- Stop only when there is enough to write a measurable, verifiable `/goal`.
 
-Fast path: if the user chooses agent recommendation, asks not to be micromanaged, or gives enough direction up front, ask one compact selection question covering recommended candidate, scope/aggressiveness, protected areas, and execution mode. Accept compact answers such as “recommendation + conservative + ask before running.”
+### Mode selection (ask once)
 
-Required question ladder:
+Before any other question, ask which interview mode to use, and recommend one based on repo complexity:
 
-### A. Strategic direction
+```text
+Two ways to proceed:
+1. Express      one compact question, fastest, good when the target is fairly clear
+2. Deep dive    a short guided drill-down from broad intent to the exact target
 
-Ask what kind of work the user wants first:
+Agent recommends: <Express | Deep dive> because <one-line reason from findings,
+e.g. large/ambiguous repo, several plausible targets, or one obvious high-confidence target>.
+
+Reply 1, 2, or "express"/"deep dive".
+```
+
+If the user already named the mode up front (for example said "deep dive" or "express"), skip this question. If the user named a concrete target up front in either mode, jump straight to the Boundaries step (L4) and confirm.
+
+### Express mode (compact, single-shot)
+
+Ask one compact selection question covering the recommended candidate, scope/aggressiveness, protected areas, and execution mode. Use the option reservoir in the section below for the suggested values.
+
+```text
+Recommended path: <top candidate from 03-synthesis.md>.
+Choose:
+1. Accept recommendation, conservative scope, ask before running.
+2. Accept recommendation, moderate scope, ask before running.
+3. Pick another candidate: <numbered list of the other Top 5 candidates>.
+4. Audit only, no implementation.
+None of these: describe the target you want in your own words.
+
+Protected areas to avoid unless approved: <detected protected areas>.
+Reply with a number or edits, e.g. "2, but also protect the styling system".
+```
+
+Accept compact answers such as "recommendation + conservative + ask before running". Then go to Phase 6.
+
+### Deep dive mode (conditioned drill-down)
+
+Run a guided drill-down. Ask exactly one question per level. Hard cap of five levels (L0 through L4) before the execution-mode question. Each level's options are conditioned on the previous answer and generated from the scout briefs, not from a fixed list.
+
+The five scouts are the branching backbone:
+
+- Architecture Scout
+- Frontend/Product Scout
+- Backend/Data Scout
+- Testing/Reliability Scout
+- Developer Experience/Security Scout
+
+Intent supplies the lens; the scout that owns the chosen domain supplies the menu content for the next level.
+
+Before each question, show a compact narrowing trail and a confidence signal:
+
+```text
+Path so far: fix → backend/data → POST /orders handler → duplicate-charge on retry
+Goal-readiness confidence: high
+Next: how aggressive should the fix be?
+```
+
+`Goal-readiness confidence` is the agent's estimate of whether it can already write a measurable `/goal`. Use it for adaptive stopping (see below).
+
+#### L0. Intent
+
+Ask what kind of outcome the user wants. Draw options from reservoir A/B. Always include `Agent recommends` and the escapes.
+
+```text
+1. Fix a correctness/reliability defect
+2. Improve a product/UX surface
+3. Improve backend/API/data robustness
+4. Improve tests and regression protection
+5. Improve architecture/maintainability
+6. Improve performance
+7. Improve developer experience
+8. Harden security/config/auth
+9. Agent picks the highest-ROI outcome
+```
+
+#### L1. Domain
+
+Given the intent, present the candidates owned by the relevant scout(s), ranked by impact and confidence. These options are real findings, not categories.
+
+```text
+Given "fix a defect", the strongest candidates from scouting:
+1. <candidate goal #1 with one-line symptom and confidence>
+2. <candidate goal #2 ...>
+3. <candidate goal #3 ...>
+4. Agent recommends: <the highest-confidence candidate>
+None of these: describe the area you care about.
+```
+
+#### L2. Surface
+
+Within the chosen domain, present concrete surfaces discovered in the repo: specific routes, modules, services, components, pipelines, or test files.
+
+```text
+Within <chosen domain>, which surface?
+1. <real route/module/service/test from the briefs>
+2. <real surface ...>
+3. <real surface ...>
+4. Agent recommends: <best surface> because <reason>
+None of these: name the file/area.
+```
+
+#### L3. Target
+
+Within the chosen surface, pin the exact behavior, function, or symptom. This is where precision is won.
+
+- If scouting converges on one clear target with high confidence, do not manufacture a multi-option menu. Instead present a single confirm:
+
+```text
+Best target: <exact behavior/function/symptom, e.g. empty-state crash in
+DashboardView.loadData when the payload is empty>.
+1. Confirm this target
+2. Adjust it: describe the precise behavior
+Go back
+```
+
+- If several plausible targets remain, offer them as numbered options plus `Agent recommends` and the escapes.
+
+#### L4. Boundaries
+
+Now that the target is concrete, ask one combined question for scope aggressiveness, protected areas, and success criteria, scoped tightly to that target. Draw from reservoirs C, E, and F.
+
+```text
+For <target>, set the boundaries:
+- Scope: 1) very conservative  2) moderate  3) ambitious  4) creative  (agent recommends: <n>)
+- Protect (avoid without approval): <detected protected areas relevant to this target>
+- Done when: <2-3 concrete checks discovered from the repo, flagged if they need to run repo code>
+Reply with edits, or "accept agent recommendation".
+```
+
+#### Adaptive stopping
+
+- If goal-readiness confidence is already high before reaching L3 (the target is unambiguous), skip ahead to L4.
+- If confidence is still low after L3, ask one extra sharpening question at the same altitude rather than proceeding with a vague target. Never exceed the five-level cap by more than this single clarifier.
+- If the user repeatedly chooses `Agent recommends`, commit to the highest-confidence path and stop asking. Never loop.
+- Support `Go back` at any level by re-presenting the previous question with the prior answer noted, without restarting the whole funnel.
+
+### Execution mode (both modes)
+
+After the target and boundaries are set, ask how to proceed:
+
+1. Show me the final `/goal` command and wait.
+2. Save the `/goal` command, then ask before running.
+3. Save and run automatically after showing it, only if it matches my answers.
+4. Audit only, no implementation.
+
+Default to option 2 unless the user explicitly selects another mode.
+
+### Option reservoir
+
+Both modes draw suggested answers from this reservoir. Adapt and reorder based on actual findings; drop options that do not apply to the repo.
+
+Strategic direction (reservoir A):
 
 1. Fix the most important correctness/reliability issue.
 2. Improve frontend/UI/UX.
@@ -310,9 +463,7 @@ Ask what kind of work the user wants first:
 9. Work on a specific page, flow, feature, or bug.
 10. Let the agent choose the highest ROI target.
 
-### B. Product/business priority
-
-Ask what outcome matters most:
+Product/business priority (reservoir B):
 
 1. More accurate results.
 2. Better user experience.
@@ -325,9 +476,7 @@ Ask what outcome matters most:
 9. Better observability/debuggability.
 10. Agent recommendation.
 
-### C. Scope and aggressiveness
-
-Ask how aggressive changes should be:
+Scope and aggressiveness (reservoir C):
 
 1. Very conservative: minimal safe fixes only.
 2. Moderate: improve quality without changing architecture.
@@ -335,9 +484,7 @@ Ask how aggressive changes should be:
 4. Creative: propose a better product/technical direction.
 5. Agent recommendation.
 
-### D. Surface selection
-
-Offer project-specific options discovered from the codebase, such as:
+Surface candidates (reservoir D), populate from the briefs:
 
 - specific pages/routes
 - specific components
@@ -347,9 +494,7 @@ Offer project-specific options discovered from the codebase, such as:
 - specific tests
 - specific flows
 
-### E. Constraints and protected areas
-
-Ask what must not be touched without approval:
+Protected areas (reservoir E):
 
 - auth
 - payments
@@ -362,9 +507,7 @@ Ask what must not be touched without approval:
 - specific user flows
 - production configuration
 
-### F. Success criteria
-
-Offer concrete success criteria discovered from the repo:
+Success criteria (reservoir F):
 
 1. Tests pass.
 2. Typecheck/lint/build pass.
@@ -376,17 +519,6 @@ Offer concrete success criteria discovered from the repo:
 8. Final diff is small and reviewable.
 9. Playwright or integration checks pass where relevant.
 10. Agent recommendation.
-
-### G. Execution mode
-
-Ask:
-
-1. Show me the final `/goal` command and wait.
-2. Save the `/goal` command, then ask before running.
-3. Save and run automatically after showing it, only if it matches my answers.
-4. Audit only, no implementation.
-
-Default to option 2 unless the user explicitly selects another mode.
 
 ## Phase 6: Generate the Claude Code `/goal` command
 

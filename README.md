@@ -70,6 +70,11 @@ flowchart LR
 
 Pathfinder builds understanding from **actual code, tests, configs, routes, and schemas** before it ever opens a README. Then it converts your decisions into one precise execution goal.
 
+At step 4 you pick how it interviews you:
+
+- **Express**: one compact question. Fastest, when the target is already clear.
+- **Deep dive**: a guided drill-down from broad intent down to the exact file and behavior, one sharp question at a time. Every question suggests answers, names the agent's recommendation, and lets you go back or describe your own.
+
 <br>
 
 ## 📦 What you get
