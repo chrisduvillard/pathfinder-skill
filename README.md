@@ -84,13 +84,13 @@ Every run drops a clean, resumable trail inside the repo:
 ```text
 .agent-work/pathfinder/<date>-<task>/
 ├── 01-blind-discovery.md      what the repo actually is
-├── 02-scout-briefs/           per-domain deep dives
+├── 02-scout-briefs/           located, evidence-graded findings per domain
 ├── 03-synthesis.md            ranked next moves + risks
 ├── 04-question-funnel.md      the choices put to you
 └── 06-goal-command.md         a ready-to-copy /goal
 ```
 
-In plain terms: **what the repo does, the best next moves, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
+In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
 
 <br>
 
