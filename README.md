@@ -1,6 +1,5 @@
 <div align="center">
 
-<img src="assets/pathfinder-hero.svg" alt="Pathfinder mapping a codebase into a clear implementation goal" width="920">
 
 # Pathfinder
 
