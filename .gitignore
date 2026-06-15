@@ -1,0 +1,27 @@
+# Local/process artifacts
+.agent-work/
+.agent-workspace/
+
+# Secrets and local environment
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Dependency/build/cache noise
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+dist/
+build/
+.cache/
