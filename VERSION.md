@@ -1,8 +1,15 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-15 22:58:55 CEST
+Generated: 2026-06-15 23:21:24 CEST
 
-Version: 2.5.0
+Version: 2.6.0
+
+Changes in v2.6.0:
+- Deepened Phase 2 scouts: every finding must now be located (file path plus symbol/route), evidence-backed, symptom-level, evidence-graded (confirmed/inferred/suspected), and carry a measurable candidate end state, verification command, and blast radius.
+- Added a quality bar that rejects unlocated or ungrounded findings.
+- Phase 1 blind discovery now produces a concrete seed inventory (stack, entry points, surface list, commands) for the scouts.
+- Phase 4 synthesis now derives the Top 5 candidates and the L2/L3 surface index from scout finding ids, with dedup, evidence-grade-aware ranking, and a per-candidate goal-readiness signal.
+- Rewrote the scout-brief template to the new per-finding structure.
 
 Changes in v2.5.0:
 - Reworked the Phase 5 question funnel into two user-selectable interview modes.
