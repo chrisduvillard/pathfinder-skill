@@ -17,6 +17,15 @@ Then invoke the namespaced plugin skill:
 
 Claude Code namespaces plugin skills as `/plugin-name:skill-name` to avoid collisions.
 
+## Install with Codex `plugin`
+
+```bash
+codex plugin marketplace add chrisduvillard/pathfinder-skill
+codex plugin add pathfinder@pathfinder
+```
+
+Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
+
 ## Manual Claude Code install
 
 Copy the entire `pathfinder/` directory, including `SKILL.md` and `references/`, to one of:
@@ -40,7 +49,7 @@ Use the pathfinder skill on this repository. Start the full Pathfinder process.
 
 No separate slash-command wrapper is required.
 
-## Install for Codex
+## Manual Codex install
 
 If your Codex setup supports Agent Skills, copy the entire skill directory to your Codex skills folder, commonly:
 
@@ -48,7 +57,7 @@ If your Codex setup supports Agent Skills, copy the entire skill directory to yo
 ~/.codex/skills/pathfinder/
 ```
 
-If your Codex runtime does not auto-discover skills, include `pathfinder/SKILL.md` as context and use the same invocation.
+If your Codex runtime does not auto-discover skills, include `SKILL.md` as context and use the same invocation.
 
 ## Claude Code `/goal` compatibility
 

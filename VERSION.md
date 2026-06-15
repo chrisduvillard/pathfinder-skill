@@ -2,7 +2,12 @@
 
 Generated: 2026-06-15 21:46:31 CEST
 
-Version: 2.3.0
+Version: 2.4.0
+
+Changes in v2.4.0:
+- Added Codex plugin support with `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json`.
+- Added `codex plugin marketplace add chrisduvillard/pathfinder-skill` installation instructions.
+- Aligned Claude and Codex plugin manifest versions.
 
 Changes in v2.3.0:
 - Added Claude Code plugin marketplace support with `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.

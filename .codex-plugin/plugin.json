@@ -1,0 +1,32 @@
+{
+  "name": "pathfinder",
+  "version": "2.4.0",
+  "description": "Map an unfamiliar repository, choose the highest-value next move, and generate a bounded Claude Code /goal or fallback implementation goal.",
+  "author": {
+    "name": "Chris Duvillard",
+    "url": "https://github.com/chrisduvillard"
+  },
+  "homepage": "https://github.com/chrisduvillard/pathfinder-skill",
+  "repository": "https://github.com/chrisduvillard/pathfinder-skill",
+  "license": "MIT",
+  "keywords": [
+    "repo-discovery",
+    "goal-generation",
+    "codebase-analysis",
+    "agent-skill"
+  ],
+  "interface": {
+    "displayName": "Pathfinder",
+    "shortDescription": "Map a repo, pick the next move, write the goal",
+    "longDescription": "Pathfinder explores an unfamiliar repository from its code, proposes the highest-value next moves, asks a few focused direction questions, then generates a bounded, verifiable Claude Code /goal command or an equivalent implementation goal.",
+    "developerName": "Chris Duvillard",
+    "category": "Productivity",
+    "capabilities": ["Instructions"],
+    "websiteURL": "https://github.com/chrisduvillard/pathfinder-skill",
+    "defaultPrompt": [
+      "Use the pathfinder skill on this repository. Start the full Pathfinder process.",
+      "Map this codebase and propose the highest-value next move.",
+      "Generate a bounded /goal for the work we just scoped."
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "pathfinder",
+  "interface": {
+    "displayName": "Pathfinder"
+  },
+  "plugins": [
+    {
+      "name": "pathfinder",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/chrisduvillard/pathfinder-skill.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

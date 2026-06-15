@@ -6,9 +6,9 @@
 
 <img alt="Skill: Pathfinder" src="https://img.shields.io/badge/skill-pathfinder-2DD4BF?style=for-the-badge&labelColor=0F172A">
 <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude_Code-plugin-F59E0B?style=for-the-badge&labelColor=0F172A">
-<img alt="Codex ready" src="https://img.shields.io/badge/Codex-ready-38BDF8?style=for-the-badge&labelColor=0F172A">
+<img alt="Codex plugin" src="https://img.shields.io/badge/Codex-plugin-38BDF8?style=for-the-badge&labelColor=0F172A">
 
-`/pathfinder:pathfinder` via plugin · `/pathfinder` manually
+`/pathfinder:pathfinder`
 
 </div>
 
@@ -28,6 +28,15 @@ Then run the namespaced plugin skill:
 ```text
 /pathfinder:pathfinder
 ```
+
+## Install with Codex `plugin`
+
+```bash
+codex plugin marketplace add chrisduvillard/pathfinder-skill
+codex plugin add pathfinder@pathfinder
+```
+
+Then start Codex and invoke the skill (`@pathfinder` or the slash equivalent in interactive sessions).
 
 ## Manual install
 
