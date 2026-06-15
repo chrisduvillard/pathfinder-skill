@@ -1,90 +1,78 @@
-# Pathfinder Skill
+<div align="center">
 
-> Map the codebase. Pick the path. Forge the goal.
+# Pathfinder
 
-Pathfinder is a portable agent skill for turning an unfamiliar repository into a concrete, bounded implementation goal.
+**Map a repo. Pick the next move. Write the goal.**
 
-It tells Claude Code or Codex to:
+`/pathfinder`
 
-1. Create a dedicated local work folder for process artifacts.
-2. Explore the real codebase first, without relying on README/docs during the blind pass.
-3. Spawn or simulate scout passes for architecture, product/frontend, backend/data, testing/reliability, and DX/security.
-4. Synthesize ranked candidate implementation goals.
-5. Ask structured multiple-choice questions from big picture to detail.
-6. Generate a precise Claude Code `/goal` command and an equivalent fallback Implementation Goal.
-7. Ask before running the goal unless the user explicitly selected an approved autopilot mode.
+</div>
 
-## Install for Claude Code
+Pathfinder is a small agent skill for Claude Code and Codex.
 
-Copy the entire `pathfinder/` directory, including `SKILL.md` and `references/`, to either a project-level or personal skills folder:
+It reads an unfamiliar repository, finds useful work, asks a few focused questions, then writes a clear implementation goal you can run or hand to another agent.
+
+## Use it
+
+Copy the skill folder:
 
 ```text
-<repo>/.claude/skills/pathfinder/
 ~/.claude/skills/pathfinder/
+# or
+~/.codex/skills/pathfinder/
 ```
 
-Claude Code skills can be invoked directly as slash commands. No separate slash-command wrapper is required.
+Then run:
 
 ```text
 /pathfinder
 ```
 
-You can also invoke it in natural language:
+Or say:
 
 ```text
 Use the pathfinder skill on this repository. Start the full Pathfinder process.
 ```
 
-## Install for Codex
-
-If your Codex setup supports Agent Skills, copy the entire skill directory to your Codex skills folder, commonly:
+## What it gives you
 
 ```text
-~/.codex/skills/pathfinder/
+.agent-work/pathfinder/<date>-<task>/
+  01-blind-discovery.md
+  02-scout-briefs/
+  03-synthesis.md
+  04-question-funnel.md
+  06-goal-command.md
 ```
 
-Then invoke it with:
+In plain terms:
+
+- what the repo does
+- the highest value next moves
+- the risks and protected areas
+- a few choices for scope
+- a ready to copy `/goal` command
+
+## Example
+
+You say:
 
 ```text
 Use the pathfinder skill on this repository. Start the full Pathfinder process.
 ```
 
-If your Codex runtime does not auto-discover skills, include `pathfinder/SKILL.md` as context and use the same invocation.
-
-## Claude Code `/goal` compatibility
-
-`/goal` requires Claude Code v2.1.139 or newer.
-
-Pathfinder always saves both:
-
-- a ready-to-copy `/goal <condition>` command for Claude Code v2.1.139+
-- an equivalent `Implementation Goal` Markdown block for Codex, older Claude Code versions, or environments where slash commands cannot be executed directly
-
-The generated condition is designed to be evaluator-aware: it requires the implementation agent to surface changed files, commands run, exit results, before/after behavior, remaining risks, and a final yes/no completion statement in the transcript.
-
-## Safety model
-
-Pathfinder treats target repositories as untrusted input.
-
-During discovery it should not run repo-defined scripts, install dependencies, run migrations, execute tests, or perform external side effects unless the user explicitly approves that class of execution. It also avoids opening `.env*`, credential stores, private keys, certificates, and secret-manager outputs.
-
-Artifacts are local process notes. They should not be committed or pushed unless the user explicitly requests publication after reviewing them.
-
-## Included files
+Pathfinder replies with a short route:
 
 ```text
-pathfinder/
-  SKILL.md
-  LICENSE
-  README.md
-  README-INSTALL.md
-  VERSION.md
-  references/
-    artifact-structure.md
-    goal-best-practices.md
-    question-funnel-template.md
-    scout-brief-template.md
+Best next move: fix the dashboard empty-state crash.
+Scope: dashboard data loading and tests only.
+Proof: regression test passes, typecheck passes, changed files listed.
+Goal: /goal Fix the dashboard empty-state crash so users see a useful empty state instead of a blank page...
 ```
+
+## Safety
+
+Pathfinder treats repo files as untrusted data. It does not run repo scripts, install packages, open secrets, or push changes unless you approve.
 
 ## License
 
