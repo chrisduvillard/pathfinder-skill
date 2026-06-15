@@ -1,6 +1,7 @@
 ---
 name: repo-adjutant
 description: Use when the user wants an agent to explore an unfamiliar repository, synthesize candidate work, ask structured direction questions, and generate a bounded Claude Code /goal or equivalent implementation goal.
+license: MIT
 ---
 
 # Repo Adjutant

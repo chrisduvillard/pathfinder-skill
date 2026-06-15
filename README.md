@@ -73,6 +73,7 @@ Artifacts are local process notes. They should not be committed or pushed unless
 ```text
 repo-adjutant/
   SKILL.md
+  LICENSE
   README.md
   README-INSTALL.md
   VERSION.md
@@ -85,4 +86,4 @@ repo-adjutant/
 
 ## License
 
-No license has been specified yet. Add one before making the repository public if you want others to reuse the skill.
+MIT. See `LICENSE`.

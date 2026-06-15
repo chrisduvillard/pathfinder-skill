@@ -2,7 +2,10 @@
 
 Generated: 2026-06-15 15:24:25
 
-Version: 2.1
+Version: 2.1.1
+
+Changes in v2.1.1:
+- Added MIT license metadata and repository `LICENSE` file.
 
 Changes in v2.1:
 - Hardened prompt-injection and untrusted-repository handling.
