@@ -1,85 +1,94 @@
 <div align="center">
 
-# Pathfinder
+<br>
 
-**Map a repo. Pick the next move. Write the goal.**
+# 🧭 Pathfinder
 
-<img alt="Skill: Pathfinder" src="https://img.shields.io/badge/skill-pathfinder-2DD4BF?style=for-the-badge&labelColor=0F172A">
+### Map the codebase. Pick the path. Forge the goal.
+
+<br>
+
+<p>
+<img alt="Skill: Pathfinder" src="https://img.shields.io/badge/agent_skill-pathfinder-2DD4BF?style=for-the-badge&labelColor=0F172A">
 <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude_Code-plugin-F59E0B?style=for-the-badge&labelColor=0F172A">
 <img alt="Codex plugin" src="https://img.shields.io/badge/Codex-plugin-38BDF8?style=for-the-badge&labelColor=0F172A">
+<img alt="License MIT" src="https://img.shields.io/badge/license-MIT-A78BFA?style=for-the-badge&labelColor=0F172A">
+</p>
 
-`/pathfinder:pathfinder`
+<p><b>Drop it on any unfamiliar repo. Get back the highest-value next move and a goal you can run.</b></p>
 
 </div>
 
-Pathfinder is a small agent skill for Claude Code and Codex.
+<br>
 
-It reads an unfamiliar repository, finds useful work, asks a few focused questions, then writes a clear implementation goal you can run or hand to another agent.
+Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent.
 
-## Install with Claude Code `/plugin`
+No micro-managing exploration. No guessing where to start.
+
+<br>
+
+## ⚡ Quick start
+
+### <img alt="" src="https://img.shields.io/badge/-Claude_Code-F59E0B?style=flat-square&labelColor=0F172A"> &nbsp;Claude Code
 
 ```text
 /plugin marketplace add chrisduvillard/pathfinder-skill
 /plugin install pathfinder@pathfinder
-```
-
-Then run the namespaced plugin skill:
-
-```text
 /pathfinder:pathfinder
 ```
 
-## Install with Codex `plugin`
+### <img alt="" src="https://img.shields.io/badge/-Codex-38BDF8?style=flat-square&labelColor=0F172A"> &nbsp;Codex
 
 ```bash
 codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
+# then invoke with @pathfinder
 ```
 
-Then start Codex and invoke the skill (`@pathfinder` or the slash equivalent in interactive sessions).
+> Or just say it in plain language:
+> **"Use the pathfinder skill on this repository. Start the full Pathfinder process."**
 
-## Manual install
+<br>
 
-Copy the skill folder:
+## 🔭 How it works
 
-```text
-~/.claude/skills/pathfinder/
-# or
-~/.codex/skills/pathfinder/
+```
+   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+   │  1. DISCOVER │ → │  2. SCOUT    │ → │  3. SYNTHESIZE│ → │  4. ASK      │
+   │  read code,  │   │  brief each  │   │  rank the    │   │  a few sharp │
+   │  not docs    │   │  domain      │   │  next moves  │   │  questions   │
+   └──────────────┘   └──────────────┘   └──────────────┘   └──────┬───────┘
+                                                                    │
+                                                                    ▼
+                                                          ┌──────────────────┐
+                                                          │  5. FORGE /goal  │
+                                                          │  bounded · proven │
+                                                          │  ready to run     │
+                                                          └──────────────────┘
 ```
 
-Then run:
+Pathfinder builds understanding from **actual code, tests, configs, routes, and schemas** before it ever opens a README. Then it converts your decisions into one precise execution goal.
 
-```text
-/pathfinder
-```
+<br>
 
-Or say:
+## 📦 What you get
 
-```text
-Use the pathfinder skill on this repository. Start the full Pathfinder process.
-```
-
-## What it gives you
+Every run drops a clean, resumable trail inside the repo:
 
 ```text
 .agent-work/pathfinder/<date>-<task>/
-  01-blind-discovery.md
-  02-scout-briefs/
-  03-synthesis.md
-  04-question-funnel.md
-  06-goal-command.md
+├── 01-blind-discovery.md      what the repo actually is
+├── 02-scout-briefs/           per-domain deep dives
+├── 03-synthesis.md            ranked next moves + risks
+├── 04-question-funnel.md      the choices put to you
+└── 06-goal-command.md         a ready-to-copy /goal
 ```
 
-In plain terms:
+In plain terms: **what the repo does, the best next moves, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
 
-- what the repo does
-- the highest value next moves
-- the risks and protected areas
-- a few choices for scope
-- a ready to copy `/goal` command
+<br>
 
-## Example
+## ✨ Example
 
 You say:
 
@@ -87,19 +96,44 @@ You say:
 Use the pathfinder skill on this repository. Start the full Pathfinder process.
 ```
 
-Pathfinder replies with a short route:
+Pathfinder maps the repo, then hands back a route:
 
 ```text
-Best next move: fix the dashboard empty-state crash.
-Scope: dashboard data loading and tests only.
-Proof: regression test passes, typecheck passes, changed files listed.
-Goal: /goal Fix the dashboard empty-state crash so users see a useful empty state instead of a blank page...
+Best next move : fix the dashboard empty-state crash
+Scope          : dashboard data loading and tests only
+Proof          : regression test passes, typecheck passes, changed files listed
+Goal           : /goal Fix the dashboard empty-state crash so users see a useful
+                 empty state instead of a blank page; npm test exits 0; tsc clean;
+                 no schema change; or stop after 12 turns and report the blocker
 ```
 
-## Safety
+That `/goal` is bounded, measurable, and self-proving, so Claude Code keeps working toward it across turns until the condition holds.
 
-Pathfinder treats repo files as untrusted data. It does not run repo scripts, install packages, open secrets, or push changes unless you approve.
+<br>
 
-## License
+## 🛠 Manual install
 
-MIT. See `LICENSE`.
+If you would rather not use the plugin system, copy the skill folder directly:
+
+```text
+~/.claude/skills/pathfinder/      # Claude Code
+~/.codex/skills/pathfinder/       # Codex
+```
+
+Then run `/pathfinder` or invoke it by name. See [`README-INSTALL.md`](README-INSTALL.md) for `/goal` compatibility notes.
+
+<br>
+
+## 🔒 Safety
+
+Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
+
+<br>
+
+<div align="center">
+
+**Map the codebase. Pick the path. Forge the goal.**
+
+MIT licensed · built for Claude Code and Codex
+
+</div>
