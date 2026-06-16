@@ -2,7 +2,15 @@
 
 Generated: 2026-06-16
 
-Version: 2.7.0
+Version: 2.8.0
+
+Changes in v2.8.0:
+- Reordered the Phase 5 question funnel to lead with the ranked, evidence-graded Top 5 candidates (a presentation reorder of existing Phase 4 output; no scout/synthesis change).
+- Renamed the two interview modes to "Pick a move" (candidate-first, default; alias "express") and "Explore from scratch" (the drill-down; alias "deep dive"), and grounded the mode-selection question with a top-candidate teaser.
+- Added two-channel freedom: persistent `show the full map` and `describe your own` lateral moves on every work-selection screen, plus `back to candidates` at every level of Explore from scratch.
+- Added confidence-adaptive collapse: when one high-confidence candidate dominates, the funnel confirms it instead of showing a full menu.
+- Grounded Explore's L0 to list only intents that have candidates, annotated with candidate counts, with evidence carried alongside every option.
+- Applied the changes in both `SKILL.md` and `references/question-funnel-template.md`, and synced the README mode blurb.
 
 Changes in v2.7.0:
 - Restructured packaging to the conventional `skills/pathfinder/` layout (SKILL.md and references moved under it) so the skill is found by standard plugin skills auto-discovery; the plugin/marketplace manifests stay at the repo root.
