@@ -75,6 +75,8 @@ At step 4 you pick how it interviews you:
 - **Pick a move** (default): Pathfinder shows the ranked, evidence-graded Top 5 candidates and you pick one, then set boundaries. Fastest when a strong target stands out. (Alias: "express".)
 - **Explore from scratch**: a guided drill-down from broad intent down to the exact file and behavior, one sharp question at a time. (Alias: "deep dive".) Every question suggests answers, names the agent's recommendation, and lets you go back, return to the ranked candidates, browse the full map, or describe your own.
 
+Either mode can open the **full surface map** — a browsable index of every surface the scouts found, not just the Top 5 — and both end the same way: Pathfinder shows the assembled `/goal` back to you as a labeled, line-by-line contract you can adjust before anything is saved or run.
+
 <br>
 
 ## 📦 What you get
