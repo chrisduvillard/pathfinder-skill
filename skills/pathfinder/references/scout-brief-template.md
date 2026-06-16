@@ -1,6 +1,6 @@
 # Scout Brief Template
 
-One file per scout in `02-scout-briefs/`. The goal is located, evidence-backed, symptom-level findings that feed the Deep dive funnel (surfaces feed L2, symptoms feed L3, candidate end states feed the goal).
+One file per scout in `02-scout-briefs/`. The goal is located, evidence-backed, symptom-level findings that feed the Explore from scratch drill-down (surfaces feed L2, symptoms feed L3, candidate end states feed the goal).
 
 ## Scout role
 

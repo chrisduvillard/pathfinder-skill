@@ -2,49 +2,70 @@
 
 Use after blind discovery, scout reports, synthesis, and the Top 5 candidate implementation goals.
 
-Pathfinder runs one of two user-selectable modes. Ask which mode to use first, then follow that mode. Both modes obey the same universal rules.
+Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Both obey the same universal rules.
 
 ## Universal rules
 
 - Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options.
 - Always include an `Agent recommends:` line that names which listed option is the current best pick. It is a pointer to one of the options, never an extra numbered option.
-- Every option-bearing work-selection question (L0–L4 and Express's single question) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal execution-mode questions are exempt from both.
+- Every option-bearing work-selection question (L0–L4 and Pick a move's candidate screen) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal execution-mode questions are exempt from both.
 - Ground every option in actual findings, not generic categories.
-- Record the chosen mode in `04-question-funnel.md`; for Deep dive, record the full narrowing path. Save answers to `05-user-answers.md`.
+- Recognition-first: the first screen shows the ranked Top 5 or the full map, never an abstract category menu.
+- Two-channel freedom: every work-selection screen offers `show the full map` and `describe your own`; Explore mode also offers `back to candidates` at every level.
+- Evidence with options: each option shows its evidence grade (confirmed/inferred/suspected) and a one-line basis next to any confidence word.
+- Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. Save answers to `05-user-answers.md`.
 - Stop only when there is enough to write a measurable `/goal`.
 
 ## Mode selection (ask once)
 
 ```text
-Two ways to proceed:
-1. Express      one compact question, fastest, good when the target is fairly clear
-2. Deep dive    a short guided drill-down from broad intent to the exact target
+I mapped this repo and found <N> ranked candidates.
+Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
 
-Agent recommends: <Express | Deep dive> because <one-line reason from findings>.
+How do you want to choose the work?
+1. Pick a move          show the ranked candidates, pick one   [recommended]
+2. Explore from scratch drill down by intent → area → surface, ignoring my ranking
+
+Agent recommends: <1 | 2> because <one-line reason from findings>.
 Reply 1, 2, or "express"/"deep dive".
 ```
 
-Recommend Deep dive for large or ambiguous repos with several plausible targets; recommend Express when one high-confidence target stands out. If the user names a concrete target up front, jump straight to L4 (Boundaries) and confirm.
+Recommend Pick a move when one high-confidence target stands out; recommend Explore for large or ambiguous repos. "express" → Pick a move, "deep dive" → Explore from scratch. If the user names a concrete target up front, jump straight to L4 (Boundaries) and confirm.
 
-## Express mode
+## Mode 1: Pick a move (candidate-first, default)
 
-One compact question, then generate the goal.
+Show the ranked Top 5 from `03-synthesis.md` as evidence cards, then generate the goal.
 
 ```text
-Recommended path: <top candidate from 03-synthesis.md>.
-1. Accept recommendation, conservative scope, ask before running.
-2. Accept recommendation, moderate scope, ask before running.
-3. Pick another candidate: <numbers for the other Top 5 candidates>.
-4. Audit only, no implementation.
-None of these: describe the target in your own words.
+Top moves (impact ÷ effort; confirmed > inferred > suspected):
+ 1. <symptom>   <location>
+    <glyph> <evidence_grade> — <one-line evidence>   confidence: <HIGH|MED|LOW>
+    suggested scope: <scope> · touches: <blast radius; PROTECTED flagged>
+ 2. <symptom>   <location>
+    <glyph> <evidence_grade> — <evidence>   confidence: <...>
+ ... up to 5 ...
 
-Protected areas to avoid unless approved: <detected protected areas>.
-Reply with a number or edits.
+Agent recommends: <option n> because <reason>.
+
+Pick 1–5 — or go sideways:
+  • narrow by area/intent → Explore from scratch (L0)
+  • show the full map     → browse every surface
+  • describe your own      (free text)
 ```
 
-Accept compact answers like "recommendation + conservative + ask before running".
+Glyphs: `✓` confirmed, `~` inferred, `?` suspected. `suggested scope` is derived from `blast_radius`/`risk`/protected areas, not a new field. Picking a number jumps straight to L4 (Boundaries).
 
-## Deep dive mode
+Confidence-adaptive collapse — when one `high` candidate dominates, confirm instead of menu:
+
+```text
+One target dominates: <symptom> — <location> (<evidence_grade>, HIGH).
+1. Confirm it and set boundaries
+2. See the other <N> candidates
+Agent recommends: 1.
+None of these: describe your own.   show the full map
+```
+
+## Mode 2: Explore from scratch
 
 One question per level. Hard cap of five levels (L0 to L4) before execution mode. Each level's options are conditioned on the previous answer and generated from the scout briefs.
 
@@ -58,47 +79,46 @@ Goal-readiness confidence: high
 Next: how aggressive should the fix be?
 ```
 
-### L0. Intent
+### L0. Intent (only intents with candidates, annotated)
 
 ```text
-1. Fix a correctness/reliability defect
-2. Improve a product/UX surface
-3. Improve backend/API/data robustness
-4. Improve tests and regression protection
-5. Improve architecture/maintainability
-6. Improve performance
-7. Improve developer experience
-8. Harden security/config/auth
+1. Fix a correctness/reliability defect → <n> candidates (<m> confirmed)
+2. Improve a product/UX surface         → <n> candidates
+3. Improve backend/API/data robustness  → <n> candidates
+... only intents that have candidates ...
 9. Agent picks the highest-ROI outcome
 
 Agent recommends: <option n> because <one-line reason from findings>.
 None of these: describe the outcome you want.
+back to candidates: return to the ranked Top 5.   show the full map
 ```
 
 ### L1. Domain (real candidates from the owning scout)
 
 ```text
-Given "<intent>", the strongest candidates from scouting:
-1. <candidate #1 with symptom and confidence>
-2. <candidate #2 ...>
-3. <candidate #3 ...>
+Given "<intent>", the strongest candidates (glyph = evidence grade: ✓ confirmed, ~ inferred, ? suspected):
+1. <glyph> <candidate #1 symptom> — <basis>   confidence: <HIGH|MED|LOW>
+2. <glyph> <candidate #2 symptom> — <basis>   confidence: <HIGH|MED|LOW>
+3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>
 
 Agent recommends: <option n, highest-confidence candidate> because <reason>.
 None of these: describe the area.
 Go back: return to the previous question.
+back to candidates: ranked Top 5.   show the full map
 ```
 
 ### L2. Surface (concrete surfaces from the repo)
 
 ```text
 Within <domain>, which surface?
-1. <real route/module/service/test>
-2. <real surface ...>
-3. <real surface ...>
+1. <real route/module/service/test> — <glyph> <strongest finding symptom here>
+2. <real surface> — <glyph> <strongest finding symptom>
+3. <real surface> — <glyph> <strongest finding symptom>
 
 Agent recommends: <option n, best surface> because <reason>.
 None of these: name the file/area.
 Go back: return to the previous question.
+back to candidates: ranked Top 5.   show the full map
 ```
 
 ### L3. Target (exact behavior/function/symptom)
@@ -106,10 +126,11 @@ Go back: return to the previous question.
 If one clear target dominates, confirm rather than manufacture a menu:
 
 ```text
-Best target: <exact behavior/function/symptom>.
+Best target: <glyph> <exact behavior/function/symptom> (<evidence_grade>, <confidence>).
 1. Confirm this target
 2. Adjust it: describe the precise behavior in your own words (free-text escape)
 Go back: return to the previous question.
+back to candidates: ranked Top 5.   show the full map
 ```
 
 Otherwise offer numbered targets plus `Agent recommends` and the escapes.
@@ -121,7 +142,7 @@ For <target>, set the boundaries:
 - Scope: 1) very conservative  2) moderate  3) ambitious  4) creative  (agent recommends: <n>)
 - Protect (avoid without approval): <detected protected areas for this target>
 - Done when: <2-3 concrete checks from the repo, flagged if they need to run repo code>
-Reply with edits, "accept agent recommendation", or "go back" to revise the target.
+Reply with edits, "accept agent recommendation", "go back", "back to candidates", or "show the full map".
 ```
 
 ### Adaptive stopping
@@ -130,6 +151,7 @@ Reply with edits, "accept agent recommendation", or "go back" to revise the targ
 - If confidence is still low after L3, ask one extra sharpening question at the same altitude.
 - If the user keeps choosing `Agent recommends`, commit to the highest-confidence path and stop asking.
 - `Go back` re-presents the previous question without restarting the funnel.
+- `back to candidates` returns to the ranked Top 5 and `show the full map` shows the surface index, at any level, without restarting.
 
 ## Execution mode (both modes)
 
