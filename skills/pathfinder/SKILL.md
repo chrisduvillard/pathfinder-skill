@@ -334,7 +334,7 @@ The goal of this phase is to pinpoint the exact work to do, then convert it into
 
 Universal rules that apply to both modes:
 
-- Every question must offer suggested answers. Use 3 to 6 numbered, repo-grounded options. Never ask an open question without options.
+- Every question must offer suggested answers. Use 3 to 6 numbered, repo-grounded options. Never ask an open question without options. The one exception is the Full surface map browse screen (below): it is an index of every discovered surface, not a 3-to-6 option menu, but it still carries an `Agent recommends:` line and the escapes.
 - Every question must include an explicit `Agent recommends:` line that names which of the listed options is the agent's current best pick, and why, so choosing it is informed rather than blind. `Agent recommends:` is a pointer to one of the existing options, never an extra numbered option in the list.
 - Every option-bearing work-selection question (L0 intent through L4 boundaries, and Pick a move's candidate screen) must include a `None of these, let me describe it` free-text escape. Every drill-down question after the first (L1 onward) must also include a `Go back` option. The one-time mode-selection question and the terminal execution-mode question use fixed menus and are exempt from both escapes.
 - The user may answer with a number, a short combination, or free text.
@@ -382,7 +382,7 @@ Agent recommends: <option n> because <one-line reason from findings>.
 
 Pick 1–5 — or go sideways:
   • narrow by area/intent   → switches to Explore from scratch (L0)
-  • show the full map       → browse every surface, not just the Top 5
+  • show the full map       → Full surface map (below)
   • describe your own        (free text)
 ```
 
@@ -390,7 +390,7 @@ Glyphs: `✓` confirmed, `~` inferred, `?` suspected. `suggested scope` is deriv
 
 When the user picks a number, go straight to the Boundaries step (L4) for that candidate, then the execution-mode question. Do not ask intent, domain, or surface questions on this path.
 
-`show the full map` presents the per-domain surface index from `03-synthesis.md` so the user can point at any surface, not only the Top 5. `narrow by area/intent` hands off to Explore from scratch starting at L0.
+`show the full map` opens the Full surface map browse screen (below) so the user can point at any surface, not only the Top 5. `narrow by area/intent` hands off to Explore from scratch starting at L0.
 
 Confidence-adaptive collapse: when exactly one candidate is goal-readiness `high` and clearly dominates the rest, present a single confirm card instead of the full menu:
 
@@ -402,6 +402,31 @@ One target clearly dominates:
 Agent recommends: 1.
 None of these: describe your own.   show the full map
 ```
+
+### Full surface map (the shared browse screen)
+
+`show the full map` opens this screen — the single destination for every `show the full map` offer in either mode and at every level. It is built from the per-domain surface index already in `03-synthesis.md` (Phase 4) and adds no new synthesis field. Because it is a browse/index rather than a 3-to-6 option question, it may list as many surfaces as the scouts found.
+
+```text
+Full surface map — every surface the scouts found, grouped by domain
+(✓ confirmed  ~ inferred  ? suspected · count = findings on that surface)
+
+Backend/Data
+  b1. api/orders.py:POST /orders     ✓ duplicate-charge on retry      (3)
+  b2. api/auth.py:refresh_token      ~ token TTL never validated      (1)
+Frontend/Product
+  f1. views/DashboardView.tsx        ✓ empty-state crash in loadData  (2)
+Testing/Reliability
+  t1. tests/orders/                  ~ retry path uncovered           (1)
+
+Pick a surface (b1, f1, …) to set it as your target.
+Agent recommends: b1 — most confirmed findings.
+back to candidates: ranked Top 5  ·  describe your own  ·  go back
+```
+
+- Group surfaces by scout domain; within a domain, order by finding count, then evidence grade (confirmed before inferred before suspected). Each row shows its path, evidence glyph, the strongest finding's symptom, and the finding count.
+- Picking a surface jumps to the Target step (L3) scoped to that surface. If the surface has exactly one finding, confirm it as the target automatically and go straight to Boundaries (L4).
+- The screen carries an `Agent recommends:` line (the surface with the most confirmed findings, unless another clearly dominates) and the escapes `back to candidates`, `describe your own`, and `go back` (returns to the screen the user came from). It does not re-offer `show the full map` — the user is already there.
 
 ### Mode 2: Explore from scratch (conditioned drill-down)
 
@@ -490,7 +515,18 @@ Go back: return to the previous question.
 back to candidates: return to the ranked Top 5.   show the full map
 ```
 
-- If several plausible targets remain, offer them as numbered options plus `Agent recommends` and the escapes.
+- If several plausible targets remain, offer them as numbered options plus an `Agent recommends:` line and the escapes:
+
+```text
+Within <surface>, which exact target?
+1. <glyph> <behavior/function/symptom #1> — <basis>   confidence: <HIGH|MED|LOW>
+2. <glyph> <behavior/function/symptom #2> — <basis>   confidence: <HIGH|MED|LOW>
+
+Agent recommends: <option n> because <reason>.
+None of these: describe the precise behavior.
+Go back: return to the previous question.
+back to candidates: return to the ranked Top 5.   show the full map
+```
 
 #### L4. Boundaries
 
@@ -498,9 +534,10 @@ Now that the target is concrete, ask one combined question for scope aggressiven
 
 ```text
 For <target>, set the boundaries:
-- Scope: 1) very conservative  2) moderate  3) ambitious  4) creative  (agent recommends: <n>)
+- Scope: 1) very conservative  2) moderate  3) ambitious  4) creative
 - Protect (avoid without approval): <detected protected areas relevant to this target>
 - Done when: <2-3 concrete checks discovered from the repo, flagged if they need to run repo code>
+Agent recommends: Scope 2 (moderate) because <one-line reason from findings>.
 Reply with edits, "accept agent recommendation", "go back" to revise the target, "back to candidates" to return to the ranked Top 5, or "show the full map".
 ```
 
@@ -510,7 +547,7 @@ Reply with edits, "accept agent recommendation", "go back" to revise the target,
 - If confidence is still low after L3, ask one extra sharpening question at the same altitude rather than proceeding with a vague target. Never exceed the five-level cap by more than this single clarifier.
 - If the user repeatedly chooses `Agent recommends`, commit to the highest-confidence path and stop asking. Never loop.
 - Support `Go back` at any level by re-presenting the previous question with the prior answer noted, without restarting the whole funnel.
-- `back to candidates` and `show the full map` are available at every level: the first re-presents Mode 1's ranked Top 5, the second shows the per-domain surface index. Neither restarts the funnel.
+- `back to candidates` and `show the full map` are available at every level: the first re-presents Mode 1's ranked Top 5, the second opens the Full surface map browse screen. Neither restarts the funnel.
 
 ### Execution mode (both modes)
 
@@ -624,7 +661,7 @@ Sanitize all repo-derived content before including it in either form. Do not pas
 The generated condition should follow this shape:
 
 ```text
-/goal Achieve <one measurable end state> for <selected scope>. Prove completion by surfacing: <exact checks and expected pass results>. Constraints: <important constraints>. Do not touch <protected areas> without approval. Work in small scoped changes, update tests where behavior changes, and self-review the diff. Stop after <N> turns or if <stop conditions> occur, then report the blocker instead of continuing.
+/goal Achieve <one measurable end state> for <selected scope>. Prove completion by surfacing: <exact checks and expected pass results>. Constraints: <important constraints>. Do not touch <protected areas> without approval. Work in small scoped changes, update tests where behavior changes, and self-review the diff. Between loops, record what changed and what it showed, then choose the next best action. Stop after <N> turns or if <stop conditions> occur, then report the blocker and the next input needed to proceed instead of continuing.
 ```
 
 Keep the `/goal` command itself focused on one binary completion condition, proof, constraints, protected areas, and stop bounds. Put longer rationale or supporting context in a separate `Supporting notes, not part of the /goal command` section in `06-goal-command.md`.
@@ -642,10 +679,11 @@ The goal condition must include:
 - Constraints.
 - Files or folders likely involved, if known.
 - Required workflow.
+- Iteration policy: how to choose the next action between loops.
 - Verification steps with exact commands where known.
 - Definition of done.
 - Final report format.
-- Stop conditions.
+- Stop conditions, and the next input needed to unblock progress.
 - Turn bound or stop clause.
 
 ### Verification phrasing
@@ -684,10 +722,40 @@ The condition must stay under 3900 characters. If needed, compress context aggre
 
 Before saving, count characters in the condition excluding the `/goal ` prefix. Record the character count in `06-goal-command.md`. If it exceeds 3900 characters, compress and recount.
 
+### Confirm the goal with the user (recognition-first)
+
+Before writing the final `06-goal-command.md`, mirror the assembled goal back as a labeled, line-by-line contract rather than one opaque block, so the user recognizes each part and where it came from. This carries the Phase 5 recognition-first principle through to the goal itself. Mark each line with its evidence glyph and provenance (`your L3 target`, `your L4 scope`, `derived`, or `default`), flag any proof step that must run repo code with `*`, and show the character count against the 3900 budget.
+
+```text
+Here is the /goal I assembled from your answers — recognize each part, adjust any line:
+
+  End state    ✓ <measurable outcome>                  (your L3 target)
+  Scope        ✓ <files/area>                          (your L4 scope)
+  Proof        ~ <checks + expected pass results> *runs repo code   (derived)
+  Constraints  ✓ <must-not-change>                     (your L4 protect)
+  Protected    ✓ <off-limits areas>                    (your L4 protect)
+  Iterate      ~ record what changed + pick next best action each loop  (best-practice)
+  Stop bound   ~ stop after <N> turns / 3 failed loops; report blocker + next input
+
+Transcript proof: goal makes the agent surface <changed files, checks, results>.
+Length: <n>/3900 chars.
+
+1. Looks right — save it                               [recommended]
+2. Adjust a part: name the line to change
+3. Tighten the proof: choose stricter checks
+4. Show the full /goal text + Implementation Goal fallback
+Agent recommends: 1 — every ✓ line traces to an answer you gave.
+go back: return to boundaries (L4)
+```
+
+- Show this screen before saving. Any adjustment (options 2-3, or a free-text edit) regenerates the affected lines and re-displays the screen before the goal is written.
+- The screen carries one `Agent recommends:` line and a `go back` that returns to the Boundaries step (L4). It does not offer `back to candidates` or `show the full map` — selection is complete by this phase.
+- Glyphs match the funnel: `✓` confirmed, `~` inferred or derived, `?` suspected.
+
 ### Good example
 
 ```text
-/goal Fix the beach/pool recommendation mismatch in the trip wizard so selecting beach and pool no longer ranks city-first destinations above suitable coastal/resort destinations unless explicitly justified by user inputs. Scope: recommendation scoring and its tests only. Prove completion by surfacing the relevant changed files, at least one failing-before/passing-after test or updated regression test, and successful results for the narrow recommendation tests plus typecheck if available. Constraints: no schema changes, no public API changes, no new dependencies, no unrelated UI redesign. Stop before touching auth, payments, deployment, migrations, secrets, or data contracts. Stop after 12 turns or after 3 failed implementation loops and report the blocker. Final report must include diagnosis, files changed, behavior before/after, commands run with exit results, and remaining risks.
+/goal Fix the beach/pool recommendation mismatch in the trip wizard so selecting beach and pool no longer ranks city-first destinations above suitable coastal/resort destinations unless explicitly justified by user inputs. Scope: recommendation scoring and its tests only. Prove completion by surfacing the relevant changed files, at least one failing-before/passing-after test or updated regression test, and successful results for the narrow recommendation tests plus typecheck if available. Constraints: no schema changes, no public API changes, no new dependencies, no unrelated UI redesign. Stop before touching auth, payments, deployment, migrations, secrets, or data contracts. Between loops, record what changed and the test result, then pick the next best fix. Stop after 12 turns or after 3 failed implementation loops and report the blocker and the next input needed to proceed. Final report must include diagnosis, files changed, behavior before/after, commands run with exit results, and remaining risks.
 ```
 
 ### Bad examples
@@ -712,7 +780,7 @@ These are not measurable enough and do not give the evaluator a reliable yes/no 
 
 Unless the user explicitly selected autopilot execution:
 
-- Show the saved goal command.
+- Present the recognition-first confirmation screen (Phase 6) and apply any adjustments, then show the saved goal command.
 - Ask: “Do you want me to run this goal now?”
 - Do not run until the user clearly approves.
 

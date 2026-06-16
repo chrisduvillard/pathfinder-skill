@@ -114,7 +114,8 @@ Scope          : dashboard data loading and tests only
 Proof          : regression test passes, typecheck passes, changed files listed
 Goal           : /goal Fix the dashboard empty-state crash so users see a useful
                  empty state instead of a blank page; npm test exits 0; tsc clean;
-                 no schema change; or stop after 12 turns and report the blocker
+                 no schema change; between loops note what changed and pick the next
+                 fix; stop after 12 turns, then report the blocker and the next input needed
 ```
 
 That `/goal` is bounded, measurable, and self-proving, so Claude Code keeps working toward it across turns until the condition holds.

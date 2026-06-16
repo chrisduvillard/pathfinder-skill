@@ -6,7 +6,7 @@ Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, 
 
 ## Universal rules
 
-- Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options.
+- Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options. Exception: the Full surface map browse screen lists every surface as an index, not a 3-to-6 menu; it still carries `Agent recommends:` and the escapes.
 - Always include an `Agent recommends:` line that names which listed option is the current best pick. It is a pointer to one of the options, never an extra numbered option.
 - Every option-bearing work-selection question (L0–L4 and Pick a move's candidate screen) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal execution-mode questions are exempt from both.
 - Ground every option in actual findings, not generic categories.
@@ -49,7 +49,7 @@ Agent recommends: <option n> because <reason>.
 
 Pick 1–5 — or go sideways:
   • narrow by area/intent → Explore from scratch (L0)
-  • show the full map     → browse every surface
+  • show the full map     → Full surface map (below)
   • describe your own      (free text)
 ```
 
@@ -64,6 +64,25 @@ One target dominates: <symptom> — <location> (<evidence_grade>, HIGH).
 Agent recommends: 1.
 None of these: describe your own.   show the full map
 ```
+
+## Full surface map (shared browse screen)
+
+The destination for every `show the full map`. Built from the per-domain surface index in `03-synthesis.md`; lists every surface as an index, not a 3-to-6 menu.
+
+```text
+Full surface map — grouped by domain (✓ confirmed  ~ inferred  ? suspected · count = findings)
+
+Backend/Data
+  b1. api/orders.py:POST /orders   ✓ duplicate-charge on retry   (3)
+Frontend/Product
+  f1. views/DashboardView.tsx      ✓ empty-state crash           (2)
+
+Pick a surface to set it as your target.
+Agent recommends: b1 — most confirmed findings.
+back to candidates: ranked Top 5  ·  describe your own  ·  go back
+```
+
+Group by scout domain; order by finding count then evidence grade. Picking a surface jumps to L3 (Target) for it; a single-finding surface auto-confirms and goes to L4. Carries `Agent recommends:` and the escapes; does not re-offer `show the full map`.
 
 ## Mode 2: Explore from scratch
 
@@ -139,9 +158,10 @@ Otherwise offer numbered targets plus `Agent recommends` and the escapes.
 
 ```text
 For <target>, set the boundaries:
-- Scope: 1) very conservative  2) moderate  3) ambitious  4) creative  (agent recommends: <n>)
+- Scope: 1) very conservative  2) moderate  3) ambitious  4) creative
 - Protect (avoid without approval): <detected protected areas for this target>
 - Done when: <2-3 concrete checks from the repo, flagged if they need to run repo code>
+Agent recommends: Scope 2 (moderate) because <reason>.
 Reply with edits, "accept agent recommendation", "go back", "back to candidates", or "show the full map".
 ```
 
@@ -151,7 +171,7 @@ Reply with edits, "accept agent recommendation", "go back", "back to candidates"
 - If confidence is still low after L3, ask one extra sharpening question at the same altitude.
 - If the user keeps choosing `Agent recommends`, commit to the highest-confidence path and stop asking.
 - `Go back` re-presents the previous question without restarting the funnel.
-- `back to candidates` returns to the ranked Top 5 and `show the full map` shows the surface index, at any level, without restarting.
+- `back to candidates` returns to the ranked Top 5 and `show the full map` opens the Full surface map browse screen, at any level, without restarting.
 
 ## Execution mode (both modes)
 

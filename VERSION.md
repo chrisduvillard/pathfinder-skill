@@ -2,7 +2,13 @@
 
 Generated: 2026-06-16
 
-Version: 2.8.0
+Version: 2.9.0
+
+Changes in v2.9.0:
+- Gave `show the full map` its own concrete browse screen: a Full surface map that lists every discovered surface grouped by scout domain, with evidence glyphs and finding counts, built from the per-domain surface index already in `03-synthesis.md` (no scout/synthesis change). Picking a surface jumps to the Target step (L3), or auto-confirms to Boundaries (L4) for a single-finding surface.
+- Made the Phase 6 `/goal` confirmation recognition-first: the assembled goal is mirrored back as a labeled, glyph-tagged, line-by-line contract with provenance, replacing the opaque block plus blind yes/no.
+- Tightened the generated `/goal` to match the official Claude Code and Codex `/goal` docs: added an explicit iteration policy ("between loops, record what changed and choose the next best action") and a sharper blocked-stop that names the next input needed to proceed.
+- Noted the Full surface map as the one index-screen exemption to the 3-to-6 option rule; applied all changes across `SKILL.md`, `references/question-funnel-template.md`, and `references/goal-best-practices.md`.
 
 Changes in v2.8.0:
 - Reordered the Phase 5 question funnel to lead with the ranked, evidence-graded Top 5 candidates (a presentation reorder of existing Phase 4 output; no scout/synthesis change).
