@@ -335,8 +335,8 @@ The goal of this phase is to pinpoint the exact work to do, then convert it into
 Universal rules that apply to both modes:
 
 - Every question must offer suggested answers. Use 3 to 6 numbered, repo-grounded options. Never ask an open question without options.
-- Every question must include an explicit `Agent recommends:` line naming the agent's current best pick, so choosing it is informed rather than blind.
-- Every question must include two escapes: a `None of these, let me describe it` free-text option and a `Go back` option.
+- Every question must include an explicit `Agent recommends:` line that names which of the listed options is the agent's current best pick, and why, so choosing it is informed rather than blind. `Agent recommends:` is a pointer to one of the existing options, never an extra numbered option in the list.
+- Every option-bearing work-selection question (L0 intent through L4 boundaries, and Express's single question) must include a `None of these, let me describe it` free-text escape. Every drill-down question after the first (L1 onward) must also include a `Go back` option. The one-time mode-selection question and the terminal execution-mode question use fixed menus and are exempt from both escapes.
 - The user may answer with a number, a short combination, or free text.
 - Ground all options in actual findings from `01-blind-discovery.md`, the scout briefs, and the Top 5 candidate goals in `03-synthesis.md`. Do not invent generic menus when concrete findings exist.
 - Save every question asked to `04-question-funnel.md` and every answer to `05-user-answers.md`. Record the chosen mode and, for Deep dive, the full narrowing path.
@@ -416,6 +416,9 @@ Ask what kind of outcome the user wants. Draw options from reservoir A/B. Always
 7. Improve developer experience
 8. Harden security/config/auth
 9. Agent picks the highest-ROI outcome
+
+Agent recommends: <option n> because <one-line reason from findings>.
+None of these: describe the outcome you want.
 ```
 
 #### L1. Domain
@@ -427,8 +430,10 @@ Given "fix a defect", the strongest candidates from scouting:
 1. <candidate goal #1 with one-line symptom and confidence>
 2. <candidate goal #2 ...>
 3. <candidate goal #3 ...>
-4. Agent recommends: <the highest-confidence candidate>
+
+Agent recommends: <option n, the highest-confidence candidate> because <reason>.
 None of these: describe the area you care about.
+Go back: return to the previous question.
 ```
 
 #### L2. Surface
@@ -440,8 +445,10 @@ Within <chosen domain>, which surface?
 1. <real route/module/service/test from the briefs>
 2. <real surface ...>
 3. <real surface ...>
-4. Agent recommends: <best surface> because <reason>
+
+Agent recommends: <option n, the best surface> because <reason>.
 None of these: name the file/area.
+Go back: return to the previous question.
 ```
 
 #### L3. Target
@@ -454,8 +461,8 @@ Within the chosen surface, pin the exact behavior, function, or symptom. This is
 Best target: <exact behavior/function/symptom, e.g. empty-state crash in
 DashboardView.loadData when the payload is empty>.
 1. Confirm this target
-2. Adjust it: describe the precise behavior
-Go back
+2. Adjust it: describe the precise behavior in your own words (free-text escape)
+Go back: return to the previous question.
 ```
 
 - If several plausible targets remain, offer them as numbered options plus `Agent recommends` and the escapes.
@@ -469,7 +476,7 @@ For <target>, set the boundaries:
 - Scope: 1) very conservative  2) moderate  3) ambitious  4) creative  (agent recommends: <n>)
 - Protect (avoid without approval): <detected protected areas relevant to this target>
 - Done when: <2-3 concrete checks discovered from the repo, flagged if they need to run repo code>
-Reply with edits, or "accept agent recommendation".
+Reply with edits, "accept agent recommendation", or "go back" to revise the target.
 ```
 
 #### Adaptive stopping

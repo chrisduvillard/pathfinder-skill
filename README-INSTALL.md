@@ -24,11 +24,13 @@ codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
 ```
 
+Then invoke it in Codex with `$pathfinder`, or run `/skills` to pick it.
+
 Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
 
 ## Manual Claude Code install
 
-Copy the entire `pathfinder/` directory, including `SKILL.md` and `references/`, to one of:
+Copy this repo's `skills/pathfinder/` directory, including its `SKILL.md` and `references/`, to one of:
 
 ```text
 <repo>/.claude/skills/pathfinder/
@@ -51,13 +53,13 @@ No separate slash-command wrapper is required.
 
 ## Manual Codex install
 
-If your Codex setup supports Agent Skills, copy the entire skill directory to your Codex skills folder, commonly:
+If your Codex setup supports Agent Skills, copy this repo's `skills/pathfinder/` directory (its `SKILL.md` and `references/`) to your Codex skills folder, commonly:
 
 ```text
 ~/.codex/skills/pathfinder/
 ```
 
-If your Codex runtime does not auto-discover skills, include `SKILL.md` as context and use the same invocation.
+Invoke it in Codex with `$pathfinder` or by running `/skills`. If your Codex runtime does not auto-discover skills, include `SKILL.md` as context and invoke it the same way.
 
 ## Claude Code `/goal` compatibility
 

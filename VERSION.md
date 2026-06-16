@@ -1,8 +1,15 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-15 23:21:24 CEST
+Generated: 2026-06-16
 
-Version: 2.6.0
+Version: 2.7.0
+
+Changes in v2.7.0:
+- Restructured packaging to the conventional `skills/pathfinder/` layout (SKILL.md and references moved under it) so the skill is found by standard plugin skills auto-discovery; the plugin/marketplace manifests stay at the repo root.
+- Fixed the Phase 5 question funnel so the examples match the universal rules: every work-selection question now demonstrates its escapes (`None of these`, plus `Go back` from L1 onward), and `Agent recommends:` is defined as a pointer line to one listed option rather than a duplicate numbered option. Applied in both `SKILL.md` and `references/question-funnel-template.md`.
+- Corrected the documented Codex invocation from `@pathfinder` to `$pathfinder` (or `/skills`), per OpenAI Codex Agent Skills.
+- Completed the README artifact list to the full nine-file contract.
+- Moved the Claude marketplace `description` to the documented top-level field.
 
 Changes in v2.6.0:
 - Deepened Phase 2 scouts: every finding must now be located (file path plus symbol/route), evidence-backed, symptom-level, evidence-graded (confirmed/inferred/suspected), and carry a measurable candidate end state, verification command, and blast radius.

@@ -42,7 +42,7 @@ No micro-managing exploration. No guessing where to start.
 ```bash
 codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
-# then invoke with @pathfinder
+# then run /skills, or type $pathfinder to invoke it
 ```
 
 > Or just say it in plain language:
@@ -83,11 +83,15 @@ Every run drops a clean, resumable trail inside the repo:
 
 ```text
 .agent-work/pathfinder/<date>-<task>/
+├── 00-session.md              repo root, branch, tooling, objective
 ├── 01-blind-discovery.md      what the repo actually is
 ├── 02-scout-briefs/           located, evidence-graded findings per domain
 ├── 03-synthesis.md            ranked next moves + risks
 ├── 04-question-funnel.md      the choices put to you
-└── 06-goal-command.md         a ready-to-copy /goal
+├── 05-user-answers.md         what you picked
+├── 06-goal-command.md         a ready-to-copy /goal
+├── 07-run-log.md              progress if the goal is run
+└── 08-final-summary.md        what was explored, found, and decided
 ```
 
 In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
@@ -119,14 +123,14 @@ That `/goal` is bounded, measurable, and self-proving, so Claude Code keeps work
 
 ## 🛠 Manual install
 
-If you would rather not use the plugin system, copy the skill folder directly:
+If you would rather not use the plugin system, copy this repo's `skills/pathfinder/` folder (it holds `SKILL.md` and `references/`) directly to:
 
 ```text
 ~/.claude/skills/pathfinder/      # Claude Code
 ~/.codex/skills/pathfinder/       # Codex
 ```
 
-Then run `/pathfinder` or invoke it by name. See [`README-INSTALL.md`](README-INSTALL.md) for `/goal` compatibility notes.
+Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex. See [`README-INSTALL.md`](README-INSTALL.md) for `/goal` compatibility notes.
 
 <br>
 

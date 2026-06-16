@@ -1,8 +1,6 @@
 {
   "name": "pathfinder",
-  "metadata": {
-    "description": "Repository pathfinding skill for Claude Code and Codex."
-  },
+  "description": "Repository pathfinding skill for Claude Code and Codex.",
   "owner": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"

@@ -7,8 +7,8 @@ Pathfinder runs one of two user-selectable modes. Ask which mode to use first, t
 ## Universal rules
 
 - Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options.
-- Always include an `Agent recommends:` line that names the current best pick.
-- Always include two escapes: `None of these, let me describe it` and `Go back`.
+- Always include an `Agent recommends:` line that names which listed option is the current best pick. It is a pointer to one of the options, never an extra numbered option.
+- Every option-bearing work-selection question (L0–L4 and Express's single question) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal execution-mode questions are exempt from both.
 - Ground every option in actual findings, not generic categories.
 - Record the chosen mode in `04-question-funnel.md`; for Deep dive, record the full narrowing path. Save answers to `05-user-answers.md`.
 - Stop only when there is enough to write a measurable `/goal`.
@@ -70,6 +70,9 @@ Next: how aggressive should the fix be?
 7. Improve developer experience
 8. Harden security/config/auth
 9. Agent picks the highest-ROI outcome
+
+Agent recommends: <option n> because <one-line reason from findings>.
+None of these: describe the outcome you want.
 ```
 
 ### L1. Domain (real candidates from the owning scout)
@@ -79,8 +82,10 @@ Given "<intent>", the strongest candidates from scouting:
 1. <candidate #1 with symptom and confidence>
 2. <candidate #2 ...>
 3. <candidate #3 ...>
-4. Agent recommends: <highest-confidence candidate>
+
+Agent recommends: <option n, highest-confidence candidate> because <reason>.
 None of these: describe the area.
+Go back: return to the previous question.
 ```
 
 ### L2. Surface (concrete surfaces from the repo)
@@ -90,8 +95,10 @@ Within <domain>, which surface?
 1. <real route/module/service/test>
 2. <real surface ...>
 3. <real surface ...>
-4. Agent recommends: <best surface> because <reason>
+
+Agent recommends: <option n, best surface> because <reason>.
 None of these: name the file/area.
+Go back: return to the previous question.
 ```
 
 ### L3. Target (exact behavior/function/symptom)
@@ -101,8 +108,8 @@ If one clear target dominates, confirm rather than manufacture a menu:
 ```text
 Best target: <exact behavior/function/symptom>.
 1. Confirm this target
-2. Adjust it: describe the precise behavior
-Go back
+2. Adjust it: describe the precise behavior in your own words (free-text escape)
+Go back: return to the previous question.
 ```
 
 Otherwise offer numbered targets plus `Agent recommends` and the escapes.
@@ -114,7 +121,7 @@ For <target>, set the boundaries:
 - Scope: 1) very conservative  2) moderate  3) ambitious  4) creative  (agent recommends: <n>)
 - Protect (avoid without approval): <detected protected areas for this target>
 - Done when: <2-3 concrete checks from the repo, flagged if they need to run repo code>
-Reply with edits, or "accept agent recommendation".
+Reply with edits, "accept agent recommendation", or "go back" to revise the target.
 ```
 
 ### Adaptive stopping
