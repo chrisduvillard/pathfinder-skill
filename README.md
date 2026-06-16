@@ -72,8 +72,8 @@ Pathfinder builds understanding from **actual code, tests, configs, routes, and 
 
 At step 4 you pick how it interviews you:
 
-- **Express**: one compact question. Fastest, when the target is already clear.
-- **Deep dive**: a guided drill-down from broad intent down to the exact file and behavior, one sharp question at a time. Every question suggests answers, names the agent's recommendation, and lets you go back or describe your own.
+- **Pick a move** (default): Pathfinder shows the ranked, evidence-graded Top 5 candidates and you pick one, then set boundaries. Fastest when a strong target stands out. (Alias: "express".)
+- **Explore from scratch**: a guided drill-down from broad intent down to the exact file and behavior, one sharp question at a time. (Alias: "deep dive".) Every question suggests answers, names the agent's recommendation, and lets you go back, return to the ranked candidates, browse the full map, or describe your own.
 
 <br>
 
