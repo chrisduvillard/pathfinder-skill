@@ -50,7 +50,7 @@ Agent recommends: <option n> because <reason>.
 Pick 1–5 — or go sideways:
   • narrow by area/intent → Explore from scratch (L0)
   • show the full map     → Full surface map (below)
-  • describe your own      (free text)
+  • None of these: describe your own   (free text)
 ```
 
 Glyphs: `✓` confirmed, `~` inferred, `?` suspected. `suggested scope` is derived from `blast_radius`/`risk`/protected areas, not a new field. Picking a number jumps straight to L4 (Boundaries).
@@ -149,7 +149,7 @@ If one clear target dominates, confirm rather than manufacture a menu:
 ```text
 Best target: <glyph> <exact behavior/function/symptom> — <one-line basis> (<evidence_grade>, <confidence>).
 1. Confirm this target
-2. Adjust it: describe the precise behavior in your own words (free-text escape)
+2. None of these: describe the precise behavior in your own words
 Agent recommends: 1 because <one-line reason>.
 Go back: return to the previous question.
 back to candidates: ranked Top 5.   show the full map
@@ -165,6 +165,7 @@ For <target>, set the boundaries:
 - Protect (avoid without approval): <detected protected areas for this target>
 - Done when: <2-3 concrete checks from the repo, flagged if they need to run repo code>
 Agent recommends: Scope 2 (moderate) because <reason>.
+None of these: describe the scope, protected areas, or success criteria in your own words.
 Reply with edits, "accept agent recommendation", "go back", "back to candidates", or "show the full map".
 ```
 

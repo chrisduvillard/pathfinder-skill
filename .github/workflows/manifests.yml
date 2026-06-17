@@ -1,9 +1,11 @@
 name: manifests
 
-# Guards the only machine-read surface in this markdown-only skill: the four
-# plugin/marketplace manifests must be valid JSON, and the version declared in
-# VERSION.md must match both plugin manifests. Drift or a JSON typo otherwise
-# ships silently and only breaks at marketplace install time.
+# Guards the machine-read and cross-file surfaces in this markdown-only skill:
+# (1) the four plugin/marketplace manifests must be valid JSON, and the version
+# declared in VERSION.md must match both plugin manifests; (2) SKILL.md and its
+# reference templates must not drift on shared invariants, and every reference
+# path SKILL.md cites must exist. Drift or a JSON typo otherwise ships silently
+# and only breaks at marketplace install time or in the agent's behavior.
 
 on:
   push:
@@ -54,3 +56,6 @@ jobs:
           done
           if [ "$fail" -eq 0 ]; then echo "manifests consistent at $v"; fi
           exit $fail
+
+      - name: Check SKILL.md <-> reference-template consistency
+        run: bash scripts/check-skill-consistency.sh
