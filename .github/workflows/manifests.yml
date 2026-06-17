@@ -1,0 +1,56 @@
+name: manifests
+
+# Guards the only machine-read surface in this markdown-only skill: the four
+# plugin/marketplace manifests must be valid JSON, and the version declared in
+# VERSION.md must match both plugin manifests. Drift or a JSON typo otherwise
+# ships silently and only breaks at marketplace install time.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    name: version + JSON consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest JSON
+        run: |
+          set -uo pipefail
+          fail=0
+          for f in .claude-plugin/plugin.json \
+                   .codex-plugin/plugin.json \
+                   .claude-plugin/marketplace.json \
+                   .agents/plugins/marketplace.json; do
+            if jq empty "$f" 2>/dev/null; then
+              echo "ok: $f is valid JSON"
+            else
+              echo "::error file=$f::invalid JSON (fix before merge)"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Check version consistency
+        run: |
+          set -uo pipefail
+          v=$(grep -oP 'Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)
+          if [ -z "$v" ]; then
+            echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
+            exit 1
+          fi
+          echo "VERSION.md declares $v"
+          fail=0
+          for f in .claude-plugin/plugin.json .codex-plugin/plugin.json; do
+            pv=$(jq -r '.version' "$f")
+            if [ "$pv" = "$v" ]; then
+              echo "ok: $f = $pv"
+            else
+              echo "::error file=$f::version \"$pv\" != VERSION.md \"$v\""
+              fail=1
+            fi
+          done
+          if [ "$fail" -eq 0 ]; then echo "manifests consistent at $v"; fi
+          exit $fail
