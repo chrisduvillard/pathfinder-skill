@@ -2,7 +2,13 @@
 
 Generated: 2026-06-17
 
-Version: 2.9.1
+Version: 2.9.2
+
+Changes in v2.9.2:
+- Made the untrusted-data clause mandatory in the generated `/goal`: it is now a required-content item and a slot in the `/goal` shape (was conditional "when relevant" and absent from the required-content list), and it appears in every Good example. Mirrored across `SKILL.md` Phase 6 and `references/goal-best-practices.md` (template, checklist, examples), now aligned on one mandatory-clause set.
+- Added the missing `/goal` shape slots the required-content list mandates: the user's chosen direction, non-goals, and a success-path final-report line.
+- Fixed the Phase 5 funnel self-conformance: the L4 Boundaries screen now carries the mandated `None of these` free-text escape (it was the only L0–L4 screen missing it), and the escape grammar is unified across all work-selection screens (L3 single-confirm and the Pick a move card no longer use ad-hoc wording). Synced the mode-selection reply line and wired reservoir D into L2. Mirrored in `references/question-funnel-template.md`.
+- Added a CI drift-guard (`scripts/check-skill-consistency.sh`, run from `.github/workflows/manifests.yml`) that fails when `SKILL.md` and its reference templates diverge on shared invariants (execution-mode default, five-level cap, escape grammar, lateral moves, glyph legend, 3900-char budget, the v2.1.139 gate, the untrusted-data clause) or when a `references/*.md` path `SKILL.md` cites is missing — closing the unguarded drift class the entries below recur on.
 
 Changes in v2.9.1:
 - Fixed the Phase 5 L3 Target single-confirm screen to obey the skill's own universal rules: it now carries the mandatory `Agent recommends:` line and a one-line evidence basis, matching the multi-option variant (both were missing on the common high-confidence path). Mirrored in `references/question-funnel-template.md`.
