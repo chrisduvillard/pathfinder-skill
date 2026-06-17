@@ -84,6 +84,19 @@ else
   echo "  only in artifact-structure:  $(comm -13 <(printf '%s\n' "$skill_arts") <(printf '%s\n' "$struct_arts") | tr '\n' ' ')"
 fi
 
+# (4) Markdown fence balance: the skill's value is dozens of hand-aligned
+#     fenced screens; an odd count of ^``` lines means an unterminated block,
+#     which corrupts rendering of the funnel/goal screens. Assert each skill
+#     markdown file closes every fence it opens.
+for f in "$skill" "$root"/skills/pathfinder/references/*.md; do
+  n=$(grep -cE '^```' "$f" || true)
+  if [ $((n % 2)) -eq 0 ]; then
+    echo "ok: balanced code fences ($n) in $(basename "$f")"
+  else
+    err "unbalanced code fence in $f: $n \`\`\` lines (odd = an unterminated block)"
+  fi
+done
+
 if [ "$fail" -eq 0 ]; then
   echo "skill consistency: all invariants hold"
 fi
