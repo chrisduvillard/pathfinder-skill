@@ -100,9 +100,9 @@ Use a lowercase alphanumeric-and-hyphen task slug. Before writing, verify `.agen
 
 Avoid dirtying the repository with process artifacts:
 
-1. Prefer adding `.agent-work/` and `.agent-workspace/` to `.git/info/exclude` as a local-only ignore rule when allowed.
-2. If local ignore metadata cannot be updated, verify the artifact folder is already ignored.
-3. If the folder would remain unignored, ask before editing tracked `.gitignore`; otherwise use an outside work folder and record why.
+1. First check whether `.agent-work/` and `.agent-workspace/` are already ignored (by a committed `.gitignore` or an existing `.git/info/exclude` rule). If so, write there directly and add no new ignore rule.
+2. Otherwise prefer adding them to `.git/info/exclude` as a local-only ignore rule when allowed.
+3. If local ignore metadata cannot be updated and the folder would remain unignored, ask before editing tracked `.gitignore`; otherwise use an outside work folder and record why.
 
 Never commit or push `.agent-work/`, `.agent-workspace/`, scout reports, run logs, or generated goal artifacts unless the user explicitly requests publication after reviewing them.
 
@@ -233,19 +233,21 @@ When simulating scouts, run five separate passes and write each scout file indep
 
 Use at least these five scouts. Each owns a domain that becomes a branch in the Explore from scratch drill-down.
 
-1. Architecture Scout
+Each scout writes one brief in `02-scout-briefs/`; the filename for each is named below so the mapping is explicit (the `dx-` slug abbreviates Developer Experience).
+
+1. Architecture Scout — writes `architecture-scout.md`
    - Map app structure, core modules, coupling, data flow, boundaries, entry points, and likely architectural risks.
 
-2. Frontend/Product Scout
+2. Frontend/Product Scout — writes `frontend-product-scout.md`
    - Map UI surfaces, routes, flows, component structure, UX inconsistencies, visual quality, accessibility, state handling, and conversion bottlenecks.
 
-3. Backend/Data Scout
+3. Backend/Data Scout — writes `backend-data-scout.md`
    - Map APIs, services, data access, schemas, background jobs, external integrations, error handling, validation, and data correctness risks.
 
-4. Testing/Reliability Scout
+4. Testing/Reliability Scout — writes `testing-reliability-scout.md`
    - Map tests, coverage shape, brittle areas, missing edge cases, build/lint/typecheck commands, CI signals, and likely regression risks.
 
-5. Developer Experience/Security Scout
+5. Developer Experience/Security Scout — writes `dx-security-scout.md`
    - Map setup complexity, scripts, typing, conventions, secrets handling, auth/config surfaces, dependency risk, and maintainability issues.
 
 ### Required depth for every scout
@@ -294,7 +296,7 @@ Purpose:
 
 Do not let docs override actual code unless verified.
 
-Record any doc/code mismatch in `03-synthesis.md`.
+Hold any doc/code mismatch as a note to fold into `03-synthesis.md` when Phase 4 assembles it. Phase 4 creates that file, so Phase 3 does not write it yet; keep the mismatch notes in scratch (or the scout briefs) until then.
 
 ## Phase 4: Synthesis
 
@@ -313,8 +315,9 @@ Create `03-synthesis.md` with:
 - Highest ROI opportunities, each linked to finding ids.
 - Recommended work tracks.
 - Verification commands discovered from manifests/configs/CI, with source, whether they require executing repo code, and the safest narrow command for a likely target.
-- Top 5 candidate implementation goals. Build each candidate from one or more scout findings (cite the finding ids). For each candidate include: measurable end state (reuse or merge the findings' `candidate_end_state`), exact location(s), observable symptom, the finding `type` (defect/risk/opportunity/smell), likely files/folders, impact, effort, risk, verification commands, protected areas / blast radius, aggregate evidence_grade, confidence, and which scout owns it.
+- Top 5 candidate implementation goals. Build each candidate from one or more scout findings (cite the finding ids). For each candidate include: measurable end state (reuse or merge the findings' `candidate_end_state`), exact location(s) (from `location`), observable symptom (from `symptom`), the finding `type` (defect/risk/opportunity/smell), likely files/folders (from `blast_radius`), effort (from `effort`), verification commands (from `verification`), protected areas / blast radius (from `blast_radius`), aggregate evidence_grade (merged from the findings' `evidence_grade`), and which scout owns it. Three fields have no scout source and are derived here, per the rules below: impact, risk, and confidence.
 - A per-domain surface index to feed the Explore from scratch drill-down: for each scout domain that has candidates, list the concrete surfaces from the scouts' surface maps, and under each surface the exact behavior/function/symptom (from finding `symptom` and `location`). This is the branching material the drill-down questions draw on for L2 and L3.
+- An intent tally to feed the L0 intent screen: group candidates by intent (from each finding's `type` and owning domain) and record, per intent, the total candidate count and the confirmed-only count. The L0 screen reads these counts; it does not recount.
 - Areas that should be protected.
 - Unknowns that need user input, separated from confirmed findings.
 
@@ -325,6 +328,9 @@ Create `03-synthesis.md` with:
 - Carry each finding's `evidence_grade` into the candidate. A candidate built only on suspected findings must say so and propose the cheapest check to confirm it before any implementation.
 - If a candidate lacks a measurable end state, either derive one from the symptom or move it to unknowns. Do not promote a non-measurable item to the Top 5.
 - Goal-readiness per candidate: mark high when location, symptom, end state, and a verification command are all present and confirmed or strongly inferred; medium when one is weak; low otherwise. The funnel uses this for its confidence signal and adaptive stopping.
+- Field provenance: every candidate field either copies a scout finding field or is derived here from named finding fields. The three derived fields are: `impact` (the finding `severity` weighted by how far the `symptom` reaches), `risk` (the `blast_radius` plus nearby protected areas — the chance a fix causes collateral change), and `confidence` (mapped from the aggregate `evidence_grade`: confirmed→HIGH, inferred→MED, suspected→LOW). State the basis whenever a value is derived rather than copied.
+- Two confidence quantities, kept distinct: a candidate's `confidence` (how sure the finding is real and correctly characterized, derived from `evidence_grade`) versus its `goal-readiness` (whether a measurable `/goal` can be written for it yet, per the rule above). The Pick a move cards and Explore option lines show candidate `confidence`; the Explore trail header shows `goal-readiness`. Never collapse the two into one "confidence".
+- Candidate `type` consumer: `type` (defect/risk/opportunity/smell), together with the owning domain, feeds the L0 intent buckets and the per-intent tally above — `type` alone fixes only the defect bucket (`defect`→"fix a correctness/reliability defect"), while the owning domain decides the rest (for example a backend `opportunity` or `smell`→"improve backend/API/data robustness"). It is upstream provenance for L0, not a separately displayed card field.
 
 Use practical language. Do not produce a generic audit. Separate facts found in code from interpretation throughout.
 
@@ -456,7 +462,7 @@ Render this trail-and-confidence header before every level below (L0 through L4)
 
 #### L0. Intent
 
-Ask what kind of outcome the user wants. List only intents that have at least one real candidate, annotate each with its candidate count, and draw wording from reservoir A/B. Always include `Agent recommends` and the lateral moves.
+Ask what kind of outcome the user wants. List only intents that have at least one real candidate, annotate each with its candidate count and confirmed-only count from the Phase 4 intent tally, and draw wording from reservoir A/B. Always include `Agent recommends` and the lateral moves.
 
 ```text
 1. Fix a correctness/reliability defect      → <n> candidates (<m> confirmed)
@@ -753,6 +759,7 @@ Agent recommends: 1 — every ✓ line traces to an answer you gave.
 go back: return to boundaries (L4)
 ```
 
+- Sanitize every mirrored line the same way as the goal forms (the Phase 6 opening rule): the End state, Scope, Constraints, and Protected lines are repo-derived, so redact secrets and never render instruction-like repo text in the contract.
 - Show this screen before saving. Any adjustment (options 2-3, or a free-text edit) regenerates the affected lines and re-displays the screen before the goal is written.
 - The screen carries one `Agent recommends:` line and a `go back` that returns to the Boundaries step (L4). It does not offer `back to candidates` or `show the full map` — selection is complete by this phase.
 - Glyphs match the funnel: `✓` confirmed, `~` inferred or derived, `?` suspected.

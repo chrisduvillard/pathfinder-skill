@@ -22,11 +22,12 @@ root="${1:-.}"
 skill="$root/skills/pathfinder/SKILL.md"
 funnel="$root/skills/pathfinder/references/question-funnel-template.md"
 goal="$root/skills/pathfinder/references/goal-best-practices.md"
+arts="$root/skills/pathfinder/references/artifact-structure.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal"; do
+for f in "$skill" "$funnel" "$goal" "$arts"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -67,6 +68,21 @@ check_pair "✓ confirmed"          "$funnel" "evidence glyph legend"
 check_pair "3900"            "$goal" "3900-char goal budget"
 check_pair "2.1.139"         "$goal" "Claude Code /goal version gate"
 check_pair "untrusted data"  "$goal" "untrusted-data clause"
+
+# (3) Artifact-contract parity: the set of pathfinder artifact filenames
+#     (NN-*.md numbered files + *-scout.md briefs) must match between the
+#     canonical SKILL.md list and artifact-structure.md. A file renamed or added
+#     in one but not the other is the same drift class as the invariants above.
+art_re='[0-9]{2}-[a-z-]+\.md|[a-z-]+-scout\.md'
+skill_arts="$(grep -oE "$art_re" "$skill" | sort -u)"
+struct_arts="$(grep -oE "$art_re" "$arts" | sort -u)"
+if [ "$skill_arts" = "$struct_arts" ]; then
+  echo "ok: artifact filename set matches (SKILL.md + artifact-structure.md)"
+else
+  err "artifact-contract drift: SKILL.md and artifact-structure.md list different artifact files"
+  echo "  only in SKILL.md:            $(comm -23 <(printf '%s\n' "$skill_arts") <(printf '%s\n' "$struct_arts") | tr '\n' ' ')"
+  echo "  only in artifact-structure:  $(comm -13 <(printf '%s\n' "$skill_arts") <(printf '%s\n' "$struct_arts") | tr '\n' ' ')"
+fi
 
 if [ "$fail" -eq 0 ]; then
   echo "skill consistency: all invariants hold"
