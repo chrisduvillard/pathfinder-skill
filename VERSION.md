@@ -2,7 +2,14 @@
 
 Generated: 2026-06-17
 
-Version: 2.9.2
+Version: 2.9.3
+
+Changes in v2.9.3:
+- Closed the Phase 4 candidate data-contract provenance gaps: every candidate field now either copies a named scout finding field or is explicitly derived, with the three synthesis-only fields (`impact`, `risk`, `confidence`) given documented derivation rules. Added an intent tally as the named source for the L0 screen's candidate/confirmed counts, named the L0 intent buckets as the consumer of the finding `type`, and disambiguated candidate `confidence` (from `evidence_grade`) from `goal-readiness` so the two are never collapsed.
+- Added release-hygiene CI guards to `.github/workflows/manifests.yml`: the build now fails when VERSION.md has more than one `Version:` line or lacks a `Changes in v<declared>:` changelog heading for the version it declares.
+- Extended `scripts/check-skill-consistency.sh` to assert the artifact-file contract (the `NN-*.md` and `*-scout.md` set) matches between `SKILL.md` and `references/artifact-structure.md`, folding the triplicated artifact list into the existing drift-guard.
+- Spec-hygiene nits: Phase 2 now maps each scout to its brief filename (documenting the `dx-` abbreviation); Phase 3 no longer instructs writing `03-synthesis.md` before Phase 4 creates it; the work-folder ignore guidance checks "already ignored" before adding a redundant local exclude; the Phase 6 confirmation screen now requires sanitizing every mirrored repo-derived line.
+- Added `.gitattributes` enforcing LF for `*.sh`/`*.yml` (with `* text=auto`) so the Linux-CI guard scripts are guaranteed LF regardless of the committer's platform, instead of relying on autocrlf behavior.
 
 Changes in v2.9.2:
 - Made the untrusted-data clause mandatory in the generated `/goal`: it is now a required-content item and a slot in the `/goal` shape (was conditional "when relevant" and absent from the required-content list), and it appears in every Good example. Mirrored across `SKILL.md` Phase 6 and `references/goal-best-practices.md` (template, checklist, examples), now aligned on one mandatory-clause set.

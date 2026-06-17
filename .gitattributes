@@ -1,0 +1,7 @@
+# Normalize line endings. Shell scripts and CI YAML run on Linux runners and
+# must be LF — a stray CR breaks the bash shebang and can corrupt string
+# comparisons in the consistency/release-hygiene guards.
+* text=auto
+*.sh  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

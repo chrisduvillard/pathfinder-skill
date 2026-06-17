@@ -2,10 +2,13 @@ name: manifests
 
 # Guards the machine-read and cross-file surfaces in this markdown-only skill:
 # (1) the four plugin/marketplace manifests must be valid JSON, and the version
-# declared in VERSION.md must match both plugin manifests; (2) SKILL.md and its
-# reference templates must not drift on shared invariants, and every reference
-# path SKILL.md cites must exist. Drift or a JSON typo otherwise ships silently
-# and only breaks at marketplace install time or in the agent's behavior.
+# declared in VERSION.md must match both plugin manifests; (2) VERSION.md release
+# hygiene: exactly one 'Version:' line and a 'Changes in v<version>:' changelog
+# entry for it; (3) SKILL.md and its reference templates must not drift on shared
+# invariants, every reference path SKILL.md cites must exist, and the artifact-file
+# contract must match across SKILL.md and artifact-structure.md. Drift or a JSON
+# typo otherwise ships silently and only breaks at marketplace install time or in
+# the agent's behavior.
 
 on:
   push:
@@ -38,12 +41,26 @@ jobs:
       - name: Check version consistency
         run: |
           set -uo pipefail
+          # Release hygiene: exactly one 'Version: X.Y.Z' line, so a stray second
+          # line can't make the parse below silently pick the wrong version.
+          vlines=$(grep -cE '^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+' VERSION.md || true)
+          if [ "$vlines" -ne 1 ]; then
+            echo "::error file=VERSION.md::expected exactly one 'Version: X.Y.Z' line, found $vlines"
+            exit 1
+          fi
           v=$(grep -oP 'Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)
           if [ -z "$v" ]; then
             echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
             exit 1
           fi
           echo "VERSION.md declares $v"
+          # Release hygiene: the declared version must have a changelog entry, so a
+          # version bump without a 'Changes in v<v>:' block fails instead of shipping.
+          if ! grep -qF "Changes in v$v:" VERSION.md; then
+            echo "::error file=VERSION.md::no 'Changes in v$v:' changelog heading for the declared version"
+            exit 1
+          fi
+          echo "ok: changelog heading present for v$v"
           fail=0
           for f in .claude-plugin/plugin.json .codex-plugin/plugin.json; do
             pv=$(jq -r '.version' "$f")
