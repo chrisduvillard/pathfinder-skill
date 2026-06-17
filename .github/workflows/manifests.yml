@@ -1,14 +1,16 @@
 name: manifests
 
 # Guards the machine-read and cross-file surfaces in this markdown-only skill:
-# (1) the four plugin/marketplace manifests must be valid JSON, and the version
-# declared in VERSION.md must match both plugin manifests; (2) VERSION.md release
-# hygiene: exactly one 'Version:' line and a 'Changes in v<version>:' changelog
-# entry for it; (3) SKILL.md and its reference templates must not drift on shared
-# invariants, every reference path SKILL.md cites must exist, and the artifact-file
-# contract must match across SKILL.md and artifact-structure.md. Drift or a JSON
-# typo otherwise ships silently and only breaks at marketplace install time or in
-# the agent's behavior.
+# (1) the four plugin/marketplace manifests must be valid JSON, the version
+# declared in VERSION.md must match both plugin manifests, and neither
+# marketplace.json may declare a version (plugin.json is the single source);
+# (2) VERSION.md release hygiene: exactly one 'Version:' line and a
+# 'Changes in v<version>:' changelog entry for it; (3) SKILL.md and its reference
+# templates must not drift on shared invariants, every reference path SKILL.md
+# cites must exist, the artifact-file contract must match across SKILL.md and
+# artifact-structure.md, and every skill markdown file must close every code fence
+# it opens. Drift or a JSON typo otherwise ships silently and only breaks at
+# marketplace install time or in the agent's behavior.
 
 on:
   push:
@@ -72,6 +74,27 @@ jobs:
             fi
           done
           if [ "$fail" -eq 0 ]; then echo "manifests consistent at $v"; fi
+          exit $fail
+
+      - name: Check marketplace version sourcing
+        run: |
+          set -uo pipefail
+          # plugin.json is the SINGLE source of truth for the plugin version.
+          # Claude Code resolves plugin.json's version before any marketplace-entry
+          # version, so declaring it in both lets a stale manifest silently mask the
+          # marketplace value (per the plugin-marketplaces docs). Neither
+          # marketplace.json may declare a version; both intentionally source it
+          # from plugin.json, and the Codex marketplace pins ref=main (rolling
+          # release: each commit is a new version). See VERSION.md.
+          fail=0
+          for f in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; do
+            if jq -e '(.version != null) or (any(.plugins[]?; .version != null))' "$f" >/dev/null; then
+              echo "::error file=$f::marketplace entry declares a version; plugin.json is the single version source — remove it"
+              fail=1
+            else
+              echo "ok: $f sources its version from plugin.json"
+            fi
+          done
           exit $fail
 
       - name: Check SKILL.md <-> reference-template consistency

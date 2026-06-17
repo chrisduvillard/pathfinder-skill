@@ -2,7 +2,23 @@
 
 Generated: 2026-06-17
 
-Version: 2.9.3
+Version: 2.9.4
+
+## Versioning & distribution
+
+The version above is the single source of truth. It is mirrored into
+`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, and CI enforces
+that all three match. The two `marketplace.json` files intentionally carry **no**
+version: Claude Code resolves a plugin's version from `plugin.json` first, so
+declaring it in a marketplace entry as well would let a stale manifest silently
+mask it (per the official plugin-marketplaces docs). CI fails if either
+marketplace file adds a version. The Codex marketplace pins `source.ref: main`
+deliberately — a rolling release in which each commit on `main` is the new
+version.
+
+Changes in v2.9.4:
+- Documented and CI-enforced the versioning/distribution model (BD-3): the two `marketplace.json` files must not declare a version (`plugin.json` is the single source Claude Code resolves first; a duplicate would silently mask it), and the Codex marketplace's `ref: main` is a deliberate rolling-release pin. A new `manifests.yml` step fails if either marketplace file adds a version.
+- Extended `scripts/check-skill-consistency.sh` with a markdown fence-balance check (TR-6): every skill markdown file (`SKILL.md` + `references/*.md`) must close every code fence (triple-backtick block) it opens, so an unterminated funnel/goal screen fails CI instead of shipping a broken render. (Reference-path existence was already guarded since v2.9.2.)
 
 Changes in v2.9.3:
 - Closed the Phase 4 candidate data-contract provenance gaps: every candidate field now either copies a named scout finding field or is explicitly derived, with the three synthesis-only fields (`impact`, `risk`, `confidence`) given documented derivation rules. Added an intent tally as the named source for the L0 screen's candidate/confirmed counts, named the L0 intent buckets as the consumer of the finding `type`, and disambiguated candidate `confidence` (from `evidence_grade`) from `goal-readiness` so the two are never collapsed.
