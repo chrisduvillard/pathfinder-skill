@@ -313,7 +313,7 @@ Create `03-synthesis.md` with:
 - Highest ROI opportunities, each linked to finding ids.
 - Recommended work tracks.
 - Verification commands discovered from manifests/configs/CI, with source, whether they require executing repo code, and the safest narrow command for a likely target.
-- Top 5 candidate implementation goals. Build each candidate from one or more scout findings (cite the finding ids). For each candidate include: measurable end state (reuse or merge the findings' `candidate_end_state`), exact location(s), observable symptom, likely files/folders, impact, effort, risk, verification commands, protected areas / blast radius, aggregate evidence_grade, confidence, and which scout owns it.
+- Top 5 candidate implementation goals. Build each candidate from one or more scout findings (cite the finding ids). For each candidate include: measurable end state (reuse or merge the findings' `candidate_end_state`), exact location(s), observable symptom, the finding `type` (defect/risk/opportunity/smell), likely files/folders, impact, effort, risk, verification commands, protected areas / blast radius, aggregate evidence_grade, confidence, and which scout owns it.
 - A per-domain surface index to feed the Explore from scratch drill-down: for each scout domain that has candidates, list the concrete surfaces from the scouts' surface maps, and under each surface the exact behavior/function/symptom (from finding `symptom` and `location`). This is the branching material the drill-down questions draw on for L2 and L3.
 - Areas that should be protected.
 - Unknowns that need user input, separated from confirmed findings.
@@ -452,6 +452,8 @@ Next: how aggressive should the fix be?
 
 `Goal-readiness confidence` is the agent's estimate of whether it can already write a measurable `/goal`. Use it for adaptive stopping (see below).
 
+Render this trail-and-confidence header before every level below (L0 through L4). The per-level example screens omit it only for brevity; it is shown each time, never skipped.
+
 #### L0. Intent
 
 Ask what kind of outcome the user wants. List only intents that have at least one real candidate, annotate each with its candidate count, and draw wording from reservoir A/B. Always include `Agent recommends` and the lateral moves.
@@ -508,9 +510,10 @@ Within the chosen surface, pin the exact behavior, function, or symptom. This is
 
 ```text
 Best target: <glyph> <exact behavior/function/symptom, e.g. empty-state crash in
-DashboardView.loadData when the payload is empty> (<evidence_grade>, <confidence>).
+DashboardView.loadData when the payload is empty> — <one-line evidence basis> (<evidence_grade>, <confidence>).
 1. Confirm this target
 2. Adjust it: describe the precise behavior in your own words (free-text escape)
+Agent recommends: 1 because <one-line reason the target is the right call from the findings>.
 Go back: return to the previous question.
 back to candidates: return to the ranked Top 5.   show the full map
 ```

@@ -1,8 +1,13 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-16
+Generated: 2026-06-17
 
-Version: 2.9.0
+Version: 2.9.1
+
+Changes in v2.9.1:
+- Fixed the Phase 5 L3 Target single-confirm screen to obey the skill's own universal rules: it now carries the mandatory `Agent recommends:` line and a one-line evidence basis, matching the multi-option variant (both were missing on the common high-confidence path). Mirrored in `references/question-funnel-template.md`.
+- Closed a Phase 5 Mode 2 spec/example gap: added an explicit note that the narrowing-trail + `Goal-readiness confidence` header is rendered before every level (L0–L4); the per-level example screens omit it only for brevity. Adaptive stopping depends on that signal. Mirrored in the template.
+- Carried the finding `type` (defect/risk/opportunity/smell) into the Phase 4 candidate field list so the Phase 5 funnel's intent annotations have an explicit upstream source (data-contract fix). Scoped to the schema field only; no L1 filtering rule added.
 
 Changes in v2.9.0:
 - Gave `show the full map` its own concrete browse screen: a Full surface map that lists every discovered surface grouped by scout domain, with evidence glyphs and finding counts, built from the per-domain surface index already in `03-synthesis.md` (no scout/synthesis change). Picking a surface jumps to the Target step (L3), or auto-confirms to Boundaries (L4) for a single-finding surface.

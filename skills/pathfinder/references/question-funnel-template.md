@@ -98,6 +98,8 @@ Goal-readiness confidence: high
 Next: how aggressive should the fix be?
 ```
 
+Render this header before every level (L0–L4); the per-level screens below omit it only for brevity, never because it is skipped.
+
 ### L0. Intent (only intents with candidates, annotated)
 
 ```text
@@ -145,9 +147,10 @@ back to candidates: ranked Top 5.   show the full map
 If one clear target dominates, confirm rather than manufacture a menu:
 
 ```text
-Best target: <glyph> <exact behavior/function/symptom> (<evidence_grade>, <confidence>).
+Best target: <glyph> <exact behavior/function/symptom> — <one-line basis> (<evidence_grade>, <confidence>).
 1. Confirm this target
 2. Adjust it: describe the precise behavior in your own words (free-text escape)
+Agent recommends: 1 because <one-line reason>.
 Go back: return to the previous question.
 back to candidates: ranked Top 5.   show the full map
 ```
