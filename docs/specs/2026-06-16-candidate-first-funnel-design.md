@@ -1,9 +1,12 @@
 # Candidate-first question funnel — design spec
 
 Date: 2026-06-16
-Status: approved (design); implementation pending
+Status: archived; completed and shipped in v2.8.0
 Scope: Phase 5 of the Pathfinder skill only
-Target version: 2.8.0
+Shipped version: 2.8.0
+
+> Archive note (2026-06-18): This design shipped in v2.8.0. See
+> `VERSION.md` -> `Changes in v2.8.0` for the release record.
 
 ## Problem
 

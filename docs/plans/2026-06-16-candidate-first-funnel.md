@@ -1,5 +1,10 @@
 # Candidate-first Question Funnel Implementation Plan
 
+> **Archive note (2026-06-18):** Completed and shipped in v2.8.0. See
+> `VERSION.md` -> `Changes in v2.8.0` for the release record. This plan is
+> retained as historical implementation detail; unchecked boxes below are not
+> active work items.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reorder Phase 5 so it leads with the ranked, evidence-graded Top 5 candidates (a presentation change), keep a grounded two-mode toggle, and add persistent lateral moves for freedom — across `SKILL.md`, the funnel template, and supporting docs.
