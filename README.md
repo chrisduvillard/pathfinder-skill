@@ -72,7 +72,7 @@ Pathfinder builds understanding from **actual code, tests, configs, routes, and 
 
 At step 4 you pick how it interviews you:
 
-- **Pick a move** (default): Pathfinder shows the ranked, evidence-graded Top 5 candidates and you pick one, then set boundaries. Fastest when a strong target stands out. (Alias: "express".)
+- **Pick a move** (default): Pathfinder shows the ranked, evidence-graded Top 5 candidates and you can pick one, pick several (`1,3,5`), or select all (`all`, `a`, `1-5`, `1,2,3,4,5`). Multi-select opens a grouping review, then saves the confirmed result as a numbered goal pack when more than one goal is needed. (Alias: "express".)
 - **Explore from scratch**: a guided drill-down from broad intent down to the exact file and behavior, one sharp question at a time. (Alias: "deep dive".) Every question suggests answers, names the agent's recommendation, and lets you go back, return to the ranked candidates, browse the full map, or describe your own.
 
 Either mode can open the **full surface map** — a browsable index of every surface the scouts found, not just the Top 5 — and both end the same way: Pathfinder shows the assembled `/goal` back to you as a labeled, line-by-line contract you can adjust before anything is saved or run.
@@ -91,7 +91,7 @@ Every run drops a clean, resumable trail inside the repo:
 ├── 03-synthesis.md            ranked next moves + risks
 ├── 04-question-funnel.md      the choices put to you
 ├── 05-user-answers.md         what you picked
-├── 06-goal-command.md         a ready-to-copy /goal
+├── 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
 ├── 07-run-log.md              progress if the goal is run
 └── 08-final-summary.md        what was explored, found, and decided
 ```

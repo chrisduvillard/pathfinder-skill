@@ -2,18 +2,18 @@
 
 Use after blind discovery, scout reports, synthesis, and the Top 5 candidate implementation goals.
 
-Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Both obey the same universal rules.
+Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
 ## Universal rules
 
 - Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options. Exception: the Full surface map browse screen lists every surface as an index, not a 3-to-6 menu; it still carries `Agent recommends:` and the escapes.
 - Always include an `Agent recommends:` line that names which listed option is the current best pick. It is a pointer to one of the options, never an extra numbered option.
-- Every option-bearing work-selection question (L0–L4 and Pick a move's candidate screen) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal execution-mode questions are exempt from both.
+- Every option-bearing work-selection question (L0-L4 and Pick a move's candidate screen) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal post-save execution choice are exempt from both.
 - Ground every option in actual findings, not generic categories.
 - Recognition-first: the first screen shows the ranked Top 5 or the full map, never an abstract category menu.
 - Two-channel freedom: every work-selection screen offers `show the full map` and `describe your own`; Explore mode also offers `back to candidates` at every level.
 - Evidence with options: each option shows its evidence grade (confirmed/inferred/suspected) and a one-line basis next to any confidence word.
-- Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. Save answers to `05-user-answers.md`.
+- Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. For Pick a move multi-select, record the raw selection input and grouping review options shown. Save answers to `05-user-answers.md`, including selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable `/goal`.
 
 ## Mode selection (ask once)
@@ -23,7 +23,7 @@ I mapped this repo and found <N> ranked candidates.
 Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
 
 How do you want to choose the work?
-1. Pick a move          show the ranked candidates, pick one   [recommended]
+1. Pick a move          show the ranked candidates, pick one or more   [recommended]
 2. Explore from scratch drill down by intent → area → surface, ignoring my ranking
 
 Agent recommends: <1 | 2> because <one-line reason from findings>.
@@ -34,26 +34,68 @@ Recommend Pick a move when one high-confidence target stands out; recommend Expl
 
 ## Mode 1: Pick a move (candidate-first, default)
 
-Show the ranked Top 5 from `03-synthesis.md` as evidence cards, then generate the goal.
+Show the ranked Top 5 from `03-synthesis.md` as evidence cards. The card must be understandable without reading hidden synthesis files: show the plain outcome/symptom, exact location, evidence grade and basis, likely fix shape, proof/checks, risk/protected areas, and grouping hint.
 
 ```text
 Top moves (impact ÷ effort; confirmed > inferred > suspected):
- 1. <symptom>   <location>
-    <glyph> <evidence_grade> — <one-line evidence>   confidence: <HIGH|MED|LOW>
-    suggested scope: <scope> · touches: <blast radius; PROTECTED flagged>
- 2. <symptom>   <location>
-    <glyph> <evidence_grade> — <evidence>   confidence: <...>
+ 1. Outcome: <plain-language symptom or result>
+    Location: <exact file:symbol/route/component>
+    Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <HIGH|MED|LOW>
+    Likely fix shape: <validation/refactor/test/etc.>
+    Proof/checks: <narrow verification commands; flag repo-code execution>
+    Risk/protected areas: <blast radius; PROTECTED flagged>
+    Grouping hint: <can group with ids because... / keep separate because...>
+ 2. Outcome: <plain-language symptom or result>
+    Location: <exact location>
+    Evidence: <glyph> <evidence_grade> — <basis>   confidence: <...>
+    Likely fix shape: <fix shape>
+    Proof/checks: <checks>
+    Risk/protected areas: <risk>
+    Grouping hint: <hint>
  ... up to 5 ...
 
 Agent recommends: <option n> because <reason>.
 
-Pick 1–5 — or go sideways:
+Pick a move:
+  • one: 1
+  • several: 1,3,5
+  • select all: all, a, 1-5, or 1,2,3,4,5
+
+Or go sideways:
   • narrow by area/intent → Explore from scratch (L0)
   • show the full map     → Full surface map (below)
   • None of these: describe your own   (free text)
 ```
 
-Glyphs: `✓` confirmed, `~` inferred, `?` suspected. `suggested scope` is derived from `blast_radius`/`risk`/protected areas, not a new field. Picking a number jumps straight to L4 (Boundaries).
+Glyphs: `✓` confirmed, `~` inferred, `?` suspected. Picking one number jumps straight to L4 (Boundaries).
+
+Pick a move input grammar:
+
+- Single select: `1` through `5`.
+- Partial multi-select: comma-separated candidate numbers such as `1,3,5`.
+- All aliases: `all`, `a`, `1-5`, and `1,2,3,4,5`. These all mean select all five Top moves.
+
+Any multi-select, including all aliases or manually selecting all five moves, opens the Selected moves grouping review before boundaries or goal generation. Recommend grouped goals by default when one measurable goal can cover the selected moves cleanly. Keep unrelated, risky, protected-area-heavy, low-confidence, or incompatible-verification moves separate.
+
+```text
+Selected moves: <ids and short outcomes>
+
+Recommended grouping review:
+  Goal 1: candidates <ids> — <shared surface/check/end state>
+    Rationale: <why one measurable goal can cover them>
+    Proof: <shared or compatible checks>
+  Goal 2: candidate <id> — kept separate
+    Rationale: <unrelated surface, protected area, risk, or incompatible proof>
+
+1. Accept recommended grouping and save a goal pack   [recommended when groups are coherent]
+2. Split into one goal per selected move
+3. Adjust selection: reply with numbers or all aliases
+4. Go back to Top moves
+
+Agent recommends: <1 | 2> because <one-line grouping rationale>.
+```
+
+Accepted grouping produces a numbered goal pack in `06-goal-command.md`; split produces one goal per selected move. Adjusting selection re-runs the grouping review. If the final selection has one move, return to the single-goal flow.
 
 Confidence-adaptive collapse — when one `high` candidate dominates, confirm instead of menu:
 
@@ -86,7 +128,7 @@ Group by scout domain; order by finding count then evidence grade. Picking a sur
 
 ## Mode 2: Explore from scratch
 
-One question per level. Hard cap of five levels (L0 to L4) before execution mode. Each level's options are conditioned on the previous answer and generated from the scout briefs.
+One question per level. Hard cap of five levels (L0 to L4) before Phase 6 goal confirmation and the post-save execution choice. Each level's options are conditioned on the previous answer and generated from the scout briefs.
 
 Scout backbone: Architecture, Frontend/Product, Backend/Data, Testing/Reliability, Developer Experience/Security.
 
@@ -177,11 +219,15 @@ Reply with edits, "accept agent recommendation", "go back", "back to candidates"
 - `Go back` re-presents the previous question without restarting the funnel.
 - `back to candidates` returns to the ranked Top 5 and `show the full map` opens the Full surface map browse screen, at any level, without restarting.
 
-## Execution mode (both modes)
+## Post-save execution choice (both modes)
 
-1. Show the final goal and wait.
-2. Save the goal, then ask before running.
-3. Save and run automatically if aligned and no separate execution approval is required.
+Show this only after the recognition-first contract is accepted and `06-goal-command.md` has been written.
+
+1. Show the saved goal or goal pack and wait.
+2. Keep it saved; do not run until I explicitly approve. [default]
+3. Run the saved goal now after showing the exact command. For a goal pack, ask which numbered goal to run first.
 4. Audit only.
 
-Default to option 2.
+Default to option 2. Do not recommend option 3 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run.
+
+For a goal pack, default remains save first and ask before running. If the user approves execution, run one numbered goal at a time unless the user explicitly asks to run all goals in the pack.

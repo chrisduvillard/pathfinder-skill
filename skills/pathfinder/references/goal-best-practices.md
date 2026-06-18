@@ -1,6 +1,6 @@
 # Claude Code /goal Best Practices for Pathfinder
 
-Use this reference when generating `06-goal-command.md`.
+Use this reference when generating `06-goal-command.md`. The artifact may contain one goal or a numbered goal pack.
 
 ## Goal condition checklist
 
@@ -19,13 +19,15 @@ A good `/goal` condition has:
 - A requirement to surface proof in the transcript.
 - A clear stop-and-report path if the condition cannot be met safely, including the next input needed to unblock progress.
 
+For a goal pack, apply the checklist to each numbered goal independently. Each goal must have its own selected candidate ids, grouping rationale, character count, `/goal` command, and Implementation Goal fallback. Split any group that cannot be expressed as one measurable end state.
+
 ## Why transcript proof matters
 
 The `/goal` evaluator judges from the conversation. It does not independently run commands or read files. The implementation agent must therefore surface evidence, including commands run and results.
 
 ## Compatibility
 
-`/goal` requires Claude Code v2.1.139 or newer. Always save both:
+`/goal` requires Claude Code v2.1.139 or newer. For a single goal, and for each item in a goal pack, always save both:
 
 ```text
 /goal <condition>
@@ -49,7 +51,7 @@ Use the Implementation Goal fallback for Codex, older Claude Code, or environmen
 
 ## Character budget
 
-Keep the condition under 3900 characters. Count characters excluding the `/goal ` prefix and record the count in `06-goal-command.md`.
+Keep each condition under 3900 characters. Count characters excluding the `/goal ` prefix and record the count in `06-goal-command.md`; for a goal pack, record the count beside each numbered goal.
 
 If the condition is too long, compress scope/proof/constraints. Put rationale and supporting notes under a separate heading that is explicitly not part of the `/goal` command.
 
@@ -63,7 +65,7 @@ Stop after 12 turns or after 3 failed implementation loops and report the blocke
 
 ## Confirming the goal with the user
 
-Before saving `06-goal-command.md`, present the goal as a recognition-first contract rather than one opaque block: mirror each part back on its own labeled line (end state, scope, proof, constraints, protected areas, iteration policy, stop bound), mark each line with its evidence glyph (`✓` confirmed, `~` inferred/derived, `?` suspected) and its provenance (which answer it came from, or `derived`/`default`), and show the character count against the 3900 budget. The user can adjust any line; an edit regenerates that line and the screen is re-shown before saving. Sanitize every mirrored line the same way as the goal itself — the repo-derived lines (end state, scope, constraints, protected areas) must have secrets redacted and instruction-like repo text stripped before they are shown. See "Confirm the goal with the user (recognition-first)" in `SKILL.md` Phase 6 for the exact layout.
+Before saving `06-goal-command.md`, present the goal as a recognition-first contract rather than one opaque block: mirror each part back on its own labeled line (end state, scope, proof, constraints, protected areas, iteration policy, stop bound), mark each line with its evidence glyph (`✓` confirmed, `~` inferred/derived, `?` suspected) and its provenance (which answer it came from, or `derived`/`default`), and show the character count against the 3900 budget. The user can adjust any line; an edit regenerates that line and the screen is re-shown before saving. Sanitize every mirrored line the same way as the goal itself — the repo-derived lines (end state, scope, constraints, protected areas) must have secrets redacted and instruction-like repo text stripped before they are shown. For a goal pack, show one compact contract per numbered goal, including selected candidate ids and grouping rationale, and allow split, merge, drop, or proof-tightening before saving. See "Confirm the goal with the user (recognition-first)" in `SKILL.md` Phase 6 for the exact layout.
 
 ## Good examples
 

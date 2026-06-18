@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-17
+Generated: 2026-06-18
 
-Version: 2.9.4
+Version: 2.10.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,14 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.10.0:
+- Made Pick a move bulk selection first-class: `all`, `a`, `1-5`, and `1,2,3,4,5` now select all Top moves, while partial multi-select such as `1,3,5` opens a selected-moves grouping review.
+- Expanded Top move cards to show plain outcome, exact location, evidence grade and basis, likely fix shape, proof/checks, protected-area risk, and grouping hints without requiring users to inspect hidden synthesis artifacts.
+- Added Phase 4 derived grouping notes for the Top 5 using only existing candidate data: shared files/surfaces, scout domain, verification commands, blast radius, protected areas, and goal-readiness.
+- Extended Phase 6 so multiple selected/grouped moves save a numbered goal pack in `06-goal-command.md`, with each group carrying its own `/goal`, Implementation Goal fallback, character count, selected candidate ids, and grouping rationale.
+- Updated execution wording so goal packs are saved first by default and run one goal at a time unless the user explicitly asks to run all goals in the pack.
+- Extended markdown drift checks for `goal pack`, `grouping review`, and `select all` terminology across `SKILL.md` and `references/question-funnel-template.md`.
 
 Changes in v2.9.4:
 - Documented and CI-enforced the versioning/distribution model (BD-3): the two `marketplace.json` files must not declare a version (`plugin.json` is the single source Claude Code resolves first; a duplicate would silently mask it), and the Codex marketplace's `ref: main` is a deliberate rolling-release pin. A new `manifests.yml` step fails if either marketplace file adds a version.

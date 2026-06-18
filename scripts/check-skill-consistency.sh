@@ -63,6 +63,9 @@ check_pair "None of these"        "$funnel" "free-text escape grammar"
 check_pair "back to candidates"   "$funnel" "back-to-candidates lateral move"
 check_pair "show the full map"    "$funnel" "show-the-full-map lateral move"
 check_pair "✓ confirmed"          "$funnel" "evidence glyph legend"
+check_pair "goal pack"            "$funnel" "goal-pack multi-select output"
+check_pair "grouping review"      "$funnel" "grouping-review bulk selection"
+check_pair "select all"           "$funnel" "select-all bulk grammar"
 
 # Phase 6 goal invariants (SKILL.md <-> goal-best-practices.md)
 check_pair "3900"            "$goal" "3900-char goal budget"
