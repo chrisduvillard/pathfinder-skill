@@ -23,7 +23,8 @@
 
 Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent.
 
-Already know what you want? Hand it a prompt instead — it researches just what that prompt touches and forges the same goal, faster.
+> [!TIP]
+> **Already know what you want?** Hand it a prompt instead — it researches just what that prompt touches and forges the same goal, faster. Ideal if you just want a prompt → loop (`/goal`) tool.
 
 No micro-managing exploration. No guessing where to start.
 
