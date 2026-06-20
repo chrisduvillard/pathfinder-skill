@@ -1,6 +1,6 @@
 {
   "name": "pathfinder",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "description": "Map an unfamiliar repository, choose the highest-value next move, and generate a bounded Claude Code /goal or fallback implementation goal.",
   "author": {
     "name": "Chris Duvillard",
@@ -26,7 +26,8 @@
     "defaultPrompt": [
       "Use the pathfinder skill on this repository. Start the full Pathfinder process.",
       "Map this codebase and propose the highest-value next move.",
-      "Generate a bounded /goal for the work we just scoped."
+      "Generate a bounded /goal for the work we just scoped.",
+      "Turn this prompt into a runnable /goal: <describe the work you want done>."
     ]
   }
 }

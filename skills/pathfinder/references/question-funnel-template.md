@@ -219,6 +219,25 @@ Reply with edits, "accept agent recommendation", "go back", "back to candidates"
 - `Go back` re-presents the previous question without restarting the funnel.
 - `back to candidates` returns to the ranked Top 5 and `show the full map` opens the Full surface map browse screen, at any level, without restarting.
 
+## Prompt-to-goal track (gap-driven clarifying funnel)
+
+This is the funnel for the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), used when the user supplies a prompt instead of asking Pathfinder to explore. It replaces the L0–L4 drill-down and does not run the five scouts or Top-5 ranking.
+
+The `/goal` best-practices checklist (`goal-best-practices.md`) is the rubric. Targeted, prompt-anchored research fills every item it can; then ask only about the checklist items still missing or ambiguous: measurable end state, scope, proof/checks, constraints, non-goals, protected areas, stop bound. These are gap-driven questions — ask nothing the research already settled, and if the prompt is already well-formed, skip straight to the Phase 6 recognition-first contract.
+
+Each gap question obeys the universal rules: 3 to 6 repo-grounded options, an `Agent recommends:` pointer line, and a `None of these, let me describe it` escape.
+
+```text
+The prompt is clear on the target, but the goal still needs a stop bound. How should the loop stop?
+1. After 10 turns or 3 failed implementation loops, then report the blocker and the next input needed   [recommended]
+2. After 15 turns or 3 failed loops, then report the blocker
+3. When the named tests pass, or after 8 turns
+Agent recommends: 1 because the change is small and localized to <surface>.
+None of these, let me describe it.
+```
+
+Record the gap questions in `04-question-funnel.md` and answers in `05-user-answers.md`, then continue to Phase 6 (recognition-first contract), Phase 7, and Phase 8 exactly as the exploration modes do.
+
 ## Post-save execution choice (both modes)
 
 Show this only after the recognition-first contract is accepted and `06-goal-command.md` has been written.

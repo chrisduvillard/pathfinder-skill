@@ -66,6 +66,8 @@ check_pair "✓ confirmed"          "$funnel" "evidence glyph legend"
 check_pair "goal pack"            "$funnel" "goal-pack multi-select output"
 check_pair "grouping review"      "$funnel" "grouping-review bulk selection"
 check_pair "select all"           "$funnel" "select-all bulk grammar"
+check_pair "prompt-to-goal"       "$funnel" "prompt-to-goal track"
+check_pair "gap-driven"           "$funnel" "gap-driven clarifying funnel"
 
 # Phase 6 goal invariants (SKILL.md <-> goal-best-practices.md)
 check_pair "3900"            "$goal" "3900-char goal budget"
