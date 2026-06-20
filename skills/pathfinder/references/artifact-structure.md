@@ -26,4 +26,6 @@ If a phase has not been reached yet, create a short placeholder rather than impl
 
 `06-goal-command.md` contains either one ready-to-copy `/goal` plus Implementation Goal fallback or a numbered goal pack, where each grouped goal has its own command, fallback, character count, selected candidate ids, and grouping rationale.
 
+In the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), the same numbered files are reused with track-appropriate content: `00-session.md` also records the verbatim user prompt and the routing decision; `01-blind-discovery.md` holds the targeted prompt-anchored research instead of a blind sweep; the `02-scout-briefs/` folder and `03-synthesis.md` are short placeholders because the scouts and Top-5 ranking do not run; and `04-question-funnel.md` / `05-user-answers.md` record the gap-driven clarifying questions and answers. `06-goal-command.md`, `07-run-log.md`, and `08-final-summary.md` are produced exactly as in the full-exploration track.
+
 Artifact folders should be ignored locally and should not be committed or pushed unless the user explicitly requests publication after review.

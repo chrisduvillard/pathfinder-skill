@@ -2,6 +2,8 @@
 
 Use this reference when generating `06-goal-command.md`. The artifact may contain one goal or a numbered goal pack.
 
+In the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), the checklist below is also the gap-driver: targeted research fills every item it can, and the clarifying questions ask only about the checklist items still missing or ambiguous.
+
 ## Goal condition checklist
 
 A good `/goal` condition has:

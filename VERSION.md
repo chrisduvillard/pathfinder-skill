@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-18
+Generated: 2026-06-20
 
-Version: 2.10.0
+Version: 2.11.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,11 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.11.0:
+- Added a prompt-to-goal track (Track B): when the user supplies a prompt to convert, Pathfinder does targeted, prompt-anchored research instead of the full blind discovery + five scouts + Top-5 ranking, asks only the `/goal`-checklist gaps research could not settle, and forges the same bounded `/goal` by reusing Phases 6–8. It is routed automatically on a prompt-bearing invocation, or via a one-time entry choice. The user's prompt is treated as a trusted instruction while repository content stays untrusted; protected-area gating and Phase 7 approval still apply.
+- Reused the existing numbered artifact contract for Track B (`00-session.md` records the verbatim prompt and routing decision; `01-blind-discovery.md` holds the prompt-anchored research; `02-scout-briefs/` and `03-synthesis.md` are placeholders; `04-question-funnel.md` / `05-user-answers.md` hold the gap-driven questions and answers), so no new artifact filenames were introduced and the artifact-contract drift check is unchanged.
+- Extended the markdown drift checks (`scripts/check-skill-consistency.sh`) for `prompt-to-goal` and `gap-driven` across `SKILL.md` and `references/question-funnel-template.md`.
 
 Changes in v2.10.0:
 - Made Pick a move bulk selection first-class: `all`, `a`, `1-5`, and `1,2,3,4,5` now select all Top moves, while partial multi-select such as `1,3,5` opens a selected-moves grouping review.

@@ -15,13 +15,15 @@
 <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-A78BFA?style=for-the-badge&labelColor=0F172A">
 </p>
 
-<p><b>Drop it on any unfamiliar repo. Get back the highest-value next move and a goal you can run.</b></p>
+<p><b>Drop it on any unfamiliar repo — or hand it a prompt. Either way, get back a bounded goal you can run.</b></p>
 
 </div>
 
 <br>
 
 Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent.
+
+Already know what you want? Hand it a prompt instead — it researches just what that prompt touches and forges the same goal, faster.
 
 No micro-managing exploration. No guessing where to start.
 
@@ -47,6 +49,9 @@ codex plugin add pathfinder@pathfinder
 
 > Or just say it in plain language:
 > **"Use the pathfinder skill on this repository. Start the full Pathfinder process."**
+>
+> Already have a task in mind? Skip the exploration and hand it a prompt:
+> **"Pathfinder, turn this into a /goal: &lt;the work you want done&gt;."**
 
 <br>
 
@@ -68,7 +73,7 @@ flowchart LR
     class E forge;
 ```
 
-Pathfinder builds understanding from **actual code, tests, configs, routes, and schemas** before it ever opens a README. Then it converts your decisions into one precise execution goal.
+That's the **full-exploration track**. Pathfinder builds understanding from **actual code, tests, configs, routes, and schemas** before it ever opens a README, then converts your decisions into one precise execution goal. (Already know the work? The *prompt-to-goal track* anchors on your prompt and jumps straight to forging the goal — see [Already know what you want?](#already-know-what-you-want) below.)
 
 At step 4 you pick how it interviews you:
 
@@ -76,6 +81,14 @@ At step 4 you pick how it interviews you:
 - **Explore from scratch**: a guided drill-down from broad intent down to the exact file and behavior, one sharp question at a time. (Alias: "deep dive".) Every question suggests answers, names the agent's recommendation, and lets you go back, return to the ranked candidates, browse the full map, or describe your own.
 
 Either mode can open the **full surface map** — a browsable index of every surface the scouts found, not just the Top 5 — and both end the same way: Pathfinder shows the assembled `/goal` back to you as a labeled, line-by-line contract you can adjust before anything is saved or run.
+
+### Already know what you want?
+
+Hand Pathfinder a **prompt** instead of asking it to explore. It does *targeted*, prompt-anchored research into just what your prompt touches, asks only the questions it still needs (measured against the `/goal` checklist), and forges the same bounded, verifiable `/goal` — skipping the full scout sweep and ranking. Same safe, saved, ready-to-run output; a faster path when the work is already decided.
+
+```text
+Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
+```
 
 <br>
 
