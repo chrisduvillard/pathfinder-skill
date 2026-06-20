@@ -74,6 +74,16 @@ check_pair "3900"            "$goal" "3900-char goal budget"
 check_pair "2.1.139"         "$goal" "Claude Code /goal version gate"
 check_pair "untrusted data"  "$goal" "untrusted-data clause"
 
+# (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
+#      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
+#      mirrored into the funnel template), so it cannot use check_pair. Assert it is
+#      present so silently dropping the routing screen fails CI like any other drift.
+if grep -qF -- "How should I help?" "$skill"; then
+  echo "ok: Track B entry-menu screen present in SKILL.md"
+else
+  err "SKILL.md is missing the Track B \"How should I help?\" entry-menu screen"
+fi
+
 # (3) Artifact-contract parity: the set of pathfinder artifact filenames
 #     (NN-*.md numbered files + *-scout.md briefs) must match between the
 #     canonical SKILL.md list and artifact-structure.md. A file renamed or added
