@@ -15,6 +15,12 @@
 <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-A78BFA?style=for-the-badge&labelColor=0F172A">
 </p>
 
+<p>
+<a href="https://github.com/chrisduvillard/pathfinder-skill/actions/workflows/manifests.yml"><img alt="Manifests workflow" src="https://github.com/chrisduvillard/pathfinder-skill/actions/workflows/manifests.yml/badge.svg"></a>
+<a href="https://github.com/chrisduvillard/pathfinder-skill/actions/workflows/codeql.yml"><img alt="CodeQL workflow" src="https://github.com/chrisduvillard/pathfinder-skill/actions/workflows/codeql.yml/badge.svg"></a>
+<a href="https://scorecard.dev/viewer/?uri=github.com/chrisduvillard/pathfinder-skill"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/chrisduvillard/pathfinder-skill/badge"></a>
+</p>
+
 <p><b>Drop it on any unfamiliar repo — or hand it a prompt. Either way, get back a bounded goal you can run.</b></p>
 
 </div>
@@ -154,6 +160,16 @@ Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex.
 ## 🔒 Safety
 
 Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
+
+## 🤝 Contributing and support
+
+Contributions are welcome when they keep Pathfinder safe, bounded, and easy to run on unfamiliar repositories. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), use the issue templates, and keep pull requests focused.
+
+For usage help, see [`SUPPORT.md`](SUPPORT.md). Please report vulnerabilities privately through [`SECURITY.md`](SECURITY.md), not in public issues.
+
+## 🧪 Project health
+
+This repository uses GitHub Actions for manifest/version consistency, CodeQL workflow scanning, OpenSSF Scorecard security-health checks, and dependency review. `VERSION.md` remains the version and changelog source of truth.
 
 <br>
 

@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible Pathfinder bug.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not include secrets, private repository
+        contents, tokens, customer data, or unredacted local paths.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+      placeholder: Pathfinder did X when I expected Y.
+    validations:
+      required: true
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      options:
+        - Claude Code plugin
+        - Codex plugin
+        - Manual skill copy
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Pathfinder version
+      placeholder: "2.11.0"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use a minimal, sanitized reproduction.
+      placeholder: |
+        1. Install with ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or excerpts
+      description: Paste only redacted, minimal logs.
+      render: text

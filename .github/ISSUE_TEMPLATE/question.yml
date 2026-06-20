@@ -1,0 +1,29 @@
+name: Question
+description: Ask a usage or installation question.
+title: "[Question]: "
+body:
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Installation
+        - Claude Code plugin usage
+        - Codex plugin usage
+        - Manual skill copy
+        - Pathfinder behavior
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Include only sanitized details.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      placeholder: Links or commands from README.md / README-INSTALL.md.
