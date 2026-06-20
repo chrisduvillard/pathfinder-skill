@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a focused improvement to Pathfinder.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem would this solve?
+      placeholder: When using Pathfinder, I need...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful version of the change.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: compatibility
+    attributes:
+      label: Compatibility
+      options:
+        - label: This can be done without changing the public invocation syntax.
+        - label: This can be done without changing plugin manifest schemas.
+        - label: This can be done without weakening the safety model.

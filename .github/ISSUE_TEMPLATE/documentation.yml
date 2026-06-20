@@ -1,0 +1,22 @@
+name: Documentation issue
+description: Report unclear, stale, or missing documentation.
+title: "[Docs]: "
+body:
+  - type: input
+    id: page
+    attributes:
+      label: File or section
+      placeholder: README.md, README-INSTALL.md, VERSION.md, SKILL.md
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is unclear or wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording
+      description: Optional. Keep examples sanitized.

@@ -1,0 +1,11 @@
+# Require maintainer review for all repository changes.
+* @chrisduvillard
+
+# Keep governance, workflow, and plugin distribution changes explicitly owned.
+/.github/ @chrisduvillard
+/.agents/ @chrisduvillard
+/.claude-plugin/ @chrisduvillard
+/.codex-plugin/ @chrisduvillard
+/scripts/ @chrisduvillard
+/skills/pathfinder/ @chrisduvillard
+/SECURITY.md @chrisduvillard

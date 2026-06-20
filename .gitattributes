@@ -2,6 +2,9 @@
 # must be LF — a stray CR breaks the bash shebang and can corrupt string
 # comparisons in the consistency/release-hygiene guards.
 * text=auto
+.gitattributes text eol=lf
+.github/CODEOWNERS text eol=lf
 *.sh  text eol=lf
+*.md  text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf

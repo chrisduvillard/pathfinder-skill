@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/chrisduvillard/pathfinder-skill/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Installation guide
+    url: https://github.com/chrisduvillard/pathfinder-skill/blob/main/README-INSTALL.md
+    about: Check the install notes before opening an installation question.
