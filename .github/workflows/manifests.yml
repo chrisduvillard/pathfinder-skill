@@ -14,7 +14,15 @@ name: manifests
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+# (DX-3) Scope push to main and de-duplicate runs: a feature-branch push with an open
+# PR otherwise triggers both a push and a pull_request run, and rapid pushes stack
+# instead of superseding. Cancel in-progress runs for the same ref.
+concurrency:
+  group: manifests-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -54,7 +62,10 @@ jobs:
             echo "::error file=VERSION.md::expected exactly one 'Version: X.Y.Z' line, found $vlines"
             exit 1
           fi
-          v=$(grep -oP 'Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)
+          # (TR-4) Anchored, >=1-space regex — identical to the count above and to
+          # release.yml — so all three resolve the same version (the old unanchored
+          # '\s*' parse could latch a different mid-line 'Version:' than the count).
+          v=$(grep -oP '^Version:\s+\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)
           if [ -z "$v" ]; then
             echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
             exit 1
@@ -92,7 +103,7 @@ jobs:
           # release: each commit is a new version). See VERSION.md.
           fail=0
           for f in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; do
-            if jq -e '(.version != null) or (any(.plugins[]?; .version != null))' "$f" >/dev/null; then
+            if jq -e '(.version != null) or (any(.plugins[]?; .version != null)) or (any(.plugins[]?.source?; (.version? != null)))' "$f" >/dev/null; then
               echo "::error file=$f::marketplace entry declares a version; plugin.json is the single version source — remove it"
               fail=1
             else
