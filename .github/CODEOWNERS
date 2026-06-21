@@ -9,3 +9,6 @@
 /scripts/ @chrisduvillard
 /skills/pathfinder/ @chrisduvillard
 /SECURITY.md @chrisduvillard
+# VERSION.md drives the auto-release (release.yml); .gitattributes guards CI line endings.
+/VERSION.md @chrisduvillard
+/.gitattributes @chrisduvillard
