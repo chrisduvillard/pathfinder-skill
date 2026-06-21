@@ -8,3 +8,6 @@
 *.md  text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+# JSON manifests are parsed by jq/awk on the Linux CI runners — pin them to LF too
+# (DX-4), matching every other CI-consumed type, instead of relying on text=auto alone.
+*.json text eol=lf
