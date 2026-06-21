@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-20
+Generated: 2026-06-21
 
-Version: 2.11.0
+Version: 2.12.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,11 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.12.0:
+- Hardened `scripts/check-skill-consistency.sh` so the drift it exists to catch fails CI instead of shipping green: the artifact-filename parity check now covers the `02-scout-briefs/` directory slot (TR-1); the mandatory untrusted-data `/goal` clause is asserted by a clause-unique phrase instead of a bare substring that survived in unrelated trust-boundary prose (TR-2); code-fence validation tracks open/close state and asserts the goal-pack's 4-backtick wrapper instead of counting parity, which was blind to a 4→3 downgrade (TR-3); and previously un-mirrored shared `SKILL.md`↔`question-funnel-template.md` invariants (the select-all alias grammar, `deep dive`, `Goal-readiness confidence`, `Audit only`) are now guarded (TR-6).
+- Closed Phase 4/5/6 self-conformance and provenance gaps in `SKILL.md`, mirrored in the references: the recognition-first goal contract gains a Non-goals row and honest provenance tags for End state and Constraints (ARCH-1/2/3); the confidence-adaptive collapse names its goal-readiness trigger, labels the card confidence, and restores the `Agent recommends … because` rationale (ARCH-4, FP-1); the selected-moves grouping review gains the universal `None of these, let me describe it` escape and the escape rule enumerates it (FP-3); the Pick a move escapes are flattened to match the L0–L4 style (FP-4); the `back to candidates` wording is unified across `SKILL.md` and the funnel template (FP-5); and Phase 4 copies `severity` so `impact`'s input is named, ranks L1 by impact ÷ effort like Mode 1, and makes the type×domain→L0-intent mapping deterministic (BD-1/BD-2/BD-4).
+- Made the release/CI workflows fail loudly and closed their guard gaps: a failed `gh release create` now fails the `release.yml` step instead of being masked by the trailing success echo under `set -uo pipefail` (DX-1); version parsing is unified on one anchored regex across the `manifests.yml` count/parse and the `release.yml` parse so they cannot resolve different versions (TR-4); the marketplace version-absence `jq` check also rejects a version nested under `.plugins[].source` (TR-5); and `manifests.yml` scopes its `push` trigger to `main` and adds a `concurrency` group with cancel-in-progress (DX-3).
 
 Changes in v2.11.0:
 - Added a prompt-to-goal track (Track B): when the user supplies a prompt to convert, Pathfinder does targeted, prompt-anchored research instead of the full blind discovery + five scouts + Top-5 ranking, asks only the `/goal`-checklist gaps research could not settle, and forges the same bounded `/goal` by reusing Phases 6–8. It is routed automatically on a prompt-bearing invocation, or via a one-time entry choice. The user's prompt is treated as a trusted instruction while repository content stays untrusted; protected-area gating and Phase 7 approval still apply.
