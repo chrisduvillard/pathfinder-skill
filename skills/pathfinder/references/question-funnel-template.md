@@ -101,7 +101,7 @@ Confidence-adaptive collapse — when one goal-readiness `high` candidate domina
 ```text
 One target dominates (selected on goal-readiness `high`): <symptom> — <location> (<evidence_grade>, confidence: HIGH).
 1. Confirm it and set boundaries
-2. See the other <N> candidates
+2. See the other <N> candidates (back to the ranked Top 5)
 Agent recommends: 1 because this is the single goal-ready, high-confidence target.
 None of these: describe your own.   show the full map
 ```

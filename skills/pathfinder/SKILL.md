@@ -369,7 +369,7 @@ Purpose:
 
 Do not let docs override actual code unless verified.
 
-Hold any doc/code mismatch as a note to fold into `03-synthesis.md` when Phase 4 assembles it. Phase 4 creates that file, so Phase 3 does not write it yet; keep the mismatch notes in scratch (or the scout briefs) until then.
+Hold any doc/code mismatch as a note to fold into `03-synthesis.md` when Phase 4 assembles it. Phase 4 fills that file (a placeholder for it already exists from session setup), so Phase 3 does not write synthesis content yet; keep the mismatch notes in scratch (or the scout briefs) until then.
 
 ## Phase 4: Synthesis
 
@@ -520,7 +520,7 @@ Confidence-adaptive collapse: when exactly one candidate is goal-readiness `high
 One target clearly dominates (selected on goal-readiness `high`):
 <symptom> — <location> (<evidence_grade>, confidence: HIGH).
 1. Confirm it and set boundaries
-2. See the other <N> candidates
+2. See the other <N> candidates (back to the ranked Top 5)
 Agent recommends: 1 because this is the single goal-ready, high-confidence target.
 None of these: describe your own.   show the full map
 ```
