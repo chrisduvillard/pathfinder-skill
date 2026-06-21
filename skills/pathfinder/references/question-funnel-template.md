@@ -8,7 +8,7 @@ Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, 
 
 - Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options. Exception: the Full surface map browse screen lists every surface as an index, not a 3-to-6 menu; it still carries `Agent recommends:` and the escapes.
 - Always include an `Agent recommends:` line that names which listed option is the current best pick. It is a pointer to one of the options, never an extra numbered option.
-- Every option-bearing work-selection question (L0-L4 and Pick a move's candidate screen) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal post-save execution choice are exempt from both.
+- Every option-bearing work-selection question (L0-L4, Pick a move's candidate screen, and the selected-moves grouping review) includes a `None of these, let me describe it` escape; every drill-down question after the first (L1 onward) also includes `Go back`. The one-time mode-selection and terminal post-save execution choice are exempt from both.
 - Ground every option in actual findings, not generic categories.
 - Recognition-first: the first screen shows the ranked Top 5 or the full map, never an abstract category menu.
 - Two-channel freedom: every work-selection screen offers `show the full map` and `describe your own`; Explore mode also offers `back to candidates` at every level.
@@ -61,10 +61,8 @@ Pick a move:
   • several: 1,3,5
   • select all: all, a, 1-5, or 1,2,3,4,5
 
-Or go sideways:
-  • narrow by area/intent → Explore from scratch (L0)
-  • show the full map     → Full surface map (below)
-  • None of these: describe your own   (free text)
+narrow by area/intent: switch to Explore from scratch (L0)
+None of these: describe your own (free text)   show the full map
 ```
 
 Glyphs: `✓` confirmed, `~` inferred, `?` suspected. Picking one number jumps straight to L4 (Boundaries).
@@ -93,17 +91,18 @@ Recommended grouping review:
 4. Go back to Top moves
 
 Agent recommends: <1 | 2> because <one-line grouping rationale>.
+None of these, let me describe it: describe the grouping you want in free text.
 ```
 
 Accepted grouping produces a numbered goal pack in `06-goal-command.md`; split produces one goal per selected move. Adjusting selection re-runs the grouping review. If the final selection has one move, return to the single-goal flow.
 
-Confidence-adaptive collapse — when one `high` candidate dominates, confirm instead of menu:
+Confidence-adaptive collapse — when one goal-readiness `high` candidate dominates, confirm instead of menu:
 
 ```text
-One target dominates: <symptom> — <location> (<evidence_grade>, HIGH).
+One target dominates (selected on goal-readiness `high`): <symptom> — <location> (<evidence_grade>, confidence: HIGH).
 1. Confirm it and set boundaries
 2. See the other <N> candidates
-Agent recommends: 1.
+Agent recommends: 1 because this is the single goal-ready, high-confidence target.
 None of these: describe your own.   show the full map
 ```
 
@@ -167,7 +166,7 @@ Given "<intent>", the strongest candidates (glyph = evidence grade: ✓ confirme
 Agent recommends: <option n, highest-confidence candidate> because <reason>.
 None of these: describe the area.
 Go back: return to the previous question.
-back to candidates: ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map
 ```
 
 ### L2. Surface (concrete surfaces from the repo)
@@ -181,7 +180,7 @@ Within <domain>, which surface?
 Agent recommends: <option n, best surface> because <reason>.
 None of these: name the file/area.
 Go back: return to the previous question.
-back to candidates: ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map
 ```
 
 ### L3. Target (exact behavior/function/symptom)
@@ -194,7 +193,7 @@ Best target: <glyph> <exact behavior/function/symptom> — <one-line basis> (<ev
 2. None of these: describe the precise behavior in your own words
 Agent recommends: 1 because <one-line reason>.
 Go back: return to the previous question.
-back to candidates: ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map
 ```
 
 Otherwise offer numbered targets plus `Agent recommends` and the escapes.
