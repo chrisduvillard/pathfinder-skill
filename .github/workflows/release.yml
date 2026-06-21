@@ -43,7 +43,7 @@ jobs:
 
           # Single 'Version: X.Y.Z' line is enforced by manifests.yml, so head -1
           # is safe here.
-          version="$(grep -oP '^Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)"
+          version="$(grep -oP '^Version:\s+\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)"
           if [ -z "${version:-}" ]; then
             echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
             exit 1
@@ -70,8 +70,15 @@ jobs:
             printf 'Full changelog: [`VERSION.md`](https://github.com/%s/blob/main/VERSION.md).\n' "$REPO"
           } > release-notes.md
 
-          gh release create "$tag" \
+          # (DX-1) The run block uses `set -uo pipefail` (no -e), so a failed
+          # `gh release create` would otherwise fall through to the success echo and
+          # the step would go green without cutting the release. Check its exit code so
+          # a failure fails the step.
+          if ! gh release create "$tag" \
             --target "$COMMIT_SHA" \
             --title "Pathfinder $tag" \
-            --notes-file release-notes.md
+            --notes-file release-notes.md; then
+            echo "::error file=VERSION.md::gh release create failed for $tag — no release/tag was cut"
+            exit 1
+          fi
           echo "Created release $tag at $COMMIT_SHA"
