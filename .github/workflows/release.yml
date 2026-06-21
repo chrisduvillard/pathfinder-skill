@@ -1,0 +1,77 @@
+name: release
+
+# Auto-cut a GitHub Release + tag when VERSION.md declares a new version on main.
+#
+# VERSION.md is the single source of truth for the version (see manifests.yml).
+# When its version changes to one with no existing tag, this creates tag
+# v<version> at the merged commit and a release whose body is the matching
+# "Changes in v<version>:" changelog block. It is idempotent: if the tag/release
+# already exists (e.g. a changelog wording fix with no version bump), it does
+# nothing. Marketplace installs still resolve from plugin.json on main (rolling
+# release); this only keeps the human-facing Releases page in sync.
+
+on:
+  push:
+    branches: [main]
+    paths: ["VERSION.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: cut release from VERSION.md
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the tag and the release
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Create release if VERSION.md declares a new version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+
+          # Single 'Version: X.Y.Z' line is enforced by manifests.yml, so head -1
+          # is safe here.
+          version="$(grep -oP '^Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)"
+          if [ -z "${version:-}" ]; then
+            echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
+            exit 1
+          fi
+          tag="v$version"
+
+          # Idempotent: do nothing if this version was already released (e.g. the
+          # push only edited the changelog wording, not the version).
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists — nothing to do."
+            exit 0
+          fi
+
+          # Release notes = the 'Changes in v<version>:' block from VERSION.md, up
+          # to the next 'Changes in v' heading.
+          notes="$(awk -v hdr="Changes in v$version:" \
+            'index($0,hdr)==1{g=1;next} g&&/^Changes in v[0-9]/{exit} g{print}' \
+            VERSION.md | sed '/^[[:space:]]*$/d')"
+          if [ -z "$notes" ]; then
+            notes="Release $tag."
+          fi
+          {
+            printf '%s\n\n' "$notes"
+            printf 'Full changelog: [`VERSION.md`](https://github.com/%s/blob/main/VERSION.md).\n' "$REPO"
+          } > release-notes.md
+
+          gh release create "$tag" \
+            --target "$COMMIT_SHA" \
+            --title "Pathfinder $tag" \
+            --notes-file release-notes.md
+          echo "Created release $tag at $COMMIT_SHA"
