@@ -35,82 +35,12 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Validate manifest JSON
-        run: |
-          set -uo pipefail
-          fail=0
-          for f in .claude-plugin/plugin.json \
-                   .codex-plugin/plugin.json \
-                   .claude-plugin/marketplace.json \
-                   .agents/plugins/marketplace.json; do
-            if jq empty "$f" 2>/dev/null; then
-              echo "ok: $f is valid JSON"
-            else
-              echo "::error file=$f::invalid JSON (fix before merge)"
-              fail=1
-            fi
-          done
-          exit $fail
-
-      - name: Check version consistency
-        run: |
-          set -uo pipefail
-          # Release hygiene: exactly one 'Version: X.Y.Z' line, so a stray second
-          # line can't make the parse below silently pick the wrong version.
-          vlines=$(grep -cE '^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+' VERSION.md || true)
-          if [ "$vlines" -ne 1 ]; then
-            echo "::error file=VERSION.md::expected exactly one 'Version: X.Y.Z' line, found $vlines"
-            exit 1
-          fi
-          # (TR-4) Anchored, >=1-space regex — identical to the count above and to
-          # release.yml — so all three resolve the same version (the old unanchored
-          # '\s*' parse could latch a different mid-line 'Version:' than the count).
-          v=$(grep -oP '^Version:\s+\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.md | head -1)
-          if [ -z "$v" ]; then
-            echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
-            exit 1
-          fi
-          echo "VERSION.md declares $v"
-          # Release hygiene: the declared version must have a changelog entry, so a
-          # version bump without a 'Changes in v<v>:' block fails instead of shipping.
-          if ! grep -qF "Changes in v$v:" VERSION.md; then
-            echo "::error file=VERSION.md::no 'Changes in v$v:' changelog heading for the declared version"
-            exit 1
-          fi
-          echo "ok: changelog heading present for v$v"
-          fail=0
-          for f in .claude-plugin/plugin.json .codex-plugin/plugin.json; do
-            pv=$(jq -r '.version' "$f")
-            if [ "$pv" = "$v" ]; then
-              echo "ok: $f = $pv"
-            else
-              echo "::error file=$f::version \"$pv\" != VERSION.md \"$v\""
-              fail=1
-            fi
-          done
-          if [ "$fail" -eq 0 ]; then echo "manifests consistent at $v"; fi
-          exit $fail
-
-      - name: Check marketplace version sourcing
-        run: |
-          set -uo pipefail
-          # plugin.json is the SINGLE source of truth for the plugin version.
-          # Claude Code resolves plugin.json's version before any marketplace-entry
-          # version, so declaring it in both lets a stale manifest silently mask the
-          # marketplace value (per the plugin-marketplaces docs). Neither
-          # marketplace.json may declare a version; both intentionally source it
-          # from plugin.json, and the Codex marketplace pins ref=main (rolling
-          # release: each commit is a new version). See VERSION.md.
-          fail=0
-          for f in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; do
-            if jq -e '(.version != null) or (any(.plugins[]?; .version != null)) or (any(.plugins[]?.source?; (.version? != null)))' "$f" >/dev/null; then
-              echo "::error file=$f::marketplace entry declares a version; plugin.json is the single version source — remove it"
-              fail=1
-            else
-              echo "ok: $f sources its version from plugin.json"
-            fi
-          done
-          exit $fail
+      # (DX-2) All four manifests + VERSION.md hygiene + version parity + marketplace
+      # version-absence are checked by one script that CONTRIBUTING runs too, so a
+      # contributor reproduces every failure locally before pushing (these checks used
+      # to live only inline here).
+      - name: Manifest + version consistency
+        run: bash scripts/check-manifests.sh
 
       - name: Check SKILL.md <-> reference-template consistency
         run: bash scripts/check-skill-consistency.sh
