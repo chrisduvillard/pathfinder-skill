@@ -2,7 +2,7 @@
 
 Generated: 2026-06-21
 
-Version: 2.12.0
+Version: 2.13.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,12 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.13.0:
+- Pinned `*.json` to LF in `.gitattributes` so the JSON manifests parsed by jq/awk on the Linux CI runners get the same explicit LF guarantee as every other CI-consumed type instead of relying on `text=auto` alone (DX-4), and added explicit CODEOWNERS rules for `VERSION.md` (auto-publishes releases) and `.gitattributes` (guards CI line endings) (DX-5).
+- Extracted the manifest JSON-validity, version-parity, marketplace-version-absence, and VERSION.md-hygiene checks into `scripts/check-manifests.sh`, now run by both `.github/workflows/manifests.yml` and `CONTRIBUTING.md`, so contributors reproduce every version-drift failure locally before pushing instead of after (DX-2).
+- Reconciled the Phase 3 wording that called `03-synthesis.md` a file Phase 4 "creates" with the placeholder-first model — it now "fills" the placeholder created at session setup (ARCH-6) — and labeled the confidence-adaptive collapse's second option as the path back to the ranked Top 5 (FP-2).
+- Documented two intentional designs in `CONTRIBUTING.md` so they are not "fixed" into breakage: marketplace `category` casing is per-platform (Claude lowercase, Codex title-case) and must not be unified (BD-3); the `references/*.md` files deliberately mirror the `SKILL.md` Phase 5/6 screens for on-demand loading and the mirror is enforced by `scripts/check-skill-consistency.sh` (ARCH-5).
 
 Changes in v2.12.0:
 - Hardened `scripts/check-skill-consistency.sh` so the drift it exists to catch fails CI instead of shipping green: the artifact-filename parity check now covers the `02-scout-briefs/` directory slot (TR-1); the mandatory untrusted-data `/goal` clause is asserted by a clause-unique phrase instead of a bare substring that survived in unrelated trust-boundary prose (TR-2); code-fence validation tracks open/close state and asserts the goal-pack's 4-backtick wrapper instead of counting parity, which was blind to a 4→3 downgrade (TR-3); and previously un-mirrored shared `SKILL.md`↔`question-funnel-template.md` invariants (the select-all alias grammar, `deep dive`, `Goal-readiness confidence`, `Audit only`) are now guarded (TR-6).
