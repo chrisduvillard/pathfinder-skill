@@ -16,27 +16,17 @@ unfamiliar repositories.
 
 ## Before opening a pull request
 
-Run the local checks:
+Run the local checks — these run the same logic CI does, so green locally means green in CI:
 
 ```bash
-bash scripts/check-skill-consistency.sh
-git diff --check
+bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
+bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
+git diff --check                          # trailing whitespace / conflict markers
 ```
 
-Validate the JSON manifests:
-
-```powershell
-$files = @(
-  ".claude-plugin/plugin.json",
-  ".codex-plugin/plugin.json",
-  ".claude-plugin/marketplace.json",
-  ".agents/plugins/marketplace.json"
-)
-foreach ($f in $files) {
-  Get-Content -Raw $f | ConvertFrom-Json | Out-Null
-  Write-Output "ok: $f"
-}
-```
+`scripts/check-manifests.sh` is the same script `.github/workflows/manifests.yml` runs, so it
+catches the most common mistake — bumping `VERSION.md` without mirroring both `plugin.json`
+files — before you push, not after.
 
 ## Change guidelines
 
@@ -44,9 +34,16 @@ foreach ($f in $files) {
   explains a breaking change.
 - Do not change the skill invocation syntax, manifest schema, or `/goal`
   contract casually.
+- Marketplace `category` casing is per-platform and must not be "unified":
+  Claude Code marketplaces use lowercase (`productivity`), Codex manifests use
+  title-case (`Productivity`). Changing either to match the other breaks that
+  platform's listing.
 - Keep `VERSION.md` as the version and changelog source of truth.
-- Update both `SKILL.md` and the relevant `references/*.md` file when changing
-  mirrored instructions.
+- The `references/*.md` files intentionally mirror the Phase 5/6 screens and rules
+  from `SKILL.md` so each is useful when loaded on its own; the duplication is
+  deliberate and enforced by `scripts/check-skill-consistency.sh`. When you change a
+  mirrored instruction, update both `SKILL.md` and the relevant `references/*.md`
+  file, or CI will fail.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the
