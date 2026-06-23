@@ -103,7 +103,7 @@ fi
 #     renamed or added in one but not the other is the same drift class as the invariants
 #     above. (TR-1) The middle alternative captures the 02-scout-briefs/ directory slot,
 #     which has no .md extension and was previously invisible to this check.
-art_re='[0-9]{2}-[a-z-]+\.md|[0-9]{2}-[a-z-]+/|[a-z-]+-scout\.md'
+art_re='[0-9]{2}[a-z]?-[a-z-]+\.md|[0-9]{2}-[a-z-]+/|[a-z-]+-scout\.md'
 skill_arts="$(grep -oE "$art_re" "$skill" | sort -u)"
 struct_arts="$(grep -oE "$art_re" "$arts" | sort -u)"
 if [ "$skill_arts" = "$struct_arts" ]; then

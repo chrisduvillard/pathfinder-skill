@@ -125,6 +125,7 @@ Required files:
   testing-reliability-scout.md
   dx-security-scout.md
 03-synthesis.md
+03b-verification.md
 04-question-funnel.md
 05-user-answers.md
 06-goal-command.md
@@ -134,7 +135,7 @@ Required files:
 
 If the platform cannot create folders immediately, first describe the intended folder and create it as soon as file writing is available.
 
-If a phase has not yet been reached, create a short placeholder in the corresponding artifact, for example “not answered yet,” “goal not generated yet,” or “goal not run.” This makes interrupted runs resumable without implying completion.
+If a phase has not yet been reached, create a short placeholder in the corresponding artifact, for example “not answered yet,” “verification not run yet,” “goal not generated yet,” or “goal not run.” This makes interrupted runs resumable without implying completion.
 
 ## Phase 0: Session setup
 
@@ -192,7 +193,7 @@ Record the verbatim prompt and the routing decision in `00-session.md`. Then res
 - Identify the governing tests, the verification commands (test/typecheck/lint/build) from manifests or CI, and any constraints or protected areas the prompt would touch (auth, payments, schema/migrations, public APIs, data contracts).
 - Note any conflict between the prompt and the code — a named thing that does not exist, or a contradiction — as evidence to reconcile with the user, not as an instruction that overrides the prompt.
 
-Write this to `01-blind-discovery.md` (the same slot the full-exploration track uses for discovery), noting at the top that it holds targeted prompt-anchored research, not a blind sweep. Leave `02-scout-briefs/` and `03-synthesis.md` as short placeholders; the scouts and Top-5 ranking do not run in this track.
+Write this to `01-blind-discovery.md` (the same slot the full-exploration track uses for discovery), noting at the top that it holds targeted prompt-anchored research, not a blind sweep. Leave `02-scout-briefs/`, `03-synthesis.md`, and `03b-verification.md` as short placeholders; the scouts, Top-5 ranking, and Phase 4b verification do not run in this track.
 
 ### Gap-driven clarification
 
