@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-21
+Generated: 2026-06-23
 
-Version: 2.13.0
+Version: 2.14.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,10 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.14.0:
+- Added Phase 4b: an independent, adversarial verification pass over the Top 5 between synthesis and the funnel. A blind three-verifier panel (grounding / grade-justification / measurability lenses) re-reads each candidate's cited code; grades aggregate by median-of-ceilings and a destructive reject needs a 2-of-3 majority with an adjudication re-read, so one hallucinating verifier cannot quarantine a real candidate. Verdicts downgrade grades, re-rank, and quarantine fabrications into a visible "Rejected by verification" block, refilling from re-verified runner-ups; the intent tally and surface index are re-emitted so L0 and the full map never read stale counts. Results surface as a `Verified:` field across the Phase 5 screens and as display-only provenance in the Phase 6 contract (never inside the generated `/goal`).
+- Recorded the new `03b-verification.md` artifact (placeholder in Track B), its lifecycle header and resumable verdict log, and read-only verifier safety (untrusted-data restatement, injection fail-safe to reject, secret/protected-file redaction, no command execution). Extended `scripts/check-skill-consistency.sh` to guard the new artifact filename and the `Verified:` / `Rejected by verification` / Lens-3 mirror invariants across `SKILL.md`, `question-funnel-template.md`, and `goal-best-practices.md`.
 
 Changes in v2.13.0:
 - Pinned `*.json` to LF in `.gitattributes` so the JSON manifests parsed by jq/awk on the Linux CI runners get the same explicit LF guarantee as every other CI-consumed type instead of relying on `text=auto` alone (DX-4), and added explicit CODEOWNERS rules for `VERSION.md` (auto-publishes releases) and `.gitattributes` (guards CI line endings) (DX-5).
