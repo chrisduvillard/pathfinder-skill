@@ -69,6 +69,15 @@ Stop after 12 turns or after 3 failed implementation loops and report the blocke
 
 Before saving `06-goal-command.md`, present the goal as a recognition-first contract rather than one opaque block: mirror each part back on its own labeled line (end state, scope, proof, constraints, non-goals, protected areas, iteration policy, stop bound), mark each line with its evidence glyph (`✓` confirmed, `~` inferred/derived, `?` suspected) and its provenance (which answer it came from, or `derived`/`default`), and show the character count against the 3900 budget. The user can adjust any line; an edit regenerates that line and the screen is re-shown before saving. Sanitize every mirrored line the same way as the goal itself — the repo-derived lines (end state, scope, constraints, non-goals, protected areas) must have secrets redacted and instruction-like repo text stripped before they are shown. For a goal pack, show one compact contract per numbered goal, including selected candidate ids and grouping rationale, and allow split, merge, drop, or proof-tightening before saving. See "Confirm the goal with the user (recognition-first)" in `SKILL.md` Phase 6 for the exact layout.
 
+- Glyphs match the funnel: `✓` confirmed, `~` inferred or derived, `?` suspected.
+- Verification is display-only: append a compact suffix such as `[v:3/3]`, `[v:↓✓→~]`, or `[v: proof unverified by Lens 3]` to the relevant contract lines. It is never written into the `/goal` command or the Implementation Goal fallback, so it does not count against the 3900-character budget. `verified` / `Phase 4b panel` is a recognized provenance source alongside `your L3 target`, `your L4 scope`, `derived`, and `default`.
+
+The `Proof` contract line should be rendered as:
+
+```text
+  Proof        ~ <checks + expected pass results> *runs repo code   (derived) [v:3/3 | proof unverified by Lens 3 — derive the narrowest real check]
+```
+
 ## Good examples
 
 ```text
