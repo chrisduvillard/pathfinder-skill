@@ -68,6 +68,8 @@ check_pair "grouping review"      "$funnel" "grouping-review bulk selection"
 check_pair "select all"           "$funnel" "select-all bulk grammar"
 check_pair "prompt-to-goal"       "$funnel" "prompt-to-goal track"
 check_pair "gap-driven"           "$funnel" "gap-driven clarifying funnel"
+check_pair "Verified:"            "$funnel" "post-verification grade field"
+check_pair "Rejected by verification" "$funnel" "rejected-by-verification surfacing"
 # (TR-6) Additional shared Phase 5 invariants that were hand-mirrored but unguarded:
 # the select-all alias grammar, the Explore-mode alias, the goal-readiness header, and
 # the post-save audit-only option. The changelog shows these exact rules drifting
