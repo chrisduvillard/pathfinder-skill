@@ -509,6 +509,7 @@ Universal rules that apply to both modes:
 - Recognition-first ordering: the first screen in either mode must show the most grounded artifact available (the ranked Top 5 candidates, or the full surface map), never an abstract category menu presented before any concrete finding.
 - Two-channel freedom: every work-selection screen must carry a lateral move to widen (`show the full map`) and to leave (`describe your own`), in addition to `Go back`. In Explore mode, every level also offers `back to candidates` to return to the ranked list.
 - Evidence with options: wherever an option carries a confidence word, it also shows its evidence grade (confirmed, inferred, or suspected) and a one-line basis, so the choice is informed rather than blind.
+- Post-verification grades: when `03b-verification.md` is `complete`, every work-selection screen shows the post-verification grade and a one-line `Verified:` field; when it is `not-run` or `in-progress`, show the Phase 4 grades and no `Verified:` field. Surface any candidates the panel rejected in a `Rejected by verification` line.
 - Save every question asked to `04-question-funnel.md` and every answer to `05-user-answers.md`. Record the chosen mode and, for Explore from scratch, the full narrowing path. For Pick a move multi-select, `04-question-funnel.md` records the raw selection input and the grouping review options shown; `05-user-answers.md` records selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable, verifiable `/goal`.
 
@@ -517,8 +518,9 @@ Universal rules that apply to both modes:
 Before any other question, preview the single strongest finding so the choice is informed, then ask which interview mode to use:
 
 ```text
-I mapped this repo and found <N> ranked candidates.
+I mapped this repo and found <N> verified candidates (<M> rejected by verification).
 Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
+Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>.
 
 How do you want to choose the work?
 1. Pick a move          show the ranked candidates, pick one or more   [recommended]
@@ -531,6 +533,20 @@ Reply 1, 2, or "express"/"deep dive".
 
 "express" selects Pick a move; "deep dive" selects Explore from scratch. If the user already named a mode up front, skip this question. If the user named a concrete target up front in either mode, jump straight to the Boundaries step (L4) and confirm.
 
+### Zero or low survivors after verification
+
+If Phase 4b left zero verified candidates, do not enter the normal funnel. Show this fixed menu (exempt from the candidate-grounded-option rule because there are no candidates):
+
+```text
+Verification rejected all candidates. Reasons (from 03b-verification.md): <summary>.
+1. Re-run the scouts with these rejection reasons as hints   [recommended]
+2. Switch to prompt-to-goal: you name the work, I research it
+3. Review the "Rejected by verification" block and decide manually
+Agent recommends: 1 because re-scouting with the disconfirming evidence usually surfaces real, locatable work.
+```
+
+If one to four verified candidates remain, proceed with them; the mode-selection preamble already states the true count.
+
 ### Mode 1: Pick a move (candidate-first, default)
 
 Show the ranked Top 5 candidates from `03-synthesis.md` as evidence-bearing cards. Use the Phase 4 candidate fields directly; render likely fix shape from the candidate end state, blast radius, and effort, and render grouping hints from the derived grouping notes. Do not re-discover the repo.
@@ -541,6 +557,7 @@ Top moves (ranked by impact ÷ effort; confirmed outrank inferred outrank suspec
  1. Outcome: <plain-language symptom or user-visible result>
     Location: <exact file:symbol/route/component>
     Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <HIGH|MED|LOW>
+    Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
     Likely fix shape: <small/medium/large shape, e.g. validation + regression test>
     Proof/checks: <narrow verification commands; flag commands that run repo code>
     Risk/protected areas: <blast radius; PROTECTED areas flagged>
@@ -548,11 +565,14 @@ Top moves (ranked by impact ÷ effort; confirmed outrank inferred outrank suspec
  2. Outcome: <plain-language symptom or user-visible result>
     Location: <exact location>
     Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <...>
+    Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
     Likely fix shape: <fix shape>
     Proof/checks: <checks>
     Risk/protected areas: <risk>
     Grouping hint: <hint>
  ... up to 5 candidates ...
+
+Rejected by verification (<N>): <symptoms> — see 03b-verification.md
 
 Agent recommends: <option n> because <one-line reason from findings>.
 
@@ -603,13 +623,16 @@ If the user accepts grouping, continue to Phase 6 with those groups. If the user
 Confidence-adaptive collapse: when exactly one candidate is goal-readiness `high` and clearly dominates the rest, present a single confirm card instead of the full menu:
 
 ```text
-One target clearly dominates (selected on goal-readiness `high`):
+One target clearly dominates (selected on post-verification goal-readiness `high`):
 <symptom> — <location> (<evidence_grade>, confidence: HIGH).
+Verified: <panel verdict>.
 1. Confirm it and set boundaries
 2. See the other <N> candidates (back to the ranked Top 5)
 Agent recommends: 1 because this is the single goal-ready, high-confidence target.
 None of these: describe your own.   show the full map
 ```
+
+Compute collapse eligibility only after re-rank and refill settle, on post-verification `goal-readiness`. Never carry the pre-verification dominator forward. Do not collapse on a single-pass `keep` or on any candidate where a verifier flagged suspicious content.
 
 ### Full surface map (the shared browse screen)
 
@@ -620,12 +643,15 @@ Full surface map — every surface the scouts found, grouped by domain
 (✓ confirmed  ~ inferred  ? suspected · count = findings on that surface)
 
 Backend/Data
-  b1. api/orders.py:POST /orders     ✓ duplicate-charge on retry      (3)
+  b1. api/orders.py:POST /orders     ✓ duplicate-charge on retry      (3)   Verified: 3/3 confirm
   b2. api/auth.py:refresh_token      ~ token TTL never validated      (1)
 Frontend/Product
   f1. views/DashboardView.tsx        ✓ empty-state crash in loadData  (2)
 Testing/Reliability
   t1. tests/orders/                  ~ retry path uncovered           (1)
+
+Rejected by verification
+  (surfaces backing rejected candidates appear here with their rejection reason; picking one re-enters at L3 with the reason shown)
 
 Pick a surface (b1, f1, …) to set it as your target.
 Agent recommends: b1 — most confirmed findings.
@@ -654,11 +680,11 @@ Before each question, show a compact narrowing trail and a confidence signal:
 
 ```text
 Path so far: fix → backend/data → POST /orders handler → duplicate-charge on retry
-Goal-readiness confidence: high
+Goal-readiness confidence: high (Verified: <verdict>)
 Next: how aggressive should the fix be?
 ```
 
-`Goal-readiness confidence` is the agent's estimate of whether it can already write a measurable `/goal`. Use it for adaptive stopping (see below).
+`Goal-readiness confidence` is the agent's estimate of whether it can already write a measurable `/goal`. Use it for adaptive stopping (see below); only trigger adaptive early-stopping when goal-readiness is high AND verified.
 
 Render this trail-and-confidence header before every level below (L0 through L4). The per-level example screens omit it only for brevity; it is shown each time, never skipped.
 
@@ -684,9 +710,9 @@ Given the intent, present the candidates owned by the relevant scout(s), ranked 
 
 ```text
 Given "fix a defect", the strongest candidates from scouting (glyph = evidence grade: ✓ confirmed, ~ inferred, ? suspected):
-1. <glyph> <candidate #1 symptom> — <one-line evidence basis>   confidence: <HIGH|MED|LOW>
-2. <glyph> <candidate #2 symptom> — <basis>   confidence: <HIGH|MED|LOW>
-3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>
+1. <glyph> <candidate #1 symptom> — <one-line evidence basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
+2. <glyph> <candidate #2 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
+3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n, the highest-confidence candidate> because <reason>.
 None of these: describe the area you care about.
@@ -700,9 +726,9 @@ Within the chosen domain, present concrete surfaces discovered in the repo: spec
 
 ```text
 Within <chosen domain>, which surface?
-1. <real route/module/service/test from the briefs> — <glyph> <strongest finding symptom here>
-2. <real surface> — <glyph> <strongest finding symptom>
-3. <real surface> — <glyph> <strongest finding symptom>
+1. <real route/module/service/test from the briefs> — <glyph> <strongest finding symptom here>   Verified: <verdict>
+2. <real surface> — <glyph> <strongest finding symptom>   Verified: <verdict>
+3. <real surface> — <glyph> <strongest finding symptom>   Verified: <verdict>
 
 Agent recommends: <option n, the best surface> because <reason>.
 None of these: name the file/area.
@@ -719,6 +745,7 @@ Within the chosen surface, pin the exact behavior, function, or symptom. This is
 ```text
 Best target: <glyph> <exact behavior/function/symptom, e.g. empty-state crash in
 DashboardView.loadData when the payload is empty> — <one-line evidence basis> (<evidence_grade>, <confidence>).
+Verified: <verdict>.
 1. Confirm this target
 2. None of these: describe the precise behavior in your own words
 Agent recommends: 1 because <one-line reason the target is the right call from the findings>.
@@ -730,8 +757,8 @@ back to candidates: return to the ranked Top 5.   show the full map
 
 ```text
 Within <surface>, which exact target?
-1. <glyph> <behavior/function/symptom #1> — <basis>   confidence: <HIGH|MED|LOW>
-2. <glyph> <behavior/function/symptom #2> — <basis>   confidence: <HIGH|MED|LOW>
+1. <glyph> <behavior/function/symptom #1> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
+2. <glyph> <behavior/function/symptom #2> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n> because <reason>.
 None of these: describe the precise behavior.

@@ -13,14 +13,16 @@ Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, 
 - Recognition-first: the first screen shows the ranked Top 5 or the full map, never an abstract category menu.
 - Two-channel freedom: every work-selection screen offers `show the full map` and `describe your own`; Explore mode also offers `back to candidates` at every level.
 - Evidence with options: each option shows its evidence grade (confirmed/inferred/suspected) and a one-line basis next to any confidence word.
+- Post-verification grades: when `03b-verification.md` is `complete`, every work-selection screen shows the post-verification grade and a one-line `Verified:` field; when it is `not-run` or `in-progress`, show the Phase 4 grades and no `Verified:` field. Surface any candidates the panel rejected in a `Rejected by verification` line.
 - Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. For Pick a move multi-select, record the raw selection input and grouping review options shown. Save answers to `05-user-answers.md`, including selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable `/goal`.
 
 ## Mode selection (ask once)
 
 ```text
-I mapped this repo and found <N> ranked candidates.
+I mapped this repo and found <N> verified candidates (<M> rejected by verification).
 Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
+Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>.
 
 How do you want to choose the work?
 1. Pick a move          show the ranked candidates, pick one or more   [recommended]
@@ -32,6 +34,8 @@ Reply 1, 2, or "express"/"deep dive".
 
 Recommend Pick a move when one high-confidence target stands out; recommend Explore for large or ambiguous repos. "express" → Pick a move, "deep dive" → Explore from scratch. If the user names a concrete target up front, jump straight to L4 (Boundaries) and confirm.
 
+If verification leaves zero candidates, show the fixed zero-survivor menu from SKILL.md (re-run scouts / switch to prompt-to-goal / review rejected block) instead of the funnel.
+
 ## Mode 1: Pick a move (candidate-first, default)
 
 Show the ranked Top 5 from `03-synthesis.md` as evidence cards. The card must be understandable without reading hidden synthesis files: show the plain outcome/symptom, exact location, evidence grade and basis, likely fix shape, proof/checks, risk/protected areas, and grouping hint.
@@ -41,6 +45,7 @@ Top moves (impact ÷ effort; confirmed > inferred > suspected):
  1. Outcome: <plain-language symptom or result>
     Location: <exact file:symbol/route/component>
     Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <HIGH|MED|LOW>
+    Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
     Likely fix shape: <validation/refactor/test/etc.>
     Proof/checks: <narrow verification commands; flag repo-code execution>
     Risk/protected areas: <blast radius; PROTECTED flagged>
@@ -48,11 +53,14 @@ Top moves (impact ÷ effort; confirmed > inferred > suspected):
  2. Outcome: <plain-language symptom or result>
     Location: <exact location>
     Evidence: <glyph> <evidence_grade> — <basis>   confidence: <...>
+    Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
     Likely fix shape: <fix shape>
     Proof/checks: <checks>
     Risk/protected areas: <risk>
     Grouping hint: <hint>
  ... up to 5 ...
+
+Rejected by verification (<N>): <symptoms> — see 03b-verification.md
 
 Agent recommends: <option n> because <reason>.
 
@@ -99,12 +107,16 @@ Accepted grouping produces a numbered goal pack in `06-goal-command.md`; split p
 Confidence-adaptive collapse — when one goal-readiness `high` candidate dominates, confirm instead of menu:
 
 ```text
-One target dominates (selected on goal-readiness `high`): <symptom> — <location> (<evidence_grade>, confidence: HIGH).
+One target clearly dominates (selected on post-verification goal-readiness `high`):
+<symptom> — <location> (<evidence_grade>, confidence: HIGH).
+Verified: <panel verdict>.
 1. Confirm it and set boundaries
 2. See the other <N> candidates (back to the ranked Top 5)
 Agent recommends: 1 because this is the single goal-ready, high-confidence target.
 None of these: describe your own.   show the full map
 ```
+
+Compute collapse eligibility only after re-rank and refill settle, on post-verification `goal-readiness`. Never carry the pre-verification dominator forward. Do not collapse on a single-pass `keep` or on any candidate where a verifier flagged suspicious content.
 
 ## Full surface map (shared browse screen)
 
@@ -114,9 +126,12 @@ The destination for every `show the full map`. Built from the per-domain surface
 Full surface map — grouped by domain (✓ confirmed  ~ inferred  ? suspected · count = findings)
 
 Backend/Data
-  b1. api/orders.py:POST /orders   ✓ duplicate-charge on retry   (3)
+  b1. api/orders.py:POST /orders   ✓ duplicate-charge on retry   (3)   Verified: 3/3 confirm
 Frontend/Product
   f1. views/DashboardView.tsx      ✓ empty-state crash           (2)
+
+Rejected by verification
+  (surfaces backing rejected candidates appear here with their rejection reason; picking one re-enters at L3 with the reason shown)
 
 Pick a surface to set it as your target.
 Agent recommends: b1 — most confirmed findings.
@@ -135,11 +150,11 @@ Before each question, show the narrowing trail and a confidence signal:
 
 ```text
 Path so far: fix → backend/data → POST /orders handler → duplicate-charge on retry
-Goal-readiness confidence: high
+Goal-readiness confidence: high (Verified: <verdict>)
 Next: how aggressive should the fix be?
 ```
 
-Render this header before every level (L0–L4); the per-level screens below omit it only for brevity, never because it is skipped.
+Render this header before every level (L0–L4); the per-level screens below omit it only for brevity, never because it is skipped. Only trigger adaptive early-stopping when goal-readiness is high AND verified.
 
 ### L0. Intent (only intents with candidates, annotated)
 
@@ -159,9 +174,9 @@ back to candidates: return to the ranked Top 5.   show the full map
 
 ```text
 Given "<intent>", the strongest candidates (glyph = evidence grade: ✓ confirmed, ~ inferred, ? suspected):
-1. <glyph> <candidate #1 symptom> — <basis>   confidence: <HIGH|MED|LOW>
-2. <glyph> <candidate #2 symptom> — <basis>   confidence: <HIGH|MED|LOW>
-3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>
+1. <glyph> <candidate #1 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
+2. <glyph> <candidate #2 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
+3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n, highest-confidence candidate> because <reason>.
 None of these: describe the area.
@@ -173,9 +188,9 @@ back to candidates: return to the ranked Top 5.   show the full map
 
 ```text
 Within <domain>, which surface?
-1. <real route/module/service/test> — <glyph> <strongest finding symptom here>
-2. <real surface> — <glyph> <strongest finding symptom>
-3. <real surface> — <glyph> <strongest finding symptom>
+1. <real route/module/service/test> — <glyph> <strongest finding symptom here>   Verified: <verdict>
+2. <real surface> — <glyph> <strongest finding symptom>   Verified: <verdict>
+3. <real surface> — <glyph> <strongest finding symptom>   Verified: <verdict>
 
 Agent recommends: <option n, best surface> because <reason>.
 None of these: name the file/area.
@@ -189,6 +204,7 @@ If one clear target dominates, confirm rather than manufacture a menu:
 
 ```text
 Best target: <glyph> <exact behavior/function/symptom> — <one-line basis> (<evidence_grade>, <confidence>).
+Verified: <verdict>.
 1. Confirm this target
 2. None of these: describe the precise behavior in your own words
 Agent recommends: 1 because <one-line reason>.
@@ -196,7 +212,7 @@ Go back: return to the previous question.
 back to candidates: return to the ranked Top 5.   show the full map
 ```
 
-Otherwise offer numbered targets plus `Agent recommends` and the escapes.
+Otherwise offer numbered targets plus `Agent recommends` and the escapes, appending `   Verified: <verdict>` to each option line.
 
 ### L4. Boundaries (scoped to the target)
 
