@@ -120,7 +120,7 @@ Compute collapse eligibility only after re-rank and refill settle, on post-verif
 
 ## Full surface map (shared browse screen)
 
-The destination for every `show the full map`. Built from the per-domain surface index in `03-synthesis.md`; lists every surface as an index, not a 3-to-6 menu.
+The destination for every `show the full map`. Built from the per-domain surface index in `03-synthesis.md` (or the re-emitted post-verification index in `03b-verification.md` when Phase 4b is `complete`); lists every surface as an index, not a 3-to-6 menu.
 
 ```text
 Full surface map — grouped by domain (✓ confirmed  ~ inferred  ? suspected · count = findings)
