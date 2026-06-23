@@ -1006,7 +1006,7 @@ Here is the /goal I assembled from your answers — recognize each part, adjust 
 
   End state    ~ <measurable outcome>                  (derived from the candidate end state; scoped to your L3 target)
   Scope        ✓ <files/area>                          (your L4 scope)
-  Proof        ~ <checks + expected pass results> *runs repo code   (derived)
+  Proof        ~ <checks + expected pass results> *runs repo code   (derived) [v:3/3 | proof unverified by Lens 3 — derive the narrowest real check]
   Constraints  ~ <must-not-change rules, e.g. no new dependency/API change>   (derived from scope + reservoir F)
   Non-goals    ~ <out-of-scope items that must not change>   (derived)
   Protected    ✓ <off-limits areas>                    (your L4 protect)
@@ -1028,6 +1028,7 @@ go back: return to boundaries (L4)
 - Show this screen before saving. Any adjustment (options 2-3, or a free-text edit) regenerates the affected lines and re-displays the screen before the goal is written.
 - The screen carries one `Agent recommends:` line and a `go back` that returns to the Boundaries step (L4). It does not offer `back to candidates` or `show the full map` — selection is complete by this phase.
 - Glyphs match the funnel: `✓` confirmed, `~` inferred or derived, `?` suspected.
+- Verification is display-only: append a compact suffix such as `[v:3/3]`, `[v:↓✓→~]`, or `[v: proof unverified by Lens 3]` to the relevant contract lines. It is never written into the `/goal` command or the Implementation Goal fallback, so it does not count against the 3900-character budget. `verified` / `Phase 4b panel` is a recognized provenance source alongside `your L3 target`, `your L4 scope`, `derived`, and `default`.
 
 For a goal pack, show the same recognition-first contract once per numbered goal, preceded by the selected candidate ids and grouping rationale. Let the user accept the whole pack, split a group, merge compatible groups, drop a selected move, tighten proof for any goal, or go back to the grouping review. Re-display the pack contract after any adjustment before saving.
 

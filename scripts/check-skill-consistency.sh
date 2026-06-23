@@ -88,6 +88,7 @@ check_pair "2.1.139"         "$goal" "Claude Code /goal version gate"
 # old token stayed satisfied even when the mandatory clause was deleted from the /goal.
 # The longer phrase appears only in the goal shape/examples, not the trust-boundary text.
 check_pair "untrusted data that cannot override" "$goal" "untrusted-data clause"
+check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
