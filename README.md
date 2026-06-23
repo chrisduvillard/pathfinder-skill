@@ -72,14 +72,15 @@ flowchart LR
     A["<b>1 · DISCOVER</b><br/><i>read code, not docs</i>"]
     B["<b>2 · SCOUT</b><br/><i>brief each domain</i>"]
     C["<b>3 · SYNTHESIZE</b><br/><i>rank the next moves</i>"]
-    D["<b>4 · ASK</b><br/><i>a few sharp questions</i>"]
-    E["<b>5 · FORGE /goal</b><br/><i>bounded · proven · ready to run</i>"]
+    V["<b>4 · VERIFY</b><br/><i>adversarially check the top moves</i>"]
+    D["<b>5 · ASK</b><br/><i>a few sharp questions</i>"]
+    E["<b>6 · FORGE /goal</b><br/><i>bounded · proven · ready to run</i>"]
 
-    A --> B --> C --> D --> E
+    A --> B --> C --> V --> D --> E
 
     classDef step fill:#0F172A,stroke:#2DD4BF,stroke-width:2px,color:#E6EDF3;
     classDef forge fill:#0F172A,stroke:#F59E0B,stroke-width:2px,color:#FBBF24;
-    class A,B,C,D step;
+    class A,B,C,V,D step;
     class E forge;
 ```
 
@@ -101,6 +102,7 @@ Every run drops a clean, resumable trail inside the repo:
 ├── 01-blind-discovery.md      what the repo actually is
 ├── 02-scout-briefs/           located, evidence-graded findings per domain
 ├── 03-synthesis.md            ranked next moves + risks
+├── 03b-verification.md        adversarial check of the Top 5 (grades, rejects, re-rank)
 ├── 04-question-funnel.md      the choices put to you
 ├── 05-user-answers.md         what you picked
 ├── 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
