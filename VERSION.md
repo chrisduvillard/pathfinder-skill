@@ -2,7 +2,7 @@
 
 Generated: 2026-06-23
 
-Version: 2.14.0
+Version: 2.15.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,10 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.15.0:
+- Refined the Phase 4b verifier panel so it can no longer false-reject a real finding for not being fixed yet. Each blind verifier now receives the candidate's `symptom` — the current behavior, which should be present in the code (the field Lens 1 always referenced but was never supplied) — alongside `candidate_end_state`, the post-fix target, which is not expected to be present and whose absence is never disconfirming. Lens 1 judges the symptom's presence, Lens 3 judges the end-state as a target, and the hallucination guard now forbids citing the unmet end-state as grounds to reject. `symptom` is added to the blind-input sanitization list.
+- Surfaced by a dogfood run of Pathfinder on its own repository: two of three verifiers misread a confirmed finding's post-fix end-state as a false claim about current code and voted reject (meeting the 2-of-3 destructive bar); only the adjudication re-read kept the finding from being quarantined.
 
 Changes in v2.14.0:
 - Added Phase 4b: an independent, adversarial verification pass over the Top 5 between synthesis and the funnel. A blind three-verifier panel (grounding / grade-justification / measurability lenses) re-reads each candidate's cited code; grades aggregate by median-of-ceilings and a destructive reject needs a 2-of-3 majority with an adjudication re-read, so one hallucinating verifier cannot quarantine a real candidate. Verdicts downgrade grades, re-rank, and quarantine fabrications into a visible "Rejected by verification" block, refilling from re-verified runner-ups; the intent tally and surface index are re-emitted so L0 and the full map never read stale counts. Results surface as a `Verified:` field across the Phase 5 screens and as display-only provenance in the Phase 6 contract (never inside the generated `/goal`).
