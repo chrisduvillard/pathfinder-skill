@@ -636,7 +636,7 @@ Compute collapse eligibility only after re-rank and refill settle, on post-verif
 
 ### Full surface map (the shared browse screen)
 
-`show the full map` opens this screen — the single destination for every `show the full map` offer in either mode and at every level. It is built from the per-domain surface index already in `03-synthesis.md` (Phase 4) and adds no new synthesis field. Because it is a browse/index rather than a 3-to-6 option question, it may list as many surfaces as the scouts found.
+`show the full map` opens this screen — the single destination for every `show the full map` offer in either mode and at every level. It is built from the per-domain surface index already in `03-synthesis.md` (Phase 4) and adds no new synthesis field. When `03b-verification.md` is `complete`, read the re-emitted post-verification surface index from `03b` instead (post-verification grades, surviving-finding counts, and the rejected-surface section). Because it is a browse/index rather than a 3-to-6 option question, it may list as many surfaces as the scouts found.
 
 ```text
 Full surface map — every surface the scouts found, grouped by domain
@@ -690,7 +690,7 @@ Render this trail-and-confidence header before every level below (L0 through L4)
 
 #### L0. Intent
 
-Ask what kind of outcome the user wants. List only intents that have at least one real candidate, annotate each with its candidate count and confirmed-only count from the Phase 4 intent tally, and draw wording from reservoir A/B. Always include `Agent recommends` and the lateral moves.
+Ask what kind of outcome the user wants. List only intents that have at least one real candidate, annotate each with its candidate count and confirmed-only count from the post-verification intent tally in `03b-verification.md` when Phase 4b is `complete`, else the Phase 4 intent tally in `03-synthesis.md`, and draw wording from reservoir A/B. Always include `Agent recommends` and the lateral moves.
 
 ```text
 1. Fix a correctness/reliability defect      → <n> candidates (<m> confirmed)
