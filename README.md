@@ -21,13 +21,13 @@
 <a href="https://scorecard.dev/viewer/?uri=github.com/chrisduvillard/pathfinder-skill"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/chrisduvillard/pathfinder-skill/badge"></a>
 </p>
 
-<p><b>Drop it on any unfamiliar repo — or hand it a prompt. Either way, get back a bounded goal you can run.</b></p>
+<p><b>Drop it on any unfamiliar repo, hand it a prompt, or let it run hands-off — get back a bounded goal you can run, or the merged PRs themselves.</b></p>
 
 </div>
 
 <br>
 
-Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent.
+Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent — or, opt-in, runs the work itself all the way to a merged pull request.
 
 > [!TIP]
 > **Already know what you want?** Hand it a prompt instead — it researches just what that prompt touches and forges the same goal, faster. Ideal if you just want a prompt → loop (`/goal`) tool.
@@ -54,16 +54,17 @@ codex plugin add pathfinder@pathfinder
 # then run /skills, or type $pathfinder to invoke it
 ```
 
-Then use it two ways:
+Then use it three ways:
 
 - **Explore a repo** — *"Use the pathfinder skill on this repository."*
 - **Turn a task into a goal** — *"Pathfinder, turn this into a /goal: &lt;the work you want done&gt;."*
+- **Run it autonomously** *(opt-in)* — *"Run Pathfinder autonomously on this repository."*
 
 <br>
 
 ## 🔭 How it works
 
-Two ways in, one result — a bounded, verifiable `/goal` you can run or hand to another agent.
+Three ways in — explore a repo, hand it a prompt, or let it run autonomously — all built on the same bounded, verifiable `/goal`.
 
 **🗺️ Explore** — point it at a repo. Pathfinder reads the code (not the docs), ranks the highest-value next moves, asks a few sharp questions, then forges the goal:
 
@@ -97,6 +98,31 @@ Run Pathfinder autonomously on this repository.
 ```
 
 It only ever self-merges where the repo's own branch protection allows it (otherwise it leaves a green PR for you to merge), isolates a failing goal and keeps going, and **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+
+<br>
+
+## 🧰 What Pathfinder can do
+
+A map of the full capability set:
+
+**🔍 Understand any codebase** — reads the repo from the **source up** (code, tests, configs, routes, schemas — not the README, so a stale or missing doc never misleads it). Five domain **scouts** (architecture, frontend/product, backend/data, testing/reliability, DX/security) produce located, evidence-graded findings, synthesized into a ranked **Top 5** of the highest-value next moves (impact ÷ effort; confirmed > inferred > suspected).
+
+**✅ Trust the findings** — an adversarial, blind **three-verifier panel** re-checks every Top-5 candidate, downgrades or rejects the weak ones, and surfaces a `Verified:` grade — so you act on confirmed work, not a hunch.
+
+**🎛️ Pick the work, your way** — choose the move through whichever lens fits:
+- **Pick a move** — select from ranked, evidence-bearing candidate cards.
+- **Explore from scratch** — drill down intent → domain → surface → target → boundaries.
+- **Goal packs** — select several moves and Pathfinder groups them into numbered, separately-bounded goals.
+
+**🎯 Forge a runnable goal** — produces a bounded, measurable, self-proving Claude Code **`/goal`** (or an `Implementation Goal` fallback for Codex and older clients): one end state, exact proof checks, constraints, protected areas, and stop bounds — kept under 3900 characters.
+
+**⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
+
+**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** executes the verified moves end to end — branch → implement → verify → commit → push → open a PR → self-merge where the repo's rules allow — one goal at a time, isolating a failing goal and continuing. See [Safety](#-safety).
+
+**🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
+
+**🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
 
 <br>
 
