@@ -100,6 +100,32 @@ else
   err "SKILL.md is missing the Track B \"How should I help?\" entry-menu screen"
 fi
 
+# (2c) Autonomous-mode safety invariants (SKILL-only presence). Autonomous mode is an
+#      explicit opt-in tier that grants unattended commit/push/merge. Its load-bearing
+#      carve-outs have no natural Phase 5/6 mirror (they are not funnel or goal screens),
+#      so guard them here the same way the Track B entry menu is guarded. Each phrase is
+#      clause-unique to one safety control; its silent deletion — the catastrophic drift
+#      class for this feature, the same one the TR-2 untrusted-data guard exists for —
+#      fails CI instead of shipping a weakened autonomous tier green.
+auto_invariants=(
+  "excluded from autonomous execution"
+  "post-execution protected-path gate"
+  "credential separation"
+  "must not run repo-defined hooks"
+  "positive branch-protection signal"
+  "injection-disqualifies-autonomy"
+)
+for inv in "${auto_invariants[@]}"; do
+  # Case-insensitive: the phrase is load-bearing as a concept, whether it appears
+  # as a heading (capitalized) or inline (lowercase); reformatting case must not
+  # silently disable the guard.
+  if grep -qiF -- "$inv" "$skill"; then
+    echo "ok: autonomous-mode safety invariant present: \"$inv\""
+  else
+    err "SKILL.md is missing autonomous-mode safety invariant: \"$inv\""
+  fi
+done
+
 # (3) Artifact-contract parity: the set of pathfinder artifact filenames
 #     (NN-*.md numbered files + the 02-scout-briefs/ directory + *-scout.md briefs)
 #     must match between the canonical SKILL.md list and artifact-structure.md. A file

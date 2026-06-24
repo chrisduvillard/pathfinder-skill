@@ -4,6 +4,8 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
+This template is the interactive funnel. In autonomous mode (see “Autonomous mode (opt-in)” in `SKILL.md`) none of these screens run: auto-selection takes every verified survivor and the Phase 7-A loop executes them without an interview.
+
 ## Universal rules
 
 - Always suggest 3 to 6 numbered, repo-grounded answers. Never ask an open question with no options. Exception: the Full surface map browse screen lists every surface as an index, not a 3-to-6 menu; it still carries `Agent recommends:` and the escapes.
