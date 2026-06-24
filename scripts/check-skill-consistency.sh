@@ -111,6 +111,7 @@ auto_invariants=(
   "excluded from autonomous execution"
   "post-execution protected-path gate"
   "credential separation"
+  "must not run repo-defined hooks"
   "positive branch-protection signal"
   "injection-disqualifies-autonomy"
 )
