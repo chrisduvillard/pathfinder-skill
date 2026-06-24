@@ -90,6 +90,14 @@ flowchart LR
 Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
 ```
 
+**⚡ Autonomous** *(opt-in)* — want it hands-off? Invoke it explicitly and Pathfinder runs the normal exploration, then implements, verifies, commits, pushes, opens a PR, and self-merges every verified move — one goal at a time, end to end:
+
+```text
+Run Pathfinder autonomously on this repository.
+```
+
+It only ever self-merges where the repo's own branch protection allows it (otherwise it leaves a green PR for you to merge), isolates a failing goal and keeps going, and **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+
 <br>
 
 ## 📦 What you get
@@ -154,6 +162,8 @@ Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex.
 ## 🔒 Safety
 
 Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
+
+**Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
 
 ## 🤝 Contributing and support
 

@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-23
+Generated: 2026-06-24
 
-Version: 2.15.0
+Version: 2.16.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,12 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.16.0:
+- Added autonomous mode (opt-in): an explicitly-invoked entrypoint ("run Pathfinder autonomously" / "/pathfinder auto") that runs the normal exploration through Phase 4b, then auto-selects every verified survivor (grouped by the existing rules, no interview) and executes the goal pack sequentially end to end — branch, implement, run the goal's proof checks, verify, commit, push, open a PR, and self-merge where the repository's own rules allow it — isolating-and-continuing on any failure. Sequential completion off a freshly updated base avoids merge-order staleness and parallel-branch collisions; parallel execution is deferred.
+- Made it a distinct authorization tier, not a new default: added "Execution authorization tiers" (read-only / autopilot / autonomous) to Execution safety. Autonomous is reached only by explicit invocation and is never an option in the post-save execution menu, so the save-don't-run default (option 2) keeps its meaning. The trust boundary and the dangerous-category carve-out (auth/payments/migrations/secrets/CI/public-API/data-deletion) are never waived: candidates touching them are excluded from autonomous execution.
+- Hardened the unattended-merge path with diff-grounded safety gates the pre-execution estimate cannot be: a post-execution protected-path gate and an absolute-danger scan run on the real `git diff` before any push; an automated verification agent (the Phase 4b panel applied to the completed diff with fidelity and absolute-danger lenses, contested → no merge) replaces the removed human checkpoint; an injection-disqualifies-autonomy filter drops candidates whose provenance flagged suspicious repo content; credential separation keeps the push token out of the environment during repo-code execution; and self-merge is default-deny, requiring a positive branch-protection signal rather than the mere absence of a blocker.
+- Reused the existing artifact contract (auto-selection logged to `04`/`05`, per-goal run log in `07`, shipped/blocked ledger in `08`) so no new artifact filenames were introduced, and extended `scripts/check-skill-consistency.sh` with a SKILL-only presence guard for the five load-bearing autonomous-mode safety invariants so silently deleting any one fails CI.
 
 Changes in v2.15.0:
 - Refined the Phase 4b verifier panel so it can no longer false-reject a real finding for not being fixed yet. Each blind verifier now receives the candidate's `symptom` — the current behavior, which should be present in the code (the field Lens 1 always referenced but was never supplied) — alongside `candidate_end_state`, the post-fix target, which is not expected to be present and whose absence is never disconfirming. Lens 1 judges the symptom's presence, Lens 3 judges the end-state as a target, and the hallucination guard now forbids citing the unmet end-state as grounds to reject. `symptom` is added to the blind-input sanitization list.
