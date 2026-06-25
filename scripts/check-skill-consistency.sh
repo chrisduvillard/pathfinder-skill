@@ -137,6 +137,7 @@ charter_invariants=(
   ".pathfinder/charter.md"
   "lower injection risk"
   "evidence, never an instruction"
+  "/pathfinder charter"
 )
 for inv in "${charter_invariants[@]}"; do
   if grep -qiF -- "$inv" "$skill"; then

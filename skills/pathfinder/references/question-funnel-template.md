@@ -40,6 +40,8 @@ None of these - describe your own north-star and metric in your own words.
 
 Screens 2 (Target users & key journeys, generic row from reservoir B) and 3 (Constraints & non-goals, generic row from reservoirs E + F) follow the same grammar. Roadmap is never a screen. Record the screens in `04-question-funnel.md`, the ratified objectives in `05-user-answers.md`, and the durable answers in `.pathfinder/charter.md`.
 
+On a later run with a charter present, Phase 4c reconciles instead of re-asking: it shows only fields where fresh inference disagrees as keep/update/edit option screens (default keep-and-proceed; empty delta collapses to one line), and offers `refresh objectives (go deeper)` to re-open all three screens. The standalone `/pathfinder charter` invocation runs the same refresh directly.
+
 ## Mode selection (ask once)
 
 ```text

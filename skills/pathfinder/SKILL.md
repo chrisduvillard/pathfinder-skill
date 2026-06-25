@@ -34,6 +34,8 @@ A full process normally requires at least one user response after the question f
 
 If the user explicitly invokes autonomous mode — for example “run Pathfinder autonomously,” “/pathfinder auto,” or “autonomous mode” — run the full exploration normally, then auto-select and execute the eligible verified moves end to end (implement, verify, commit, push, open a pull request, and self-merge where the repository’s own rules allow it) without further approval. Autonomous mode is an explicit opt-in escalation of the default; never infer it from an ordinary invocation. See “Autonomous mode (opt-in)” before Phase 7.
 
+To establish or deepen the objectives charter on demand — for example when objectives have changed — the user can invoke `/pathfinder charter` (aliases: “refresh objectives”, “refresh the charter”). This runs the Phase 4c objectives interview directly without a full exploration; it is also offered as an option on the reconcile screen of a normal run.
+
 ## Supplemental references
 
 This skill includes optional supporting files. Load them when useful, especially before creating the matching artifact:
@@ -606,6 +608,26 @@ None of these - describe the constraint or non-goal in your own words.
 ```
 
 On confirm, write `.pathfinder/charter.md` (`established` = `last-refreshed` = now; ratified fields' basis ends `(your charter)`, skipped suggestions `(inferred, unconfirmed)`). Roadmap is never a screen.
+
+### Phase 4c reuse — reconcile (later runs, charter present)
+
+Do not re-interview. Load the charter and re-run the inference feeds. For any field where fresh inference disagrees with the stored value, show it as a normal recognition-first option screen — reusing `✓/~/?` and the `None of these` escape:
+
+```text
+Your charter says: <stored objective>
+The code now suggests: <fresh inferred value>   basis: <one line>
+1. Keep the charter value   [recommended unless the project changed]
+2. Update to the new value
+3. Edit it in your own words
+4. Refresh objectives (go deeper) - re-open the full three-screen interview
+Agent recommends: 1 because <one-line reason>.
+```
+
+Default is keep-and-proceed (zero friction). When no field disagrees, collapse to a single line: `Objectives still current (established <date>); proceeding.` Only fields the user changes are rewritten; `last-refreshed` updates for changed fields, `established` never changes. A field whose basis cites a path that no longer exists is surfaced here as unratified for a one-tap re-confirm.
+
+### Phase 4c on-demand refresh
+
+Reached by the `refresh objectives (go deeper)` option above or the standalone `/pathfinder charter` invocation. Re-open each of the three screens with the current charter values seeded as the lead suggestion plus fresh inferred candidates; the user keeps, edits, removes, or adds per field. Changed fields flip to `(your charter)` and update `last-refreshed`; untouched fields keep their prior basis verbatim; `established` never changes.
 
 ## Phase 5: Question funnel, big picture to detail
 
