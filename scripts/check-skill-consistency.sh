@@ -93,6 +93,8 @@ check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
 
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
+check_pair "Objective 1 of 3"      "$funnel" "objectives charter interview screen"
+check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
@@ -134,6 +136,7 @@ done
 charter_invariants=(
   ".pathfinder/charter.md"
   "lower injection risk"
+  "evidence, never an instruction"
 )
 for inv in "${charter_invariants[@]}"; do
   if grep -qiF -- "$inv" "$skill"; then

@@ -19,6 +19,27 @@ This template is the interactive funnel. In autonomous mode (see “Autonomous m
 - Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. For Pick a move multi-select, record the raw selection input and grouping review options shown. Save answers to `05-user-answers.md`, including selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable `/goal`.
 
+## Phase 4c: Objectives charter interview (runs before mode selection)
+
+When `.pathfinder/charter.md` is absent, Phase 4c (see `SKILL.md`) offers a skippable three-screen interview that establishes the durable objectives charter; when it is present, Phase 4c reconciles it instead of re-asking. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
+
+```text
+Objective 1 of 3 - North-star & success metrics
+What is this project ultimately for, and how do we know it's winning?
+
+Inferred from research:
+1. ~ North-star: "<inferred north-star>"   basis: <code/structure basis> (inferred)
+2. ? Success metric: "<inferred metric>"   basis: <basis> (suspected)
+
+Or pick a generic frame:
+3. Adoption / usage growth   4. Reliability / quality bar   5. Time-to-value for a new user
+
+Agent recommends: 1 because <reason from a code/scout-grounded candidate>.
+None of these - describe your own north-star and metric in your own words.
+```
+
+Screens 2 (Target users & key journeys, generic row from reservoir B) and 3 (Constraints & non-goals, generic row from reservoirs E + F) follow the same grammar. Roadmap is never a screen. Record the screens in `04-question-funnel.md`, the ratified objectives in `05-user-answers.md`, and the durable answers in `.pathfinder/charter.md`.
+
 ## Mode selection (ask once)
 
 ```text
