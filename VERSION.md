@@ -2,7 +2,7 @@
 
 Generated: 2026-06-25
 
-Version: 2.17.1
+Version: 2.17.2
 
 ## Versioning & distribution
 
@@ -15,6 +15,11 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.17.2:
+- Hardened the manifest checker for Windows/MSYS contributors: it now resolves `jq.exe` when Bash cannot see `jq`, strips Windows carriage returns from the version probe, and reports a missing `jq` as a prerequisite failure instead of mislabeling manifests as invalid JSON.
+- Tightened objectives-charter drift guards so CI catches changes to the exact `Aligns:   ✓ north-star` alignment axis and the conditional Phase 6 Direction-row contract.
+- Clarified the generated-goal contract: the charter Direction line is emitted only when a charter is loaded and aligned, and is omitted when there is no charter or the selected work intentionally diverges from it.
 
 Changes in v2.17.1:
 - Fixed a charter-persistence bug surfaced by a live dogfood on Windows/MSYS git: the local-only ignore ladder's "already ignored?" rung tested the bare `.pathfinder/` directory, but `git check-ignore` on a not-yet-created directory false-positives on some git builds (reproducible with any nonexistent `<dir>/`). That mis-selected rung 1, skipped writing the `.git/info/exclude` rule, and let the file-level verify-after-write force an in-memory fallback — so the charter silently never persisted across runs on those platforms (safe, but the durability premise no-opped). Both ignore ladders (charter and work-folder) now test a concrete file path under the directory, matching the path the verify step already uses.
