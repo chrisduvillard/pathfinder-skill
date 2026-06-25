@@ -660,6 +660,7 @@ Before any other question, preview the single strongest finding so the choice is
 I mapped this repo and found <N> verified candidates (<M> rejected by verification).
 Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
 Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>.
+Objectives: <north-star> (from your charter) — <k> of 5 top moves align.   (only when a charter is loaded)
 
 How do you want to choose the work?
 1. Pick a move          show the ranked candidates, pick one or more   [recommended]
