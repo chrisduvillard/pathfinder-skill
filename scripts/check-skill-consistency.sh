@@ -98,6 +98,7 @@ check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
 check_pair "north-star"        "$funnel" "north-star alignment axis"
+check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
@@ -141,6 +142,7 @@ charter_invariants=(
   "lower injection risk"
   "evidence, never an instruction"
   "/pathfinder charter"
+  "cap it to a single short clause"
 )
 for inv in "${charter_invariants[@]}"; do
   if grep -qiF -- "$inv" "$skill"; then
