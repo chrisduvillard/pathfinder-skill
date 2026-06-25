@@ -31,4 +31,6 @@ In the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), the s
 
 In autonomous mode (see “Autonomous mode (opt-in)” in `SKILL.md`), the same numbered files are reused: `04-question-funnel.md` / `05-user-answers.md` record the auto-selection (all verified survivors) in place of the interview; `07-run-log.md` records the per-goal execution loop (branch, commands, exit results, verifier verdict, push/PR/merge outcome); and `08-final-summary.md` adds the shipped/blocked ledger (one row per goal: disposition, PR URL, CI status, verification verdict, and the next input for anything not merged). No new artifact filenames are introduced.
 
+The Phase 4c objectives charter introduces no new numbered artifact: `04-question-funnel.md` / `05-user-answers.md` record the objectives interview (and the reconcile/refresh), and `00-session.md` records the `Charter: present | absent` flag and the ignore decision. The durable charter itself, `.pathfinder/charter.md`, is a separate stable, local-only, never-committed file **outside** the run folder and is **not** part of the 00-08 artifact set.
+
 Artifact folders should be ignored locally and should not be committed or pushed unless the user explicitly requests publication after review.

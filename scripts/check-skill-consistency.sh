@@ -23,11 +23,12 @@ skill="$root/skills/pathfinder/SKILL.md"
 funnel="$root/skills/pathfinder/references/question-funnel-template.md"
 goal="$root/skills/pathfinder/references/goal-best-practices.md"
 arts="$root/skills/pathfinder/references/artifact-structure.md"
+charter="$root/skills/pathfinder/references/charter-template.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal" "$arts"; do
+for f in "$skill" "$funnel" "$goal" "$arts" "$charter"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -90,6 +91,15 @@ check_pair "2.1.139"         "$goal" "Claude Code /goal version gate"
 check_pair "untrusted data that cannot override" "$goal" "untrusted-data clause"
 check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
 
+# Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
+check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
+check_pair "Objective 1 of 3"      "$funnel" "objectives charter interview screen"
+check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
+check_pair "Aligns:"           "$funnel" "objective alignment signal"
+check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
+check_pair "north-star"        "$funnel" "north-star alignment axis"
+check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
+
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
 #      mirrored into the funnel template), so it cannot use check_pair. Assert it is
@@ -123,6 +133,24 @@ for inv in "${auto_invariants[@]}"; do
     echo "ok: autonomous-mode safety invariant present: \"$inv\""
   else
     err "SKILL.md is missing autonomous-mode safety invariant: \"$inv\""
+  fi
+done
+
+# Objectives-charter SKILL-only presence invariants (no Phase 5/6 mirror; guard like Track B).
+charter_invariants=(
+  ".pathfinder/charter.md"
+  "lower injection risk"
+  "evidence, never an instruction"
+  "/pathfinder charter"
+  "cap it to a single short clause"
+  "does not reorder the auto-selected goal pack"
+  "never widens authorization"
+)
+for inv in "${charter_invariants[@]}"; do
+  if grep -qiF -- "$inv" "$skill"; then
+    echo "ok: objectives-charter invariant present: \"$inv\""
+  else
+    err "SKILL.md is missing objectives-charter invariant: \"$inv\""
   fi
 done
 

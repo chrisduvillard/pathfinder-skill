@@ -16,8 +16,32 @@ This template is the interactive funnel. In autonomous mode (see “Autonomous m
 - Two-channel freedom: every work-selection screen offers `show the full map` and `describe your own`; Explore mode also offers `back to candidates` at every level.
 - Evidence with options: each option shows its evidence grade (confirmed/inferred/suspected) and a one-line basis next to any confidence word.
 - Post-verification grades: when `03b-verification.md` is `complete`, every work-selection screen shows the post-verification grade and a one-line `Verified:` field; when it is `not-run` or `in-progress`, show the Phase 4 grades and no `Verified:` field. Surface any candidates the panel rejected in a `Rejected by verification` line.
+- Objective awareness (only when a charter is loaded): the mode-selection preamble states `Objectives: <north-star> (from your charter) — <k> of 5 top moves align.`; every Pick a move card and Explore option carries an `Aligns:` line/token showing only **north-star** alignment (`✓` aligned, `~` partial, omitted when neutral, words `counter to north-star` for the rare counter case — no new glyphs); a candidate the tiebreak moved appends `(moved <from>-><to> on north-star alignment)`; and an `ignore objectives` escape at any level strips the annotations and reverts to pure evidence order. The `users`/`constraints` charter dimensions are not shown per-card (they live in the charter). Log each pre/post rank change and reason to `05-user-answers.md`.
 - Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. For Pick a move multi-select, record the raw selection input and grouping review options shown. Save answers to `05-user-answers.md`, including selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable `/goal`.
+
+## Phase 4c: Objectives charter interview (runs before mode selection)
+
+When `.pathfinder/charter.md` is absent, Phase 4c (see `SKILL.md`) offers a skippable three-screen interview that establishes the durable objectives charter; when it is present, Phase 4c reconciles it instead of re-asking. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
+
+```text
+Objective 1 of 3 - North-star & success metrics
+What is this project ultimately for, and how do we know it's winning?
+
+Inferred from research:
+1. ~ North-star: "<inferred north-star>"   basis: <code/structure basis> (inferred)
+2. ? Success metric: "<inferred metric>"   basis: <basis> (suspected)
+
+Or pick a generic frame:
+3. Adoption / usage growth   4. Reliability / quality bar   5. Time-to-value for a new user
+
+Agent recommends: 1 because <reason from a code/scout-grounded candidate>.
+None of these - describe your own north-star and metric in your own words.
+```
+
+Screens 2 (Target users & key journeys, generic row from reservoir B) and 3 (Constraints & non-goals, generic row from reservoirs E + F) follow the same grammar. Roadmap is never a screen. Record the screens in `04-question-funnel.md`, the ratified objectives in `05-user-answers.md`, and the durable answers in `.pathfinder/charter.md`.
+
+On a later run with a charter present, Phase 4c reconciles instead of re-asking: it shows only fields where fresh inference disagrees as keep/update/edit option screens (default keep-and-proceed; empty delta collapses to one line), and offers `refresh objectives (go deeper)` to re-open all three screens. The standalone `/pathfinder charter` invocation runs the same refresh directly.
 
 ## Mode selection (ask once)
 
@@ -25,6 +49,7 @@ This template is the interactive funnel. In autonomous mode (see “Autonomous m
 I mapped this repo and found <N> verified candidates (<M> rejected by verification).
 Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
 Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>.
+Objectives: <north-star> (from your charter) — <k> of 5 top moves align.   (only when a charter is loaded)
 
 How do you want to choose the work?
 1. Pick a move          show the ranked candidates, pick one or more   [recommended]
@@ -48,6 +73,7 @@ Top moves (impact ÷ effort; confirmed > inferred > suspected):
     Location: <exact file:symbol/route/component>
     Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <HIGH|MED|LOW>
     Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
+    Aligns:   ✓ north-star   - <one-line why>   (omit when neutral)
     Likely fix shape: <validation/refactor/test/etc.>
     Proof/checks: <narrow verification commands; flag repo-code execution>
     Risk/protected areas: <blast radius; PROTECTED flagged>
@@ -56,6 +82,7 @@ Top moves (impact ÷ effort; confirmed > inferred > suspected):
     Location: <exact location>
     Evidence: <glyph> <evidence_grade> — <basis>   confidence: <...>
     Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
+    Aligns:   ✓ north-star   - <one-line why>   (omit when neutral)
     Likely fix shape: <fix shape>
     Proof/checks: <checks>
     Risk/protected areas: <risk>
@@ -235,6 +262,7 @@ Reply with edits, "accept agent recommendation", "go back", "back to candidates"
 - If the user keeps choosing `Agent recommends`, commit to the highest-confidence path and stop asking.
 - `Go back` re-presents the previous question without restarting the funnel.
 - `back to candidates` returns to the ranked Top 5 and `show the full map` opens the Full surface map browse screen, at any level, without restarting.
+- `ignore objectives` strips the charter alignment annotations and reverts to pure evidence order, at any level.
 
 ## Prompt-to-goal track (gap-driven clarifying funnel)
 

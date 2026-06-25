@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-24
+Generated: 2026-06-25
 
-Version: 2.16.0
+Version: 2.17.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,12 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.17.0:
+- Added a durable, local-only objectives charter (`.pathfinder/charter.md`, gitignored via `.git/info/exclude`, never committed): a new Phase 4c between Phase 4b and the funnel that researches the project (code + docs + git history + scout findings) and, on the first run, offers a skippable three-screen BLEND interview — each screen leading with evidence-graded inferred suggestions (`✓/~/?` + basis), backed by a scaffolded generic row and a describe-your-own escape — to capture exactly three durable dimensions: north-star & success metrics, target users & key journeys, and constraints & non-goals. Roadmap/near-term priorities are deliberately excluded.
+- Made the charter reusable: later runs load it and reconcile only the fields where fresh inference disagrees (default keep-and-proceed; empty delta collapses to one line), and an explicit `/pathfinder charter` invocation (or a reconcile-screen option) re-opens the full interview to deepen it when objectives change.
+- Added transparent objective re-bias: a charter-driven alignment tiebreak that breaks only same-band near-ties on impact ÷ effort toward north-star-aligned candidates (never across an evidence band, only on interview-ratified fields), a visible `Aligns:` signal on every funnel card, an `ignore objectives` escape that reverts to pure evidence order, and a charter-framed `in service of <north-star>` line in the generated `/goal` and its recognition-first contract. The charter north-star is sanitized and capped to a single short clause before it ships, since it is untrusted data.
+- Hardened the trust posture: the charter is lower injection risk but still untrusted and sanitized on every read (a tracked charter is treated as fully untrusted); reading docs/git to infer objectives is evidence, never an instruction; and autonomous mode never runs the interview and never lets the charter reorder execution or widen authorization. Reused the existing `04`/`05` artifacts (no new artifact filenames) and extended `scripts/check-skill-consistency.sh` with `check_pair` and SKILL-only presence guards for every new invariant.
 
 Changes in v2.16.0:
 - Added autonomous mode (opt-in): an explicitly-invoked entrypoint ("run Pathfinder autonomously" / "/pathfinder auto") that runs the normal exploration through Phase 4b, then auto-selects every verified survivor (grouped by the existing rules, no interview) and executes the goal pack sequentially end to end — branch, implement, run the goal's proof checks, verify, commit, push, open a PR, and self-merge where the repository's own rules allow it — isolating-and-continuing on any failure. Sequential completion off a freshly updated base avoids merge-order staleness and parallel-branch collisions; parallel execution is deferred.
