@@ -21,12 +21,25 @@ set -uo pipefail
 root="${1:-.}"
 fail=0
 
+jq_bin="${JQ:-}"
+if [ -z "$jq_bin" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    jq_bin="jq"
+  elif command -v jq.exe >/dev/null 2>&1; then
+    jq_bin="jq.exe"
+  fi
+fi
+if [ -z "$jq_bin" ]; then
+  echo "::error::jq is required to run scripts/check-manifests.sh; install jq or ensure it is on PATH for this Bash environment"
+  exit 1
+fi
+
 # (1) JSON validity.
 for f in "$root"/.claude-plugin/plugin.json \
          "$root"/.codex-plugin/plugin.json \
          "$root"/.claude-plugin/marketplace.json \
          "$root"/.agents/plugins/marketplace.json; do
-  if jq empty "$f" 2>/dev/null; then
+  if "$jq_bin" empty "$f" 2>/dev/null; then
     echo "ok: $f is valid JSON"
   else
     echo "::error file=$f::invalid JSON (fix before merge)"
@@ -56,7 +69,7 @@ echo "ok: changelog heading present for v$v"
 
 # (3) Both plugin.json versions must equal VERSION.md.
 for f in "$root"/.claude-plugin/plugin.json "$root"/.codex-plugin/plugin.json; do
-  pv=$(jq -r '.version' "$f")
+  pv=$("$jq_bin" -r '.version' "$f" | tr -d '\r')
   if [ "$pv" = "$v" ]; then
     echo "ok: $f = $pv"
   else
@@ -69,7 +82,7 @@ done
 #     .plugins[].source (TR-5). plugin.json is the single source Claude Code resolves
 #     first; a duplicate elsewhere could silently mask it.
 for f in "$root"/.claude-plugin/marketplace.json "$root"/.agents/plugins/marketplace.json; do
-  if jq -e '(.version != null) or (any(.plugins[]?; .version != null)) or (any(.plugins[]?.source?; (.version? != null)))' "$f" >/dev/null; then
+  if "$jq_bin" -e '(.version != null) or (any(.plugins[]?; .version != null)) or (any(.plugins[]?.source?; (.version? != null)))' "$f" >/dev/null; then
     echo "::error file=$f::marketplace entry declares a version; plugin.json is the single version source — remove it"
     fail=1
   else

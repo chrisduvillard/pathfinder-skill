@@ -97,8 +97,9 @@ check_pair "Objective 1 of 3"      "$funnel" "objectives charter interview scree
 check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
-check_pair "north-star"        "$funnel" "north-star alignment axis"
+check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
+check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not

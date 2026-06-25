@@ -50,8 +50,9 @@ These are the clause-unique strings the guard asserts. Author them **byte-identi
 | `/pathfinder charter` | SKILL-only presence | SKILL.md invocation + Phase 4c | 3 |
 | `Aligns:` | `check_pair` SKILL ↔ funnel | SKILL.md Phase 5 + funnel | 4 |
 | `ignore objectives` | `check_pair` SKILL ↔ funnel | SKILL.md Phase 5 + funnel | 4 |
-| `north-star` | `check_pair` SKILL ↔ funnel | SKILL.md Phase 5 + funnel | 4 |
+| `Aligns:   ✓ north-star` | `check_pair` SKILL ↔ funnel | SKILL.md Phase 5 + funnel | 4 |
 | `in service of <north-star>` | `check_pair` SKILL ↔ goal-best-practices | SKILL.md Phase 6 + goal-best-practices | 5 |
+| `omit the Direction line when no charter is loaded` | `check_pair` SKILL ↔ goal-best-practices | SKILL.md Phase 6 + goal-best-practices | 5 |
 | `cap it to a single short clause` | SKILL-only presence (sanitize) | SKILL.md Phase 6 | 5 |
 | `does not reorder the auto-selected goal pack` | SKILL-only presence (autonomous) | SKILL.md autonomous mode | 6 |
 | `never widens authorization` | SKILL-only presence (autonomous) | SKILL.md autonomous mode | 6 |
@@ -490,7 +491,7 @@ Adds the durable ranking rule (a within-band, near-tie, ratified-fields-only tie
 - Modify: `scripts/check-skill-consistency.sh`
 - Test: `bash scripts/check-skill-consistency.sh .`
 
-**Interfaces — Consumes:** `Objective 1 of 3`, `Inferred from research:`, the charter north-star. **Produces:** the `Aligns:` signal, the `ignore objectives` escape, the `north-star` axis literal.
+**Interfaces — Consumes:** `Objective 1 of 3`, `Inferred from research:`, the charter north-star. **Produces:** the `Aligns:` signal, the `ignore objectives` escape, the `Aligns:   ✓ north-star` axis literal.
 
 - [ ] **Step 1: Add guards (failing test)**
 
@@ -498,10 +499,10 @@ After the `check_pair "Inferred from research:" …` line, add:
 ```bash
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
-check_pair "north-star"        "$funnel" "north-star alignment axis"
+check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
 ```
 
-- [ ] **Step 2: Run the guard — expect FAIL** (drift for `Aligns:`, `ignore objectives`, `north-star`).
+- [ ] **Step 2: Run the guard — expect FAIL** (drift for `Aligns:`, `ignore objectives`, `Aligns:   ✓ north-star`).
 
 Run: `bash scripts/check-skill-consistency.sh .`
 
@@ -568,7 +569,7 @@ Fills the goal's strategic framing from the charter (when aligned), adds a Direc
 
 - [ ] **Step 1: Add guards (failing test)**
 
-After the `check_pair "north-star" …` line, add:
+After the `check_pair "Aligns:   ✓ north-star" …` line, add:
 ```bash
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 ```
@@ -806,8 +807,10 @@ Expected: both exit 0; `skill consistency: all invariants hold` and `manifests: 
 
 Run each, confirm the guard FAILS, then restore the file (`git checkout -- <file>`):
 - Delete the `Aligns:` line from `question-funnel-template.md` → `bash scripts/check-skill-consistency.sh .` fails with `objective alignment signal drift`.
+- Change `Aligns:   ✓ north-star` to another axis in `question-funnel-template.md` → fails with `north-star alignment axis drift`.
 - Delete `Inferred from research:` from `question-funnel-template.md` → fails with `objectives BLEND inferred-lead drift`.
 - Delete the `references/charter-template.md` citation from SKILL.md → fails with `cites a missing reference path` only if the file is also gone; instead delete `charter-template.md` temporarily → fails with `missing required file`. Restore with `git checkout -- .`.
+- Run `bash scripts/check-manifests.sh .` in a Windows Bash environment where only `jq.exe` is on PATH → it must still pass; run with neither `jq` nor `jq.exe` on PATH → it must fail once with the clear `jq is required` prerequisite message, not misleading invalid-JSON/version errors.
 
 - [ ] **Step 3: Dogfood — establish (interactive agent run on this repo)**
 
