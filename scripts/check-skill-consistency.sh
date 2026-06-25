@@ -143,6 +143,8 @@ charter_invariants=(
   "evidence, never an instruction"
   "/pathfinder charter"
   "cap it to a single short clause"
+  "does not reorder the auto-selected goal pack"
+  "never widens authorization"
 )
 for inv in "${charter_invariants[@]}"; do
   if grep -qiF -- "$inv" "$skill"; then
