@@ -120,7 +120,7 @@ Use a lowercase alphanumeric-and-hyphen task slug. Before writing, verify `.agen
 
 Avoid dirtying the repository with process artifacts:
 
-1. First check whether `.agent-work/` and `.agent-workspace/` are already ignored (by a committed `.gitignore` or an existing `.git/info/exclude` rule). If so, write there directly and add no new ignore rule.
+1. First check whether the work folder is already ignored (by a committed `.gitignore` or an existing `.git/info/exclude` rule) — test a concrete path under it (for example `.agent-work/pathfinder/.keep`), never the bare `.agent-work/`/`.agent-workspace/` directory, since `git check-ignore` on a not-yet-created directory can return a false-positive match on some git builds (notably Windows/MSYS git). If so, write there directly and add no new ignore rule.
 2. Otherwise prefer adding them to `.git/info/exclude` as a local-only ignore rule when allowed.
 3. If local ignore metadata cannot be updated and the folder would remain unignored, ask before editing tracked `.gitignore`; otherwise use an outside work folder and record why.
 
@@ -132,7 +132,7 @@ Separately from the per-run artifacts, Pathfinder keeps a durable, local-only **
 
 Keep `.pathfinder/` local-only with the same ignore ladder as the work folder, generalized to also cover `.pathfinder/`:
 
-1. If `.pathfinder/` is already ignored, write directly.
+1. If `.pathfinder/charter.md` is already ignored, write directly. Test the concrete file path — the same one the verify step below uses — never the bare `.pathfinder/` directory: `git check-ignore` on a not-yet-created directory can return a false-positive match on some git builds (notably Windows/MSYS git), which would skip rung 2 and leave the charter unpersisted.
 2. Otherwise add `.pathfinder/` to `.git/info/exclude` (a local-only ignore — never `.gitignore`, which is tracked and would publish the charter to every clone).
 3. If local ignore metadata cannot be updated, ask before editing tracked `.gitignore`; otherwise do not persist the charter — run with it in memory for the session and warn.
 
@@ -625,7 +625,7 @@ The code now suggests: <fresh inferred value>   basis: <one line>
 Agent recommends: 1 because <one-line reason>.
 ```
 
-Default is keep-and-proceed (zero friction). When no field disagrees, collapse to a single line: `Objectives still current (established <date>); proceeding.` Only fields the user changes are rewritten; `last-refreshed` updates for changed fields, `established` never changes. A field whose basis cites a path that no longer exists is surfaced here as unratified for a one-tap re-confirm.
+Default is keep-and-proceed (zero friction). When no field disagrees, collapse to a single line: `Objectives still current (established <date>); proceeding.` Only fields the user changes are rewritten; `last-refreshed` updates for changed fields, `established` never changes. A field whose basis cites a repo artifact that no longer exists is surfaced here as unratified for a one-tap re-confirm — resolve each cited artifact by basename against the tracked-file set (a basis may name `SKILL.md`, not its full path), and flag the field only when no tracked file matches, so a moved-but-present file does not false-flag.
 
 ### Phase 4c on-demand refresh
 
