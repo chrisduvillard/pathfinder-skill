@@ -122,7 +122,7 @@ A map of the full capability set:
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
-**🧭 Knows your objectives.** A one-time, research-grounded interview captures the project's north-star, target users, and constraints into a durable, local-only `.pathfinder/charter.md`; later runs reuse it to transparently re-bias the ranked moves and frame the generated `/goal`.
+**🧠 Remember what the project is for** — a short, one-time interview (it suggests the answers from your code) saves the project's **north-star, users, and constraints** to a private, local-only `.pathfinder/charter.md`. Later runs reuse it to steer which moves rank highest and frame the goal — always visibly, so you can override.
 
 **🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
 
@@ -146,7 +146,7 @@ Every run drops a clean, resumable trail inside the repo:
 └── 08-final-summary.md        what was explored, found, and decided
 ```
 
-Separately, `.pathfinder/charter.md` holds your durable project objectives. Unlike the per-run `.agent-work/` trail, it persists across runs; it is gitignored (via `.git/info/exclude`) and never committed.
+Separately, `.pathfinder/charter.md` holds your durable project objectives. Unlike the per-run `.agent-work/` trail above, it **persists across runs** — and stays private: gitignored via `.git/info/exclude`, never committed.
 
 In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
 
