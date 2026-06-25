@@ -95,6 +95,9 @@ check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
 check_pair "Objective 1 of 3"      "$funnel" "objectives charter interview screen"
 check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
+check_pair "Aligns:"           "$funnel" "objective alignment signal"
+check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
+check_pair "north-star"        "$funnel" "north-star alignment axis"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not

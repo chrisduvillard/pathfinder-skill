@@ -426,6 +426,7 @@ Create `03-synthesis.md` with:
 
 - Merge duplicate findings that different scouts reported for the same location into one candidate; keep the highest severity and union the evidence.
 - Rank candidates by impact over effort, with confirmed findings outranking inferred, and inferred outranking suspected. Do not rank a suspected finding above a confirmed one of similar impact. Phase 4b verification may downgrade grades and re-rank on the post-verification grades before Phase 5 reads them.
+- Alignment tiebreak (applies only when a charter is loaded in Phase 4c; off otherwise). After the existing order is fixed, break **near-ties** — same evidence band AND within one effort-bucket on impact ÷ effort (the same deterministic bucketing Phase 4b uses, so two runs reorder identically) — toward the candidate more aligned with the charter **north-star**, reusing `✓` (aligned) > `~` (partial) > omitted (neutral) > "counter to north-star" (rare). This never folds into the impact score and never promotes across an evidence band — an aligned suspected candidate never outranks a confirmed one. Only charter fields ratified in an interview (basis `(your charter)`) drive the tiebreak; `(inferred, unconfirmed)` or hand-edited fields are neutral. In autonomous mode this tiebreak does not run (see "Autonomous mode").
 - Carry each finding's `evidence_grade` into the candidate. A candidate built only on suspected findings must say so and propose the cheapest check to confirm it before any implementation.
 - If a candidate lacks a measurable end state, either derive one from the symptom or move it to unknowns. Do not promote a non-measurable item to the Top 5.
 - Goal-readiness per candidate: mark high when location, symptom, end state, and a verification command are all present and confirmed or strongly inferred; medium when one is weak; low otherwise. The funnel uses this for its confidence signal and adaptive stopping. Phase 4b may lower goal-readiness from its verification verdict; Phase 5 uses the post-verification value.
@@ -646,6 +647,7 @@ Universal rules that apply to both modes:
 - Two-channel freedom: every work-selection screen must carry a lateral move to widen (`show the full map`) and to leave (`describe your own`), in addition to `Go back`. In Explore mode, every level also offers `back to candidates` to return to the ranked list.
 - Evidence with options: wherever an option carries a confidence word, it also shows its evidence grade (confirmed, inferred, or suspected) and a one-line basis, so the choice is informed rather than blind.
 - Post-verification grades: when `03b-verification.md` is `complete`, every work-selection screen shows the post-verification grade and a one-line `Verified:` field; when it is `not-run` or `in-progress`, show the Phase 4 grades and no `Verified:` field. Surface any candidates the panel rejected in a `Rejected by verification` line.
+- Objective awareness (only when a charter is loaded): the mode-selection preamble states `Objectives: <north-star> (from your charter) — <k> of 5 top moves align.`; every Pick a move card and Explore option carries an `Aligns:` line/token showing only **north-star** alignment (`✓` aligned, `~` partial, omitted when neutral, words `counter to north-star` for the rare counter case — no new glyphs); a candidate the tiebreak moved appends `(moved <from>-><to> on north-star alignment)`; and an `ignore objectives` escape at any level strips the annotations and reverts to pure evidence order. The `users`/`constraints` charter dimensions are not shown per-card (they live in the charter). Log each pre/post rank change and reason to `05-user-answers.md`.
 - Save every question asked to `04-question-funnel.md` and every answer to `05-user-answers.md`. Record the chosen mode and, for Explore from scratch, the full narrowing path. For Pick a move multi-select, `04-question-funnel.md` records the raw selection input and the grouping review options shown; `05-user-answers.md` records selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable, verifiable `/goal`.
 
@@ -694,6 +696,7 @@ Top moves (ranked by impact ÷ effort; confirmed outrank inferred outrank suspec
     Location: <exact file:symbol/route/component>
     Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <HIGH|MED|LOW>
     Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
+    Aligns:   ✓ north-star   - <one-line why this serves the north-star>   (omit this line when neutral)
     Likely fix shape: <small/medium/large shape, e.g. validation + regression test>
     Proof/checks: <narrow verification commands; flag commands that run repo code>
     Risk/protected areas: <blast radius; PROTECTED areas flagged>
@@ -702,6 +705,7 @@ Top moves (ranked by impact ÷ effort; confirmed outrank inferred outrank suspec
     Location: <exact location>
     Evidence: <glyph> <evidence_grade> — <one-line basis>   confidence: <...>
     Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ (median of 3) | 1/3 flagged; median holds>
+    Aligns:   ✓ north-star   - <one-line why this serves the north-star>   (omit this line when neutral)
     Likely fix shape: <fix shape>
     Proof/checks: <checks>
     Risk/protected areas: <risk>
