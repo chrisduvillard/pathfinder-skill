@@ -2,7 +2,7 @@
 
 Generated: 2026-06-25
 
-Version: 2.17.0
+Version: 2.17.1
 
 ## Versioning & distribution
 
@@ -15,6 +15,10 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.17.1:
+- Fixed a charter-persistence bug surfaced by a live dogfood on Windows/MSYS git: the local-only ignore ladder's "already ignored?" rung tested the bare `.pathfinder/` directory, but `git check-ignore` on a not-yet-created directory false-positives on some git builds (reproducible with any nonexistent `<dir>/`). That mis-selected rung 1, skipped writing the `.git/info/exclude` rule, and let the file-level verify-after-write force an in-memory fallback — so the charter silently never persisted across runs on those platforms (safe, but the durability premise no-opped). Both ignore ladders (charter and work-folder) now test a concrete file path under the directory, matching the path the verify step already uses.
+- Clarified the reconcile stale-basis check: a field's cited artifact is resolved by basename against the tracked-file set (a basis may name `SKILL.md`, not its full path) and flagged unratified only when no tracked file matches, so a moved-but-present file does not false-flag.
 
 Changes in v2.17.0:
 - Added a durable, local-only objectives charter (`.pathfinder/charter.md`, gitignored via `.git/info/exclude`, never committed): a new Phase 4c between Phase 4b and the funnel that researches the project (code + docs + git history + scout findings) and, on the first run, offers a skippable three-screen BLEND interview — each screen leading with evidence-graded inferred suggestions (`✓/~/?` + basis), backed by a scaffolded generic row and a describe-your-own escape — to capture exactly three durable dimensions: north-star & success metrics, target users & key journeys, and constraints & non-goals. Roadmap/near-term priorities are deliberately excluded.
