@@ -2,7 +2,7 @@
 
 Generated: 2026-06-25
 
-Version: 2.17.2
+Version: 2.17.3
 
 ## Versioning & distribution
 
@@ -15,6 +15,11 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.17.3:
+- Fixed autonomous-mode objective handling so a first autonomous run now performs the one-time charter preflight when `.pathfinder/charter.md` is missing, while later runs reuse the local charter and point to `/pathfinder charter` for refresh.
+- Clarified README and the question-funnel reference so autonomous mode is described as hands-off after charter preflight, not as skipping every possible question.
+- Added drift guards for the autonomous charter preflight and charter-reuse notice so future wording changes cannot silently break the behavior contract.
 
 Changes in v2.17.2:
 - Hardened the manifest checker for Windows/MSYS contributors: it now resolves `jq.exe` when Bash cannot see `jq`, strips Windows carriage returns from the version probe, and reports a missing `jq` as a prerequisite failure instead of mislabeling manifests as invalid JSON.
