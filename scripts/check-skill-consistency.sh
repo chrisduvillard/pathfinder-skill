@@ -98,6 +98,8 @@ check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
 check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
+check_pair "charter preflight" "$funnel" "autonomous charter preflight"
+check_pair 'charter present; use `/pathfinder charter` to refresh' "$funnel" "autonomous charter reuse notice"
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
 
