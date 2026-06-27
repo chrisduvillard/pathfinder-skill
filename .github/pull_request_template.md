@@ -9,8 +9,8 @@
 ## Checks run
 
 - [ ] `bash scripts/check-skill-consistency.sh`
+- [ ] `bash scripts/check-manifests.sh`
 - [ ] `git diff --check`
-- [ ] Manifest JSON validation
 - [ ] Not applicable, because:
 
 ## Security and compatibility
