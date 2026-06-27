@@ -99,6 +99,8 @@ Run Pathfinder autonomously on this repository.
 
 It is hands-off after charter preflight: later runs reuse `.pathfinder/charter.md`, and you can refresh it with `/pathfinder charter`. Pathfinder only ever self-merges where the repo's own branch protection allows it (otherwise it leaves a green PR for you to merge), isolates a failing goal and keeps going, and **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
 
+Two details matter when you expect questions: Pathfinder asks the charter interview only when `.pathfinder/charter.md` is missing; if that file already exists, it reuses it and tells you to run `/pathfinder charter` to refresh. Update or reinstall the plugin to v2.17.3 or newer before testing this behavior, because older installed caches skip the autonomous charter preflight.
+
 <br>
 
 ## 🧰 What Pathfinder can do
