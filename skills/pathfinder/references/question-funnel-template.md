@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see “Autonomous mode (opt-in)” in `SKILL.md`) none of these screens run: auto-selection takes every verified survivor and the Phase 7-A loop executes them without an interview.
+This template is the interactive funnel. In autonomous mode (see “Autonomous mode (opt-in)” in `SKILL.md`) only the Phase 4c charter preflight may ask questions; the work-selection screens below do not run. After that preflight, auto-selection takes every verified survivor and the Phase 7-A loop executes them without a work-selection interview.
 
 ## Universal rules
 
@@ -22,7 +22,7 @@ This template is the interactive funnel. In autonomous mode (see “Autonomous m
 
 ## Phase 4c: Objectives charter interview (runs before mode selection)
 
-When `.pathfinder/charter.md` is absent, Phase 4c (see `SKILL.md`) offers a skippable three-screen interview that establishes the durable objectives charter; when it is present, Phase 4c reconciles it instead of re-asking. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
+When `.pathfinder/charter.md` is absent in autonomous mode, Phase 4c (see `SKILL.md`) runs the three-screen interview as the charter preflight before hands-off execution continues. When `.pathfinder/charter.md` is absent outside autonomous mode, Phase 4c offers the same interview as a skippable establishment step. When the charter is present, Phase 4c reconciles it instead of re-asking and records this notice: charter present; use `/pathfinder charter` to refresh. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
 
 ```text
 Objective 1 of 3 - North-star & success metrics

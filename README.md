@@ -91,13 +91,13 @@ flowchart LR
 Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** *(opt-in)* — want it hands-off? Invoke it explicitly and Pathfinder runs the normal exploration, then implements, verifies, commits, pushes, opens a PR, and self-merges every verified move — one goal at a time, end to end:
+**⚡ Autonomous** *(opt-in)* — want it hands-off? Invoke it explicitly and Pathfinder runs the normal exploration, asks the one-time objectives interview if no local charter exists yet, then implements, verifies, commits, pushes, opens a PR, and self-merges every verified move — one goal at a time, end to end:
 
 ```text
 Run Pathfinder autonomously on this repository.
 ```
 
-It only ever self-merges where the repo's own branch protection allows it (otherwise it leaves a green PR for you to merge), isolates a failing goal and keeps going, and **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+It is hands-off after charter preflight: later runs reuse `.pathfinder/charter.md`, and you can refresh it with `/pathfinder charter`. Pathfinder only ever self-merges where the repo's own branch protection allows it (otherwise it leaves a green PR for you to merge), isolates a failing goal and keeps going, and **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
 
 <br>
 
@@ -122,7 +122,7 @@ A map of the full capability set:
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
-**🧠 Remember what the project is for** — a short, one-time interview (it suggests the answers from your code) saves the project's **north-star, users, and constraints** to a private, local-only `.pathfinder/charter.md`. Later runs reuse it to steer which moves rank highest and frame the goal — always visibly, so you can override.
+**🧠 Remember what the project is for** — a short, one-time interview (it suggests the answers from your code) saves the project's **north-star, users, and constraints** to a private, local-only `.pathfinder/charter.md`. The first autonomous run may ask this before going hands-off; later runs reuse it to steer interactive rankings and frame goals — always visibly, so you can override or refresh it.
 
 **🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
 
@@ -146,7 +146,7 @@ Every run drops a clean, resumable trail inside the repo:
 └── 08-final-summary.md        what was explored, found, and decided
 ```
 
-Separately, `.pathfinder/charter.md` holds your durable project objectives. Unlike the per-run `.agent-work/` trail above, it **persists across runs** — and stays private: gitignored via `.git/info/exclude`, never committed.
+Separately, `.pathfinder/charter.md` holds your durable project objectives. Unlike the per-run `.agent-work/` trail above, it **persists across runs** — and stays private: gitignored via `.git/info/exclude`, never committed. If it already exists, Pathfinder does not re-ask the one-time interview unless you run `/pathfinder charter`.
 
 In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
 
