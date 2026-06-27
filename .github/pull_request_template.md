@@ -10,6 +10,7 @@
 
 - [ ] `bash scripts/check-skill-consistency.sh`
 - [ ] `bash scripts/check-manifests.sh`
+- [ ] `bash scripts/check-portability.sh`
 - [ ] `git diff --check`
 - [ ] Not applicable, because:
 
