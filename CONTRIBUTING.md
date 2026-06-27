@@ -21,12 +21,14 @@ Run the local checks — these run the same logic CI does, so green locally mean
 ```bash
 bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
+bash scripts/check-portability.sh         # validation/release shell portability guard
 git diff --check                          # trailing whitespace / conflict markers
 ```
 
-`scripts/check-manifests.sh` is the same script `.github/workflows/manifests.yml` runs, so it
-catches the most common mistake — bumping `VERSION.md` without mirroring both `plugin.json`
-files — before you push, not after.
+These scripts are the same checks `.github/workflows/manifests.yml` runs, so they
+catch common mistakes — such as bumping `VERSION.md` without mirroring both
+`plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
+before you push, not after.
 
 ## Change guidelines
 

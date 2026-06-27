@@ -54,8 +54,8 @@ if [ "$vlines" -ne 1 ]; then
   echo "::error file=VERSION.md::expected exactly one 'Version: X.Y.Z' line, found $vlines"
   exit 1
 fi
-# Anchored, >=1-space regex — identical to release.yml so both resolve the same version.
-v=$(grep -oP '^Version:\s+\K[0-9]+\.[0-9]+\.[0-9]+' "$root/VERSION.md" | head -1)
+# Anchored, >=1-space regex; keep this parser in sync with release.yml.
+v=$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+/ { print $2; exit }' "$root/VERSION.md" | tr -d '\r')
 if [ -z "$v" ]; then
   echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
   exit 1

@@ -44,3 +44,6 @@ jobs:
 
       - name: Check SKILL.md <-> reference-template consistency
         run: bash scripts/check-skill-consistency.sh
+
+      - name: Check validation/release portability
+        run: bash scripts/check-portability.sh
