@@ -91,15 +91,15 @@ flowchart LR
 Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** *(opt-in)* — want it hands-off? Invoke it explicitly and Pathfinder runs the normal exploration, asks the one-time objectives interview if no local charter exists yet, then implements, verifies, commits, pushes, opens a PR, and self-merges every verified move — one goal at a time, end to end:
+**⚡ Autonomous** *(opt-in)* — want it hands-off? Invoke it explicitly and Pathfinder checks the local intent files first. If `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing or incomplete, it runs the Deep Intent Gate, then selects eligible goals from the sanitized charter, roadmap, and current repo evidence. Each goal runs one at a time — implement, verify, commit, push, open a PR, and conditionally self-merge where branch protection allows:
 
 ```text
 Run Pathfinder autonomously on this repository.
 ```
 
-It is hands-off after charter preflight: later runs reuse `.pathfinder/charter.md`, and you can refresh it with `/pathfinder charter`. Pathfinder only ever self-merges where the repo's own branch protection allows it (otherwise it leaves a green PR for you to merge), isolates a failing goal and keeps going, and **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+It is hands-off after intent preflight: later runs reuse complete intent files, and you can refresh them with `/pathfinder charter`. Pathfinder updates the roadmap after each goal, may isolate a recoverable per-goal failure and continue to another independent eligible goal, and stops the run at safety, manual-approval, ambiguity, or budget boundaries. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
 
-Two details matter when you expect questions: Pathfinder asks the charter interview only when `.pathfinder/charter.md` is missing; if that file already exists, it reuses it and tells you to run `/pathfinder charter` to refresh. Update or reinstall the plugin to v2.17.3 or newer before testing this behavior, because older installed caches skip the autonomous charter preflight.
+Two details matter when you expect questions: Pathfinder asks the Deep Intent Gate only when `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, incomplete, or explicitly refreshed; if both files are complete, it reuses them and tells you to run `/pathfinder charter` to refresh. Update or reinstall the plugin to v2.17.3 or newer before testing this behavior, because older installed caches skip the autonomous intent preflight.
 
 <br>
 
@@ -120,11 +120,11 @@ A map of the full capability set:
 
 **⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
 
-**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** executes the verified moves end to end — branch → implement → verify → commit → push → open a PR → self-merge where the repo's rules allow — one goal at a time, isolating a failing goal and continuing. See [Safety](#-safety).
+**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** runs the Deep Intent Gate when needed, selects eligible goals from sanitized charter, roadmap, and repo evidence, then executes them one at a time — branch → implement → verify → commit → push → open a PR → conditional self-merge where the repo's rules allow — updating the roadmap and stopping at safety, manual-approval, ambiguity, or budget boundaries. See [Safety](#-safety).
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
-**🧠 Remember what the project is for** — a short, one-time interview (it suggests the answers from your code) saves the project's **north-star, users, and constraints** to a private, local-only `.pathfinder/charter.md`. The first autonomous run may ask this before going hands-off; later runs reuse it to steer interactive rankings and frame goals — always visibly, so you can override or refresh it.
+**🧠 Remember what the project is for** — a short interview (it suggests the answers from your code) saves the project's **north-star, users, constraints, and deep objectives** to private, local-only intent files: `.pathfinder/charter.md` for durable intent and `.pathfinder/roadmap.md` for evolving desired work. The first autonomous run may ask this before going hands-off; later runs reuse the charter plus roadmap to steer interactive rankings and frame goals — always visibly, so you can override or refresh them.
 
 **🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
 
@@ -148,7 +148,7 @@ Every run drops a clean, resumable trail inside the repo:
 └── 08-final-summary.md        what was explored, found, and decided
 ```
 
-Separately, `.pathfinder/charter.md` holds your durable project objectives. Unlike the per-run `.agent-work/` trail above, it **persists across runs** — and stays private: gitignored via `.git/info/exclude`, never committed. If it already exists, Pathfinder does not re-ask the one-time interview unless you run `/pathfinder charter`.
+Separately, `.pathfinder/charter.md` holds durable project objectives and `.pathfinder/roadmap.md` holds evolving desired work. Unlike the per-run `.agent-work/` trail above, they **persist across runs** — and stay private: gitignored via `.git/info/exclude`, never committed. If both are complete, Pathfinder does not re-ask the Deep Intent Gate unless you run `/pathfinder charter`.
 
 In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
 
@@ -195,7 +195,7 @@ Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex.
 
 Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
 
-**Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
+**Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, safety/manual/ambiguity/budget boundaries stop the run, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
 
 ## 🤝 Contributing and support
 
