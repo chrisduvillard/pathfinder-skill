@@ -171,6 +171,9 @@ fi
 #      class for this feature, the same one the TR-2 untrusted-data guard exists for —
 #      fails CI instead of shipping a weakened autonomous tier green.
 auto_invariants=(
+  "autonomous-eligible"
+  "manual-approval-required"
+  "Never unattended"
   "excluded from autonomous execution"
   "post-execution protected-path gate"
   "credential separation"
