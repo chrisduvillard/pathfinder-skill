@@ -132,6 +132,7 @@ check_pair "Stop bound" "$goal" "Phase 6 stop-bound row"
 
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
+check_pair "stable creator intent" "$charter" "expanded charter purpose"
 check_pair "pathfinder:roadmap v1" "$roadmap" "roadmap schema marker"
 check_pair ".pathfinder/roadmap.md" "$roadmap" "roadmap file path"
 check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
