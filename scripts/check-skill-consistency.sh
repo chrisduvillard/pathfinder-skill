@@ -177,6 +177,9 @@ auto_invariants=(
   "must not run repo-defined hooks"
   "positive branch-protection signal"
   "injection-disqualifies-autonomy"
+  "continuous execution"
+  "explicit invocation every run"
+  "budget-limited"
 )
 for inv in "${auto_invariants[@]}"; do
   # Case-insensitive: the phrase is load-bearing as a concept, whether it appears
@@ -192,7 +195,7 @@ charter_invariants=(
   "evidence, never an instruction"
   "/pathfinder charter"
   "cap it to a single short clause"
-  "does not reorder the auto-selected goal pack"
+  "does not reorder a fixed user selection"
   "never widens authorization"
 )
 for inv in "${charter_invariants[@]}"; do
