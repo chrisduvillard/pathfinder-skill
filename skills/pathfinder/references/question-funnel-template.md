@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see “Autonomous mode (opt-in)” in `SKILL.md`) only the Phase 4c charter preflight may ask questions; the work-selection screens below do not run. After that preflight, auto-selection takes every verified survivor and the Phase 7-A loop executes them without a work-selection interview.
+This template is the interactive funnel. In autonomous mode (see "Autonomous mode (opt-in)" in `SKILL.md`) the Deep Intent Gate may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run in autonomous mode.
 
 ## Universal rules
 
@@ -20,28 +20,43 @@ This template is the interactive funnel. In autonomous mode (see “Autonomous m
 - Record the chosen mode in `04-question-funnel.md`; for Explore from scratch, record the full narrowing path. For Pick a move multi-select, record the raw selection input and grouping review options shown. Save answers to `05-user-answers.md`, including selected moves, accepted grouping, splits, merges, drops, and execution choice.
 - Stop only when there is enough to write a measurable `/goal`.
 
-## Phase 4c: Objectives charter interview (runs before mode selection)
+## Phase 4c: Deep Intent Gate (runs before entry-point continuation)
 
-When `.pathfinder/charter.md` is absent in autonomous mode, Phase 4c (see `SKILL.md`) runs the three-screen interview as the charter preflight before hands-off execution continues. When `.pathfinder/charter.md` is absent outside autonomous mode, Phase 4c offers the same interview as a skippable establishment step. When the charter is present outside autonomous mode, Phase 4c reconciles it instead of re-asking and records this notice: charter present; use `/pathfinder charter` to refresh. In autonomous mode with an existing charter, Phase 4c records that notice and proceeds without reconcile screens. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
+When `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, or explicitly refreshed, Phase 4c runs the Deep Intent Gate before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing.
+
+The gate opens with an evidence draft, then asks a recognition-first interview that usually spans 8 to 12 compact screens. Every screen shows inferred answers with evidence and confidence, offers 3 to 6 concrete options where possible, includes `Agent recommends:`, includes free text, and asks directly about future capabilities not started yet.
 
 ```text
-Objective 1 of 3 - North-star & success metrics
-What is this project ultimately for, and how do we know it's winning?
+Deep Intent Gate - Evidence draft
+I found this current project shape:
+1. Purpose: <inferred purpose>   confidence: <confirmed|inferred|suspected>   basis: <file/git/doc basis>
+2. Users: <inferred users>       confidence: <...>                            basis: <basis>
+3. Constraints: <inferred constraints>   confidence: <...>                    basis: <basis>
 
-Inferred from research:
-1. ~ North-star: "<inferred north-star>"   basis: <code/structure basis> (inferred)
-2. ? Success metric: "<inferred metric>"   basis: <basis> (suspected)
+The repo cannot tell me these future-facing parts:
+- future capabilities not started yet
+- roadmap priority and sequencing
+- optional finished state
+- autonomy policy
 
-Or pick a generic frame:
-3. Adoption / usage growth   4. Reliability / quality bar   5. Time-to-value for a new user
-
-Agent recommends: 1 because <reason from a code/scout-grounded candidate>.
-None of these - describe your own north-star and metric in your own words.
+Agent recommends: continue the Deep Intent Gate now because autonomous work needs the creator model.
+Reply "continue" to answer now, or "continue later" to save a partial model and stop.
 ```
 
-Screens 2 (Target users & key journeys, generic row from reservoir B) and 3 (Constraints & non-goals, generic row from reservoirs E + F) follow the same grammar. Roadmap is never a screen. Record the screens in `04-question-funnel.md`, the ratified objectives in `05-user-answers.md`, and the durable answers in `.pathfinder/charter.md`.
+The normal screens are:
 
-On a later non-autonomous run with a charter present, Phase 4c reconciles instead of re-asking: it shows only fields where fresh inference disagrees as keep/update/edit option screens (default keep-and-proceed; empty delta collapses to one line), and offers `refresh objectives (go deeper)` to re-open all three screens. The standalone `/pathfinder charter` invocation runs the same refresh directly. Autonomous runs with a charter skip these reconcile screens and only record the refresh notice.
+1. Purpose and promise.
+2. Primary users and excluded users.
+3. Key journeys and must-work flows.
+4. Durable success metrics and quality bars.
+5. Future capabilities not started yet.
+6. Roadmap priorities and sequencing.
+7. Constraints and protected areas.
+8. Non-goals and tradeoffs.
+9. Optional finished state.
+10. Autonomy policy and manual-approval boundaries.
+
+Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, and evolving desired work in `.pathfinder/roadmap.md`.
 
 ## Mode selection (ask once)
 
