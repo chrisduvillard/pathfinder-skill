@@ -39,7 +39,7 @@ The repo cannot tell me these future-facing parts:
 - optional finished state
 - autonomy policy
 
-Agent recommends: continue the Deep Intent Gate now because autonomous work needs the creator model.
+Agent recommends: continue the Deep Intent Gate now because every Pathfinder entry point needs the creator model.
 Reply "continue" to answer now, or "continue later" to save a partial model and stop.
 ```
 
