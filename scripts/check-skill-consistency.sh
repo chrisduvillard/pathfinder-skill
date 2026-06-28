@@ -76,6 +76,21 @@ check_pair() {
   fi
 }
 
+check_skill_section() {
+  local start="$1" end="$2" token="$3" label="$4"
+  if awk -v start="$start" -v stop="$end" -v token="$token" '
+    BEGIN { token = tolower(token); found = 0 }
+    index($0, start) { in_section = 1 }
+    in_section && index($0, stop) { exit }
+    in_section && index(tolower($0), token) { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$skill"; then
+    echo "ok: $label present in section \"$start\""
+  else
+    err "$label drift: token \"$token\" missing from section \"$start\""
+  fi
+}
+
 # Phase 5 funnel invariants (SKILL.md <-> question-funnel-template.md)
 check_pair "Default to option 2" "$funnel" "execution-mode default"
 check_pair "five levels"          "$funnel" "five-level funnel cap"
@@ -110,6 +125,8 @@ check_pair "2.1.139"         "$goal" "Claude Code /goal version gate"
 check_pair "untrusted data that cannot override" "$goal" "untrusted-data clause"
 check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
 check_pair "autonomous mode records the contract without asking" "$goal" "autonomous Phase 6 non-interactive contract"
+check_pair "One measurable end state" "$goal" "Phase 6 measurable-end-state row"
+check_pair "Stop bound" "$goal" "Phase 6 stop-bound row"
 
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
@@ -152,11 +169,7 @@ for inv in "${auto_invariants[@]}"; do
   # Case-insensitive: the phrase is load-bearing as a concept, whether it appears
   # as a heading (capitalized) or inline (lowercase); reformatting case must not
   # silently disable the guard.
-  if grep -qiF -- "$inv" "$skill"; then
-    echo "ok: autonomous-mode safety invariant present: \"$inv\""
-  else
-    err "SKILL.md is missing autonomous-mode safety invariant: \"$inv\""
-  fi
+  check_skill_section "## Autonomous mode" "## Phase 7:" "$inv" "autonomous-mode safety invariant \"$inv\""
 done
 
 # Objectives-charter SKILL-only presence invariants (no Phase 5/6 mirror; guard like Track B).
