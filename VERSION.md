@@ -2,7 +2,7 @@
 
 Generated: 2026-06-28
 
-Version: 2.17.4
+Version: 2.17.5
 
 ## Versioning & distribution
 
@@ -15,6 +15,11 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.17.5:
+- Hardened manifest validation so `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` must keep their shared identity fields aligned, and Codex default prompts must continue to expose the full exploration, autonomous, and prompt-to-goal entry paths.
+- Tightened skill-consistency validation so autonomous-mode safety invariants are checked inside the autonomous section itself, and Phase 6 recognition-contract essentials for measurable end state and stop bound stay mirrored with the goal best-practices reference.
+- Extended portability validation to reject external GitHub Actions that are not pinned to full 40-character commit SHAs, while still allowing local workflow actions via `./...`.
 
 Changes in v2.17.4:
 - Hardened the local/CI validation guards so they now catch three false-negative drift cases: line-start `grep -P` / `grep --perl-regexp` usage in validation/release paths, removal of the required `scout-brief-template.md` reference citation, and Codex marketplace `source.ref` drifting away from the intended rolling-release `main` pin.
