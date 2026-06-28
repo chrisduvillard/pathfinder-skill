@@ -9,13 +9,13 @@ set -uo pipefail
 root="${1:-.}"
 fail=0
 
-for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml; do
+for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
   [ -f "$f" ] || continue
   case "$f" in
     */scripts/check-portability.sh) continue ;;
   esac
 
-  if grep -nE 'grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)' "$f"; then
+  if grep -nE '^[[:space:]]*[^#[:space:]][^#]*grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)' "$f"; then
     echo "::error file=$f::replace GNU-only grep Perl-regexp usage with portable awk, sed, or grep -E"
     fail=1
   fi

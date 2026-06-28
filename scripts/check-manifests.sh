@@ -47,17 +47,19 @@ for f in "$root"/.claude-plugin/plugin.json \
   fi
 done
 
-# (2) VERSION.md hygiene: exactly one anchored 'Version:' line so the parse below
-#     cannot silently pick the wrong version, plus a changelog heading for it.
-vlines=$(grep -cE '^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+' "$root/VERSION.md" || true)
+version_re='^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$'
+
+# (2) VERSION.md hygiene: exactly one full-line 'Version:' line so the parse
+#     below cannot silently pick the wrong version, plus a changelog heading for it.
+vlines=$(grep -cE "$version_re" "$root/VERSION.md" || true)
 if [ "$vlines" -ne 1 ]; then
-  echo "::error file=VERSION.md::expected exactly one 'Version: X.Y.Z' line, found $vlines"
+  echo "::error file=VERSION.md::expected exactly one full-line 'Version: X.Y.Z' line, found $vlines"
   exit 1
 fi
-# Anchored, >=1-space regex; keep this parser in sync with release.yml.
-v=$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+/ { print $2; exit }' "$root/VERSION.md" | tr -d '\r')
+# Full-line, >=1-space regex; keep this parser in sync with release.yml.
+v=$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }' "$root/VERSION.md" | tr -d '\r')
 if [ -z "$v" ]; then
-  echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
+  echo "::error file=VERSION.md::could not parse a full-line 'Version: X.Y.Z' line"
   exit 1
 fi
 echo "VERSION.md declares $v"

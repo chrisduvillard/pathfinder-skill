@@ -41,11 +41,11 @@ jobs:
         run: |
           set -uo pipefail
 
-          # Single 'Version: X.Y.Z' line is enforced by manifests.yml, so head -1
-          # is safe here.
-          version="$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+/ { print $2; exit }' VERSION.md | tr -d '\r')"
+          # Single full-line 'Version: X.Y.Z' is enforced by manifests.yml, so
+          # head -1 is safe here.
+          version="$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }' VERSION.md | tr -d '\r')"
           if [ -z "${version:-}" ]; then
-            echo "::error file=VERSION.md::could not parse a 'Version: X.Y.Z' line"
+            echo "::error file=VERSION.md::could not parse a full-line 'Version: X.Y.Z' line"
             exit 1
           fi
           tag="v$version"

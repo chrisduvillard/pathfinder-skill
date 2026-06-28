@@ -537,7 +537,7 @@ It runs after 4b because the inferred suggestions must come from the verified, s
 
 ### Step 1 — load or offer establishment
 
-- If `.pathfinder/charter.md` is present: load it and go to the reconcile step (Phase 4c reuse, below). In autonomous mode, do not re-interview; record this notice: charter present; use `/pathfinder charter` to refresh.
+- If `.pathfinder/charter.md` is present: load it and go to the reconcile step (Phase 4c reuse, below). In autonomous mode, do not re-interview or show reconcile screens; record this notice and proceed: charter present; use `/pathfinder charter` to refresh.
 - If absent in autonomous mode: run the establishment interview below as the charter preflight, write `.pathfinder/charter.md`, verify it is ignored, then continue to auto-selection.
 - If absent outside autonomous mode: **offer** the establishment interview below. It is skippable — a user who just wants a fast `/goal` declines, and the run proceeds with no charter and no objective re-bias. Establishment is never forced.
 
@@ -1144,6 +1144,8 @@ Before saving, count characters in the condition excluding the `/goal ` prefix. 
 
 Before writing the final `06-goal-command.md`, mirror the assembled goal back as a labeled, line-by-line contract rather than one opaque block, so the user recognizes each part and where it came from. This carries the Phase 5 recognition-first principle through to the goal itself. Mark each line with its evidence glyph and provenance (`your L3 target`, `your L4 scope`, `derived`, or `default`), flag any proof step that must run repo code with `*`, and show the character count against the 3900 budget.
 
+In autonomous mode, this is not an interactive checkpoint: autonomous mode records the contract without asking, then writes `06-goal-command.md` and continues into the Phase 7-A loop for eligible goals.
+
 ```text
 Here is the /goal I assembled from your answers — recognize each part, adjust any line:
 
@@ -1218,7 +1220,7 @@ Two things never change in autonomous mode:
 
 Run autonomous mode only when the user explicitly invokes it (“run Pathfinder autonomously,” “/pathfinder auto,” “autonomous mode”). It is never reached from the normal post-save execution menu, so option 2 (save, don't run) keeps its meaning and no one falls into unattended merge by picking a menu item.
 
-Run Phases 0–4b exactly as normal — discovery, scouts, synthesis, and Phase 4b adversarial verification. Then run Phase 4c as the charter preflight before auto-selection: if `.pathfinder/charter.md` is absent, ask the one-time three-screen objectives interview and save the charter before continuing; if the charter exists, reuse it and record this notice: charter present; use `/pathfinder charter` to refresh. Then, instead of the Phase 5 work-selection interview, run auto-selection; Phase 6 then generates the goal pack unchanged; then the Phase 7-A loop executes it.
+Run Phases 0–4b exactly as normal — discovery, scouts, synthesis, and Phase 4b adversarial verification. Then run Phase 4c as the charter preflight before auto-selection: if `.pathfinder/charter.md` is absent, ask the one-time three-screen objectives interview and save the charter before continuing; if the charter exists, reuse it and record this notice without showing reconcile screens: charter present; use `/pathfinder charter` to refresh. Then, instead of the Phase 5 work-selection interview, run auto-selection; Phase 6 generates the goal pack and records the recognition-first contract without asking; then the Phase 7-A loop executes eligible goals.
 
 ### Auto-selection (replaces the Phase 5 interview)
 
