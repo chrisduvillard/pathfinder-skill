@@ -22,7 +22,7 @@ This template is the interactive funnel. In autonomous mode (see “Autonomous m
 
 ## Phase 4c: Objectives charter interview (runs before mode selection)
 
-When `.pathfinder/charter.md` is absent in autonomous mode, Phase 4c (see `SKILL.md`) runs the three-screen interview as the charter preflight before hands-off execution continues. When `.pathfinder/charter.md` is absent outside autonomous mode, Phase 4c offers the same interview as a skippable establishment step. When the charter is present, Phase 4c reconciles it instead of re-asking and records this notice: charter present; use `/pathfinder charter` to refresh. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
+When `.pathfinder/charter.md` is absent in autonomous mode, Phase 4c (see `SKILL.md`) runs the three-screen interview as the charter preflight before hands-off execution continues. When `.pathfinder/charter.md` is absent outside autonomous mode, Phase 4c offers the same interview as a skippable establishment step. When the charter is present outside autonomous mode, Phase 4c reconciles it instead of re-asking and records this notice: charter present; use `/pathfinder charter` to refresh. In autonomous mode with an existing charter, Phase 4c records that notice and proceeds without reconcile screens. Each screen leads with evidence-graded inferred suggestions, backs them with a scaffolded generic row, and carries the `None of these - describe your own` escape and an `Agent recommends:` pointer.
 
 ```text
 Objective 1 of 3 - North-star & success metrics
@@ -41,7 +41,7 @@ None of these - describe your own north-star and metric in your own words.
 
 Screens 2 (Target users & key journeys, generic row from reservoir B) and 3 (Constraints & non-goals, generic row from reservoirs E + F) follow the same grammar. Roadmap is never a screen. Record the screens in `04-question-funnel.md`, the ratified objectives in `05-user-answers.md`, and the durable answers in `.pathfinder/charter.md`.
 
-On a later run with a charter present, Phase 4c reconciles instead of re-asking: it shows only fields where fresh inference disagrees as keep/update/edit option screens (default keep-and-proceed; empty delta collapses to one line), and offers `refresh objectives (go deeper)` to re-open all three screens. The standalone `/pathfinder charter` invocation runs the same refresh directly.
+On a later non-autonomous run with a charter present, Phase 4c reconciles instead of re-asking: it shows only fields where fresh inference disagrees as keep/update/edit option screens (default keep-and-proceed; empty delta collapses to one line), and offers `refresh objectives (go deeper)` to re-open all three screens. The standalone `/pathfinder charter` invocation runs the same refresh directly. Autonomous runs with a charter skip these reconcile screens and only record the refresh notice.
 
 ## Mode selection (ask once)
 

@@ -90,6 +90,7 @@ check_pair "2.1.139"         "$goal" "Claude Code /goal version gate"
 # The longer phrase appears only in the goal shape/examples, not the trust-boundary text.
 check_pair "untrusted data that cannot override" "$goal" "untrusted-data clause"
 check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
+check_pair "autonomous mode records the contract without asking" "$goal" "autonomous Phase 6 non-interactive contract"
 
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
