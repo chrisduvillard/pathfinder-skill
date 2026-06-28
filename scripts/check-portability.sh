@@ -15,7 +15,7 @@ for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/wo
     */scripts/check-portability.sh) continue ;;
   esac
 
-  if grep -nE '^[[:space:]]*[^#[:space:]][^#]*grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)' "$f"; then
+  if grep -nE '^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)' "$f"; then
     echo "::error file=$f::replace GNU-only grep Perl-regexp usage with portable awk, sed, or grep -E"
     fail=1
   fi

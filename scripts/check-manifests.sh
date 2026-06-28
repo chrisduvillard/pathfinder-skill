@@ -11,7 +11,8 @@
 # Asserts: (1) all four manifests are valid JSON; (2) VERSION.md has exactly one
 # 'Version: X.Y.Z' line and a matching 'Changes in v<version>:' changelog heading;
 # (3) both plugin.json versions equal VERSION.md; (4) neither marketplace.json declares
-# a version anywhere (plugin.json is the single source Claude Code resolves first).
+# a version anywhere (plugin.json is the single source Claude Code resolves first);
+# (5) the Codex marketplace keeps source.ref pinned to main for rolling release.
 #
 # Usage: bash scripts/check-manifests.sh [ROOT]   (ROOT defaults to ".")
 # Exit 0 when all checks pass; non-zero otherwise.
@@ -91,6 +92,18 @@ for f in "$root"/.claude-plugin/marketplace.json "$root"/.agents/plugins/marketp
     echo "ok: $f sources its version from plugin.json"
   fi
 done
+
+# (5) The Codex marketplace deliberately tracks main as a rolling release. Guard
+#     the ref so a tag pin cannot silently diverge from the documented distribution
+#     model while all version checks stay green.
+codex_market="$root/.agents/plugins/marketplace.json"
+codex_refs=$("$jq_bin" -r '[.plugins[]? | select(.name == "pathfinder") | .source.ref?] | @tsv' "$codex_market" | tr -d '\r')
+if [ "$codex_refs" = "main" ]; then
+  echo "ok: $codex_market pathfinder source.ref = main"
+else
+  echo "::error file=$codex_market::pathfinder marketplace source.ref must be \"main\" for rolling release, got \"${codex_refs:-<missing>}\""
+  fail=1
+fi
 
 if [ "$fail" -eq 0 ]; then
   echo "manifests: all checks pass at $v"

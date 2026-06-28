@@ -24,24 +24,43 @@ funnel="$root/skills/pathfinder/references/question-funnel-template.md"
 goal="$root/skills/pathfinder/references/goal-best-practices.md"
 arts="$root/skills/pathfinder/references/artifact-structure.md"
 charter="$root/skills/pathfinder/references/charter-template.md"
+scout="$root/skills/pathfinder/references/scout-brief-template.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal" "$arts" "$charter"; do
+for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$scout"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
 
-# (1) Reference-path existence: every references/<name>.md cited in SKILL.md
-#     must exist on disk (catches a renamed reference whose citation was missed).
+# (1) Reference-path contract: every references/<name>.md cited in SKILL.md must
+#     exist on disk, and the cited set must include every required reference.
+#     This catches both a renamed reference and a citation removed together with
+#     its file.
+cited_refs="$(grep -oE 'references/[a-z0-9-]+\.md' "$skill" | sort -u)"
+expected_refs="$(printf '%s\n' \
+  'references/artifact-structure.md' \
+  'references/charter-template.md' \
+  'references/goal-best-practices.md' \
+  'references/question-funnel-template.md' \
+  'references/scout-brief-template.md' \
+  | sort -u)"
 while IFS= read -r ref; do
+  [ -n "$ref" ] || continue
   if [ -f "$root/skills/pathfinder/$ref" ]; then
     echo "ok: cited reference exists: $ref"
   else
     err "SKILL.md cites a missing reference path: $ref"
   fi
-done < <(grep -oE 'references/[a-z0-9-]+\.md' "$skill" | sort -u)
+done < <(printf '%s\n' "$cited_refs")
+if [ "$cited_refs" = "$expected_refs" ]; then
+  echo "ok: required reference citation set matches SKILL.md"
+else
+  err "required-reference citation drift: SKILL.md must cite exactly the required references"
+  echo "  missing from SKILL.md:  $(comm -23 <(printf '%s\n' "$expected_refs") <(printf '%s\n' "$cited_refs") | tr '\n' ' ')"
+  echo "  unexpected in SKILL.md: $(comm -13 <(printf '%s\n' "$expected_refs") <(printf '%s\n' "$cited_refs") | tr '\n' ' ')"
+fi
 
 # (2) Cross-file invariants. Each token must appear in BOTH the canonical
 #     SKILL.md and the named mirror; present-in-one-only (drift) or absent-in-
