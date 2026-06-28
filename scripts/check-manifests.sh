@@ -10,9 +10,11 @@
 #
 # Asserts: (1) all four manifests are valid JSON; (2) VERSION.md has exactly one
 # 'Version: X.Y.Z' line and a matching 'Changes in v<version>:' changelog heading;
-# (3) both plugin.json versions equal VERSION.md; (4) neither marketplace.json declares
-# a version anywhere (plugin.json is the single source Claude Code resolves first);
-# (5) the Codex marketplace keeps source.ref pinned to main for rolling release.
+# (3) both plugin.json versions equal VERSION.md; (4) core identity fields match
+# between Claude and Codex plugin manifests; (5) Codex default prompts cover the
+# supported entry paths; (6) neither marketplace.json declares a version anywhere
+# (plugin.json is the single source Claude Code resolves first); (7) the Codex
+# marketplace keeps source.ref pinned to main for rolling release.
 #
 # Usage: bash scripts/check-manifests.sh [ROOT]   (ROOT defaults to ".")
 # Exit 0 when all checks pass; non-zero otherwise.
@@ -81,7 +83,49 @@ for f in "$root"/.claude-plugin/plugin.json "$root"/.codex-plugin/plugin.json; d
   fi
 done
 
-# (4) Neither marketplace.json may declare a version — including one nested under
+# (4) Core identity metadata should not drift between the Claude and Codex plugin
+#     manifests. The Codex manifest has extra interface fields by design, so compare
+#     only the shared identity surface.
+claude_plugin="$root/.claude-plugin/plugin.json"
+codex_plugin="$root/.codex-plugin/plugin.json"
+identity_fields=(name description homepage repository license)
+for field in "${identity_fields[@]}"; do
+  cv=$("$jq_bin" -r ".$field // empty" "$claude_plugin" | tr -d '\r')
+  xv=$("$jq_bin" -r ".$field // empty" "$codex_plugin" | tr -d '\r')
+  if [ "$cv" = "$xv" ] && [ -n "$cv" ]; then
+    echo "ok: plugin identity field .$field matches"
+  else
+    echo "::error file=$codex_plugin::.$field \"$xv\" != $claude_plugin \"$cv\""
+    fail=1
+  fi
+done
+ckw=$("$jq_bin" -c '.keywords // []' "$claude_plugin" | tr -d '\r')
+xkw=$("$jq_bin" -c '.keywords // []' "$codex_plugin" | tr -d '\r')
+if [ "$ckw" = "$xkw" ] && [ "$ckw" != "[]" ]; then
+  echo "ok: plugin identity field .keywords matches"
+else
+  echo "::error file=$codex_plugin::.keywords $xkw != $claude_plugin $ckw"
+  fail=1
+fi
+
+# (5) Codex default prompts are the install-time entry affordance for the three
+#     supported paths. Guard them so a manifest edit cannot silently drop a route
+#     while every JSON/version check stays green.
+required_prompt_fragments=(
+  "Use the pathfinder skill on this repository"
+  "Run Pathfinder autonomously on this repository"
+  "Turn this prompt into a runnable /goal"
+)
+for fragment in "${required_prompt_fragments[@]}"; do
+  if "$jq_bin" -e --arg fragment "$fragment" 'any(.interface.defaultPrompt[]?; contains($fragment))' "$codex_plugin" >/dev/null; then
+    echo "ok: Codex default prompt covers \"$fragment\""
+  else
+    echo "::error file=$codex_plugin::missing Codex defaultPrompt containing \"$fragment\""
+    fail=1
+  fi
+done
+
+# (6) Neither marketplace.json may declare a version — including one nested under
 #     .plugins[].source (TR-5). plugin.json is the single source Claude Code resolves
 #     first; a duplicate elsewhere could silently mask it.
 for f in "$root"/.claude-plugin/marketplace.json "$root"/.agents/plugins/marketplace.json; do
@@ -93,7 +137,7 @@ for f in "$root"/.claude-plugin/marketplace.json "$root"/.agents/plugins/marketp
   fi
 done
 
-# (5) The Codex marketplace deliberately tracks main as a rolling release. Guard
+# (7) The Codex marketplace deliberately tracks main as a rolling release. Guard
 #     the ref so a tag pin cannot silently diverge from the documented distribution
 #     model while all version checks stay green.
 codex_market="$root/.agents/plugins/marketplace.json"
