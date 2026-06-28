@@ -18,6 +18,7 @@ roadmap-version: 1
 created: <YYYY-MM-DD HH:MM>
 last-refreshed: <YYYY-MM-DD HH:MM>
 source-basis: creator interview + repo evidence + later refreshes
+completion: complete | incomplete
 
 ## Future State
 - <capability or quality the creator wants but the repo does not yet show>
@@ -36,6 +37,8 @@ source-basis: creator interview + repo evidence + later refreshes
 ## Open Questions
 - <question that must be answered before Pathfinder can safely derive a goal>
 ```
+
+Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation.
 
 ## Status Semantics
 
