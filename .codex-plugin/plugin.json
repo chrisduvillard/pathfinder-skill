@@ -27,6 +27,7 @@
       "Use the pathfinder skill on this repository. Start the full Pathfinder process.",
       "Map this codebase and propose the highest-value next move.",
       "Generate a bounded /goal for the work we just scoped.",
+      "Run Pathfinder autonomously on this repository.",
       "Turn this prompt into a runnable /goal: <describe the work you want done>."
     ]
   }
