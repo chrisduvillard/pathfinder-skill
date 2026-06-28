@@ -91,15 +91,15 @@ flowchart LR
 Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** *(opt-in)* — want it hands-off? Invoke it explicitly and Pathfinder checks the local intent files first. If `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing or incomplete, it runs the Deep Intent Gate, then selects eligible goals from the sanitized charter, roadmap, and current repo evidence. Each goal runs one at a time — implement, verify, commit, push, open a PR, and conditionally self-merge where branch protection allows:
+**⚡ Autonomous** *(opt-in)* — autonomous mode is explicit opt-in. Pathfinder first ensures the Deep Intent Gate has captured the creator model. It then derives one bounded goal at a time from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence; implements, verifies, commits, pushes, opens a PR, and self-merges where allowed; updates the roadmap; and continues until the work is complete, blocked, unsafe, ambiguous, or budget-limited:
 
 ```text
 Run Pathfinder autonomously on this repository.
 ```
 
-It is hands-off after intent preflight: later runs reuse complete intent files, and you can refresh them with `/pathfinder charter`. Pathfinder updates the roadmap after each goal, may isolate a recoverable per-goal failure and continue to another independent eligible goal, and stops the run at safety, manual-approval, ambiguity, or budget boundaries. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you can refresh them with `/pathfinder charter`. Pathfinder may isolate a recoverable per-goal failure and continue to another independent eligible goal. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
 
-Two details matter when you expect questions: Pathfinder asks the Deep Intent Gate only when `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, incomplete, or explicitly refreshed; if both files are complete, it reuses them and tells you to run `/pathfinder charter` to refresh. Update or reinstall the plugin to v2.17.3 or newer before testing this behavior, because older installed caches skip the autonomous intent preflight.
+Two details matter when you expect questions: on first use, Pathfinder asks the Deep Intent Gate questions by default for every entry point, including autonomous mode. Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`; run `/pathfinder charter` to refresh or deepen either file.
 
 <br>
 
@@ -120,11 +120,11 @@ A map of the full capability set:
 
 **⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
 
-**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** runs the Deep Intent Gate when needed, selects eligible goals from sanitized charter, roadmap, and repo evidence, then executes them one at a time — branch → implement → verify → commit → push → open a PR → conditional self-merge where the repo's rules allow — updating the roadmap and stopping at safety, manual-approval, ambiguity, or budget boundaries. See [Safety](#-safety).
+**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** is explicit opt-in. Pathfinder first captures the creator model through the Deep Intent Gate, then derives one bounded goal at a time from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence — branch → implement → verify → commit → push → open a PR → conditional self-merge where the repo's rules allow — updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. See [Safety](#-safety).
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
-**🧠 Remember what the project is for** — a short interview (it suggests the answers from your code) saves the project's **north-star, users, constraints, and deep objectives** to private, local-only intent files: `.pathfinder/charter.md` for durable intent and `.pathfinder/roadmap.md` for evolving desired work. The first autonomous run may ask this before going hands-off; later runs reuse the charter plus roadmap to steer interactive rankings and frame goals — always visibly, so you can override or refresh them.
+**🧠 Understands creator intent deeply** — on first use, Pathfinder asks 8 to 12 compact questions about purpose, users, success, constraints, non-goals, finished state, autonomy policy, and future capabilities not started yet. It saves stable intent to `.pathfinder/charter.md` and evolving desired work to `.pathfinder/roadmap.md`; later runs reuse both, show their influence, and let you refresh or override them.
 
 **🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
 
@@ -148,7 +148,7 @@ Every run drops a clean, resumable trail inside the repo:
 └── 08-final-summary.md        what was explored, found, and decided
 ```
 
-Separately, `.pathfinder/charter.md` holds durable project objectives and `.pathfinder/roadmap.md` holds evolving desired work. Unlike the per-run `.agent-work/` trail above, they **persist across runs** — and stay private: gitignored via `.git/info/exclude`, never committed. If both are complete, Pathfinder does not re-ask the Deep Intent Gate unless you run `/pathfinder charter`.
+Separately, `.pathfinder/charter.md` holds stable creator intent and `.pathfinder/roadmap.md` holds evolving desired work. Both persist across runs, stay private, are gitignored via `.git/info/exclude`, are never committed, and are sanitized on every read.
 
 In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
 
