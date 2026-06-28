@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see "Autonomous mode (opt-in)" in `SKILL.md`) the Deep Intent Gate may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run in autonomous mode.
+This template is the interactive funnel. In autonomous mode (see "Autonomous mode (opt-in)" in `SKILL.md`) the Deep Intent Gate may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate, autonomous mode selects goals from the sanitized charter plus roadmap and runs continuous execution until a stop condition is reached.
 
 ## Universal rules
 
