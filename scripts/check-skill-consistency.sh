@@ -24,12 +24,13 @@ funnel="$root/skills/pathfinder/references/question-funnel-template.md"
 goal="$root/skills/pathfinder/references/goal-best-practices.md"
 arts="$root/skills/pathfinder/references/artifact-structure.md"
 charter="$root/skills/pathfinder/references/charter-template.md"
+roadmap="$root/skills/pathfinder/references/roadmap-template.md"
 scout="$root/skills/pathfinder/references/scout-brief-template.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$scout"; do
+for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$scout"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -44,6 +45,7 @@ expected_refs="$(printf '%s\n' \
   'references/charter-template.md' \
   'references/goal-best-practices.md' \
   'references/question-funnel-template.md' \
+  'references/roadmap-template.md' \
   'references/scout-brief-template.md' \
   | sort -u)"
 while IFS= read -r ref; do
@@ -130,6 +132,9 @@ check_pair "Stop bound" "$goal" "Phase 6 stop-bound row"
 
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
+check_pair "pathfinder:roadmap v1" "$roadmap" "roadmap schema marker"
+check_pair ".pathfinder/roadmap.md" "$roadmap" "roadmap file path"
+check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
 check_pair "Objective 1 of 3"      "$funnel" "objectives charter interview screen"
 check_pair "Inferred from research:" "$funnel" "objectives BLEND inferred-lead"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
