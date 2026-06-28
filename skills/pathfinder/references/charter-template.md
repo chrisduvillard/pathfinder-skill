@@ -6,7 +6,7 @@ It holds the creator model that should stay true across many runs: purpose, user
 
 ## Format
 
-Use an HTML-comment marker plus plain metadata. Keep `pathfinder:charter v1` unless a later implementation deliberately bumps the schema.
+Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:charter v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema.
 
 ```text
 # Pathfinder Charter

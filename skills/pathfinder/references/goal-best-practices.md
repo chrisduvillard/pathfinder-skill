@@ -2,7 +2,7 @@
 
 Use this reference when generating `06-goal-command.md`. The artifact may contain one goal or a numbered goal pack.
 
-When a charter and roadmap are loaded, use charter plus roadmap direction as project context: the charter supplies stable creator intent and safety boundaries; the roadmap supplies evolving desired work and priority. The user's current prompt or selected move still defines the run's task objective.
+When a charter and roadmap are loaded, use relevant charter plus roadmap direction as project context: the charter supplies stable creator intent and safety boundaries; the roadmap supplies evolving desired work and priority. The user's current prompt or selected move still defines the run's task objective.
 
 In the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), the checklist below is also the gap-driver: targeted research fills every item it can, and the clarifying questions ask only about the checklist items still missing or ambiguous.
 
