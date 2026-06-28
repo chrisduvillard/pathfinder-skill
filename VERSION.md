@@ -2,7 +2,7 @@
 
 Generated: 2026-06-28
 
-Version: 2.17.5
+Version: 2.18.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,13 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.18.0:
+- Replaced the optional three-question objectives charter with a first-run Deep Intent Gate that asks by default for every Pathfinder entry point when the local creator model is missing, invalid, incomplete, or explicitly refreshed.
+- Added `.pathfinder/roadmap.md` with the `pathfinder:roadmap v1` marker for evolving desired work, future capabilities not started yet, milestones, priorities, completion state, evidence, and safety classification.
+- Expanded `.pathfinder/charter.md` into the stable creator-intent model: purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy.
+- Changed autonomous mode to continuous execution from sanitized charter plus roadmap context after explicit invocation every run, updating the roadmap after each goal and stopping when complete, blocked, unsafe, ambiguous, or budget-limited.
+- Extended markdown drift guards and docs so the Deep Intent Gate, roadmap schema, explicit-autonomy rule, and safety boundaries cannot silently drift out of the mirrored references.
 
 Changes in v2.17.5:
 - Hardened manifest validation so `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` must keep their shared identity fields aligned, and Codex default prompts must continue to expose the full exploration, autonomous, and prompt-to-goal entry paths.
