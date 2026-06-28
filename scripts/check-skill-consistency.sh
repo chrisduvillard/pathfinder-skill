@@ -133,6 +133,7 @@ check_pair "Stop bound" "$goal" "Phase 6 stop-bound row"
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
 check_pair "stable creator intent" "$charter" "expanded charter purpose"
+check_pair "completion: complete | incomplete" "$charter" "charter completion marker"
 check_pair "pathfinder:roadmap v1" "$roadmap" "roadmap schema marker"
 check_pair ".pathfinder/roadmap.md" "$roadmap" "roadmap file path"
 check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
@@ -149,6 +150,7 @@ check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
 check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
+check_pair "charter plus roadmap" "$goal" "creator-model goal framing"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
