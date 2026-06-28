@@ -8,9 +8,10 @@ name: manifests
 # 'Changes in v<version>:' changelog entry for it; (3) SKILL.md and its reference
 # templates must not drift on shared invariants, every reference path SKILL.md
 # cites must exist, the artifact-file contract must match across SKILL.md and
-# artifact-structure.md, and every skill markdown file must close every code fence
-# it opens. Drift or a JSON typo otherwise ships silently and only breaks at
-# marketplace install time or in the agent's behavior.
+# artifact-structure.md, every skill markdown file must close every code fence
+# it opens, and the diff must be whitespace/conflict-marker clean. Drift or a
+# JSON typo otherwise ships silently and only breaks at marketplace install time
+# or in the agent's behavior.
 
 on:
   push:
@@ -47,3 +48,6 @@ jobs:
 
       - name: Check validation/release portability
         run: bash scripts/check-portability.sh
+
+      - name: Check diff cleanliness
+        run: git diff --check
