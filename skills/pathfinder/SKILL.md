@@ -600,7 +600,7 @@ The standalone `/pathfinder charter` invocation always opens the gate as a refre
 
 The goal of this phase is to pinpoint the exact work to do, then convert it into a measurable `/goal`. Pathfinder offers two interview modes. The user always chooses which one runs.
 
-In autonomous mode this interview does not run: auto-selection takes every verified survivor instead of asking the user to pick one (see “Autonomous mode (opt-in)” before Phase 7). The rest of Phase 5 below describes the interactive funnel only.
+In autonomous mode this interview does not run: Pathfinder does not show the interactive work-selection screens. After the Deep Intent Gate, it selects goals from the sanitized charter plus roadmap and current repo evidence as described in “Autonomous mode (opt-in)” before Phase 7. The rest of Phase 5 below describes the interactive funnel only.
 
 Universal rules that apply to both modes:
 
