@@ -43,18 +43,87 @@ Agent recommends: continue the Deep Intent Gate now because every Pathfinder ent
 Reply "continue" to answer now, or "continue later" to save a partial model and stop.
 ```
 
-The normal screens are:
+The normal screens are below. Keep them compact: each screen mirrors the best inferred answer first, names the evidence and confidence, offers 3 to 6 concrete choices where possible, includes `Agent recommends:`, and keeps both a free-text escape and `continue later`.
 
-1. Purpose and promise.
-2. Primary users and excluded users.
-3. Key journeys and must-work flows.
-4. Durable success metrics and quality bars.
-5. Future capabilities not started yet.
-6. Roadmap priorities and sequencing.
-7. Constraints and protected areas.
-8. Non-goals and tradeoffs.
-9. Optional finished state.
-10. Autonomy policy and manual-approval boundaries.
+### Screen 1 - Purpose and promise
+
+- Purpose: establish the north-star and the primary promise that must feel true when Pathfinder works.
+- Mirror evidence: inferred purpose from `SKILL.md`, plugin manifests, README/product copy, and recurring verification gates.
+- Options: 1) keep the inferred purpose, 2) tighten it around safety and bounded goals, 3) tighten it around autonomous PR delivery, 4) replace it with a creator-supplied promise.
+- Agent recommends: the most code/scout-grounded option, usually the inferred purpose.
+- Escape: `None of these - describe the purpose and promise yourself`, or `continue later`.
+
+### Screen 2 - Primary users and excluded users
+
+- Purpose: name who the skill optimizes for and who it should not optimize for.
+- Mirror evidence: installation surfaces, invocation examples, plugin interface copy, support templates, and docs that identify Claude Code/Codex users.
+- Options: 1) developers exploring unfamiliar repos, 2) agent operators converting tasks into goals, 3) maintainers running safe autonomous work, 4) add secondary users, 5) name excluded users.
+- Agent recommends: the option best supported by installed/invocation surfaces.
+- Escape: `None of these - describe users and excluded users yourself`, or `continue later`.
+
+### Screen 3 - Key journeys and must-work flows
+
+- Purpose: capture the journeys that must stay reliable across releases.
+- Mirror evidence: supported invocation paths, artifact pipeline, prompt-to-goal routing, autonomous mode loop, and plugin default prompts.
+- Options: 1) explore repo -> ranked candidates -> goal, 2) prompt -> targeted research -> goal, 3) autonomous -> roadmap goal -> PR ledger, 4) refresh creator model, 5) name another must-work flow.
+- Agent recommends: the journey with the strongest source and docs evidence.
+- Escape: `None of these - describe key journeys yourself`, or `continue later`.
+
+### Screen 4 - Durable success metrics and quality bars
+
+- Purpose: define stable measures of success and non-negotiable quality bars.
+- Mirror evidence: `/goal` budget, proof/check requirements, verification panel, safety filters, and CI validation scripts.
+- Options: 1) every run ends in a bounded goal or clear ledger, 2) generated goals stay under 3900 chars and include proof, 3) verified candidates are evidence-backed, 4) autonomous work never bypasses safety gates, 5) name another quality bar.
+- Agent recommends: the option that best matches the repo's current guardrails.
+- Escape: `None of these - describe metrics and quality bars yourself`, or `continue later`.
+
+### Screen 5 - Future capabilities not started yet
+
+- Purpose: ask for desired capabilities the repository cannot reveal.
+- Mirror evidence: gaps from scout findings, roadmap template empty slots, issue themes, and docs/spec plans; mark repo-only guesses as suspected.
+- Options: 1) more accurate candidate ranking, 2) better Deep Intent Gate UX, 3) stronger autonomous safety verification, 4) better Codex/Claude install experience, 5) no future capability right now, 6) creator-supplied capability.
+- Agent recommends: do not recommend a docs-only guess; recommend the strongest code/scout-grounded gap or ask the creator to supply one.
+- Escape: `None of these - describe future capabilities yourself`, or `continue later`.
+
+### Screen 6 - Roadmap priorities and sequencing
+
+- Purpose: turn desired work into ordered roadmap items with dependencies.
+- Mirror evidence: verified candidates, existing roadmap items, open blockers, recent changelog themes, and creator-stated urgency.
+- Options: 1) highest safety/quality risk first, 2) highest user-visible value first, 3) smallest safe autonomous item first, 4) blocked/manual items first for clarification, 5) creator-supplied ordering.
+- Agent recommends: the highest-value option that is not blocked by safety or ambiguity.
+- Escape: `None of these - describe priority and sequencing yourself`, or `continue later`.
+
+### Screen 7 - Constraints and protected areas
+
+- Purpose: record boundaries that require approval or must not change.
+- Mirror evidence: stop conditions, CODEOWNERS, security docs, workflows, manifests, scripts, schemas, auth/payment/secret surfaces, and user-stated constraints.
+- Options: 1) preserve public invocation and `/goal` contract, 2) protect CI/release/scripts/manifests, 3) avoid new dependencies, 4) avoid auth/payments/migrations/secrets/public APIs, 5) add project-specific protected files.
+- Agent recommends: the strictest code-backed safety boundary.
+- Escape: `None of these - describe constraints and protected areas yourself`, or `continue later`.
+
+### Screen 8 - Non-goals and tradeoffs
+
+- Purpose: state what Pathfinder should not optimize for and what tradeoffs are acceptable.
+- Mirror evidence: safety model, README positioning, stop conditions, roadmap template, and previous non-goal statements.
+- Options: 1) not a general unattended coding bot, 2) not a shared roadmap/product-board replacement, 3) favor reviewability over broad refactors, 4) favor safety over speed, 5) creator-supplied non-goal.
+- Agent recommends: the non-goal that most directly protects the current safety model.
+- Escape: `None of these - describe non-goals and tradeoffs yourself`, or `continue later`.
+
+### Screen 9 - Optional finished state
+
+- Purpose: decide whether the project has a final desired state or ongoing standing qualities.
+- Mirror evidence: README positioning, release notes, roadmap items, and recurring quality bars.
+- Options: 1) ongoing product with standing safety/quality bars, 2) finished when core entry paths are stable, 3) finished when autonomous roadmap execution is reliable, 4) no fixed finished state, 5) creator-supplied final state.
+- Agent recommends: the option best supported by project shape and roadmap evidence.
+- Escape: `None of these - describe the finished state yourself`, or `continue later`.
+
+### Screen 10 - Autonomy policy and manual-approval boundaries
+
+- Purpose: define what may run unattended, what needs approval, and what must never run unattended.
+- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, and branch-protection/self-merge rules.
+- Options: 1) autonomous only for explicitly marked `autonomous-eligible` roadmap items, 2) manual approval for scripts/workflows/manifests/public interfaces, 3) never unattended for dangerous categories, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
+- Agent recommends: the strictest option that still permits safe low-risk work.
+- Escape: `None of these - describe autonomy policy yourself`, or `continue later`.
 
 Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, and evolving desired work in `.pathfinder/roadmap.md`.
 
