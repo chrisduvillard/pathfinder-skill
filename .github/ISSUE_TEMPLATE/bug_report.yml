@@ -30,7 +30,7 @@ body:
     id: version
     attributes:
       label: Pathfinder version
-      placeholder: "2.11.0"
+      placeholder: "2.x.y"
     validations:
       required: true
   - type: textarea
