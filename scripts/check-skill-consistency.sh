@@ -202,7 +202,11 @@ charter_invariants=(
   "never widens authorization"
 )
 for inv in "${charter_invariants[@]}"; do
-  if grep -qiF -- "$inv" "$skill"; then
+  # Case-insensitive literal match, the portable way. `grep -qiF` aborts (SIGABRT)
+  # on GNU grep 3.0 under MSYS/Git-for-Windows, which would falsely fail every
+  # charter invariant for local contributors on that platform; awk index(tolower())
+  # is the portable equivalent and matches the same case-insensitive substring.
+  if awk -v inv="$inv" 'BEGIN { inv = tolower(inv) } index(tolower($0), inv) { found = 1 } END { exit found ? 0 : 1 }' "$skill"; then
     echo "ok: objectives-charter invariant present: \"$inv\""
   else
     err "SKILL.md is missing objectives-charter invariant: \"$inv\""
