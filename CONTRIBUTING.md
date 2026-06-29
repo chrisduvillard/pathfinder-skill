@@ -25,6 +25,11 @@ bash scripts/check-portability.sh         # validation/release shell portability
 git diff --check                          # trailing whitespace / conflict markers
 ```
 
+`scripts/check-manifests.sh` needs [`jq`](https://jqlang.github.io/jq/) on your `PATH`
+(`apt-get install jq`, `brew install jq`, `choco install jq`, or `winget install jqlang.jq`);
+it exits early with an error if `jq` is missing. The other checks need only `bash` and
+standard POSIX tools (`awk`, `sed`, `grep`).
+
 These scripts are the same checks `.github/workflows/manifests.yml` runs, so they
 catch common mistakes — such as bumping `VERSION.md` without mirroring both
 `plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
