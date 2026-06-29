@@ -292,7 +292,7 @@ Given "<intent>", the strongest candidates (glyph = evidence grade: ✓ confirme
 3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n, highest-confidence candidate> because <reason>.
-None of these: describe the area.
+None of these: describe the area you care about.
 Go back: return to the previous question.
 back to candidates: return to the ranked Top 5.   show the full map
 ```
@@ -374,7 +374,7 @@ Show this only after the recognition-first contract is accepted and `06-goal-com
 1. Show the saved goal or goal pack and wait.
 2. Keep it saved; do not run until I explicitly approve. [default]
 3. Run the saved goal now after showing the exact command. For a goal pack, ask which numbered goal to run first.
-4. Audit only.
+4. Audit only, no implementation.
 
 Default to option 2. Do not recommend option 3 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run.
 
