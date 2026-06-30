@@ -1,6 +1,6 @@
 {
   "name": "pathfinder",
-  "description": "Repository pathfinding skill for Claude Code and Codex.",
+  "description": "Repository pathfinding skill for exploring repos, prompt-to-goal drafting, and safety-gated autonomous runs in Claude Code and Codex.",
   "owner": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"
@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "pathfinder",
-      "description": "Map the codebase. Pick the path. Forge the goal.",
+      "description": "Map the codebase, pick the path, forge the goal, or run safety-gated autonomous work.",
       "source": "./",
       "category": "productivity"
     }

@@ -125,6 +125,8 @@ A map of the full capability set:
 
 **🎯 Forge a runnable goal** — produces a bounded, measurable, self-proving Claude Code **`/goal`** (or an `Implementation Goal` fallback for Codex and older clients): one end state, exact proof checks, constraints, protected areas, and stop bounds — kept under 3900 characters.
 
+**🧾 Bind proof to the goal** — each saved goal records a compact Goal Binding, then run logs and summaries record the Runtime Boundary and Binding Status so completion evidence can be checked against the original objective instead of drifting into "looks done" prose.
+
 **Add a second-model review** *(opt-in)* — after a goal run finishes or hits an ordinary blocker, Pathfinder can hand the original goal, diff summary, checks, and run log to the opposite local subscription tool (Claude Code after Codex/ChatGPT, or Codex after Claude). The reviewer can make simple goal-bounded fixes and related polish, then Pathfinder records the result in `07b-cross-model-review.md`. If no local launcher is available, the artifact becomes a manual handoff packet.
 
 **⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.

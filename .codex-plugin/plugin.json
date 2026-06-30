@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Pathfinder",
     "shortDescription": "Map a repo, pick the next move, write the goal",
-    "longDescription": "Pathfinder explores an unfamiliar repository from its code, proposes the highest-value next moves, asks a few focused direction questions, then generates a bounded, verifiable Claude Code /goal command or an equivalent implementation goal.",
+    "longDescription": "Pathfinder opens a chooser for exploring a repo, prompt-to-goal drafting, explicit safety-gated autonomous runs, creator model refresh, and status/help. It reads code first, ranks grounded moves, asks focused questions, then saves a bounded Claude Code /goal or fallback implementation goal.",
     "developerName": "Chris Duvillard",
     "category": "Productivity",
     "capabilities": ["Instructions"],

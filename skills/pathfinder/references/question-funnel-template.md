@@ -339,6 +339,8 @@ None of these: describe the scope, protected areas, or success criteria in your 
 Reply with edits, "accept agent recommendation", "go back", "back to candidates", or "show the full map".
 ```
 
+Before saving, the Phase 6 recognition-first contract must show proof, protected areas, and runtime authority as separate lines with confirmed/inferred/missing provenance. Do not ask extra questions for Runtime Boundary fields the environment already supplies; derive them from the current runtime, sandbox, repo-code execution plan, and consent state, and mark unknown fields as unknown instead of blocking goal saving.
+
 ### Adaptive stopping
 
 - If goal-readiness confidence is already high before L3, skip to L4.

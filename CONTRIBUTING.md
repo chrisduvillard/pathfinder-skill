@@ -16,13 +16,10 @@ unfamiliar repositories.
 
 ## Before opening a pull request
 
-Run the local checks — these run the same logic CI does, so green locally means green in CI:
+Run the local preflight — it runs the same logic CI does, so green locally means green in CI:
 
 ```bash
-bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
-bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
-bash scripts/check-portability.sh         # validation/release shell portability guard
-git diff --check                          # trailing whitespace / conflict markers
+bash scripts/check-all.sh
 ```
 
 `scripts/check-manifests.sh` needs [`jq`](https://jqlang.github.io/jq/) on your `PATH`
@@ -30,7 +27,17 @@ git diff --check                          # trailing whitespace / conflict marke
 it exits early with an error if `jq` is missing. The other checks need only `bash` and
 standard POSIX tools (`awk`, `sed`, `grep`).
 
-These scripts are the same checks `.github/workflows/manifests.yml` runs, so they
+The wrapper runs these same checks individually:
+
+```bash
+bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
+bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
+bash scripts/check-portability.sh         # validation/release shell portability guard
+git diff --check                          # trailing whitespace / conflict markers
+git diff --cached --check                 # staged whitespace / conflict markers
+```
+
+These are the same checks `.github/workflows/manifests.yml` runs, so they
 catch common mistakes — such as bumping `VERSION.md` without mirroring both
 `plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
 before you push, not after.
@@ -50,7 +57,8 @@ before you push, not after.
   from `SKILL.md` so each is useful when loaded on its own; the duplication is
   deliberate and enforced by `scripts/check-skill-consistency.sh`. When you change a
   mirrored instruction, update both `SKILL.md` and the relevant `references/*.md`
-  file, or CI will fail.
+  file, and add or update the matching `check_pair` or section guard in
+  `scripts/check-skill-consistency.sh`, or CI will fail.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the
