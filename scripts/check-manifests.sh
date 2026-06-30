@@ -33,7 +33,7 @@ if [ -z "$jq_bin" ]; then
   fi
 fi
 if [ -z "$jq_bin" ]; then
-  echo "::error::jq is required to run scripts/check-manifests.sh; install jq or ensure it is on PATH for this Bash environment"
+  echo "::error::jq is required to run scripts/check-manifests.sh; install jq, ensure it is on PATH for this Bash environment, or set JQ=/path/to/jq"
   exit 1
 fi
 
@@ -124,6 +124,25 @@ for fragment in "${required_prompt_fragments[@]}"; do
     echo "ok: Codex default prompt covers \"$fragment\""
   else
     echo "::error file=$codex_plugin::missing Codex defaultPrompt containing \"$fragment\""
+    fail=1
+  fi
+done
+
+# Codex interface display copy is the first install-time explanation users see.
+# Guard a small concept set so the display description cannot silently drift
+# behind the richer defaultPrompt entry paths.
+required_display_fragments=(
+  "chooser"
+  "prompt-to-goal"
+  "autonomous"
+  "creator model"
+  "status/help"
+)
+for fragment in "${required_display_fragments[@]}"; do
+  if "$jq_bin" -e --arg fragment "$fragment" '.interface.longDescription | ascii_downcase | contains($fragment)' "$codex_plugin" >/dev/null; then
+    echo "ok: Codex display copy covers \"$fragment\""
+  else
+    echo "::error file=$codex_plugin::interface.longDescription missing display concept \"$fragment\""
     fail=1
   fi
 done

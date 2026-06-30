@@ -8,6 +8,7 @@
 
 ## Checks run
 
+- [ ] `bash scripts/check-all.sh`
 - [ ] `bash scripts/check-skill-consistency.sh`
 - [ ] `bash scripts/check-manifests.sh`
 - [ ] `bash scripts/check-portability.sh`

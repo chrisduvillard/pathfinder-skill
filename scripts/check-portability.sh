@@ -12,13 +12,32 @@ set -uo pipefail
 root="${1:-.}"
 fail=0
 
+scan_perl_grep() {
+  awk '
+    /^[[:space:]]*($|#)/ { next }
+    /^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)/ {
+      print NR ":" $0
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$1"
+}
+
+scan_grep_i_f_combo() {
+  awk '
+    /^[[:space:]]*($|#)/ { next }
+    /^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*i[[:alnum:]]*F|-[[:alnum:]]*F[[:alnum:]]*i)/ {
+      print NR ":" $0
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$1"
+}
+
 for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
   [ -f "$f" ] || continue
-  case "$f" in
-    */scripts/check-portability.sh) continue ;;
-  esac
 
-  if grep -nE '^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)' "$f"; then
+  if scan_perl_grep "$f"; then
     echo "::error file=$f::replace GNU-only grep Perl-regexp usage with portable awk, sed, or grep -E"
     fail=1
   fi
@@ -27,7 +46,7 @@ for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/wo
   # combined in one short-flag group (e.g. `grep -qiF`), silently failing the
   # validators on that platform; -i or -F alone is fine. Flag the combo so it
   # cannot regress. Use awk index(tolower()) for a portable case-insensitive literal.
-  if grep -nE '^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*i[[:alnum:]]*F|-[[:alnum:]]*F[[:alnum:]]*i)' "$f"; then
+  if scan_grep_i_f_combo "$f"; then
     echo "::error file=$f::replace the GNU grep -i+-F combo (aborts on MSYS GNU grep 3.0) with awk index(tolower()) or grep -F without -i"
     fail=1
   fi

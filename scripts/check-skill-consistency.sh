@@ -26,11 +26,12 @@ arts="$root/skills/pathfinder/references/artifact-structure.md"
 charter="$root/skills/pathfinder/references/charter-template.md"
 roadmap="$root/skills/pathfinder/references/roadmap-template.md"
 scout="$root/skills/pathfinder/references/scout-brief-template.md"
+contributing="$root/CONTRIBUTING.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$scout"; do
+for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$scout" "$contributing"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -130,6 +131,23 @@ check_pair "proof unverified by Lens 3" "$goal" "Lens-3 proof-provenance flag"
 check_pair "autonomous mode records the contract without asking" "$goal" "autonomous Phase 6 non-interactive contract"
 check_pair "One measurable end state" "$goal" "Phase 6 measurable-end-state row"
 check_pair "Stop bound" "$goal" "Phase 6 stop-bound row"
+check_pair "Goal Binding" "$goal" "goal binding goal contract"
+check_pair "Runtime Boundary" "$goal" "runtime boundary goal contract"
+check_pair "Binding Status" "$goal" "binding status goal contract"
+check_pair "stale-objective" "$goal" "stale binding status goal contract"
+check_pair "mismatched" "$goal" "mismatched binding status goal contract"
+check_pair "complexity_notes" "$goal" "structured completion complexity field"
+check_pair "changed_files" "$goal" "structured completion changed-files field"
+check_pair "checks_run_with_exit_results" "$goal" "structured completion check-results field"
+
+# Mirrored-rule guard path. Keep maintainer guidance explicit so a future change
+# to mirrored SKILL/reference behavior does not update prose while forgetting the
+# validator token that makes drift visible in CI.
+if grep -qF -- 'add or update the matching `check_pair` or section guard' "$contributing"; then
+  echo "ok: mirror guard guidance present in CONTRIBUTING.md"
+else
+  err "mirror guard guidance drift: CONTRIBUTING.md must tell maintainers to update check_pair or section guards"
+fi
 
 # Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
 check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
@@ -147,6 +165,14 @@ check_pair "continue later" "$funnel" "partial-intent continuation escape"
 check_pair ".pathfinder/roadmap.md" "$arts" "artifact roadmap intent file"
 check_pair "07b-cross-model-review.md" "$arts" "cross-model review artifact"
 check_pair "outside the run folder" "$arts" "intent files outside run folder"
+check_pair "Goal Binding" "$arts" "goal binding artifact contract"
+check_pair "Runtime Boundary" "$arts" "runtime boundary artifact contract"
+check_pair "Binding Status" "$arts" "binding status artifact contract"
+check_pair "tool_allowlist_enforced" "$arts" "runtime tool-allowlist field"
+check_pair "credential_exposure" "$arts" "runtime credential-exposure field"
+check_pair "stale-objective" "$arts" "stale binding status artifact contract"
+check_pair "mismatched" "$arts" "mismatched binding status artifact contract"
+check_pair "not-run" "$arts" "not-run binding status artifact contract"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
 check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
@@ -183,6 +209,10 @@ while IFS= read -r example; do
   case "$example" in
     *"deep verification/testing"*) echo "ok: good goal example $good_example_i includes deep verification/testing language" ;;
     *) err "good goal example $good_example_i is missing deep verification/testing language" ;;
+  esac
+  case "$example" in
+    *"changed_files"*complexity_notes*) echo "ok: good goal example $good_example_i includes structured completion claim fields" ;;
+    *) err "good goal example $good_example_i is missing structured completion claim fields" ;;
   esac
   if [[ "$example" == *"Stop before touching"* || "$example" == *"Do not touch"* ]]; then
     echo "ok: good goal example $good_example_i includes protected-area stop language"
