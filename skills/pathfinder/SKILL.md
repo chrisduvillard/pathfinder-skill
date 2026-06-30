@@ -12,7 +12,7 @@ Use this skill when the user wants an agent to understand an unfamiliar codebase
 
 The user should not need to micro-manage repository exploration. Your job is to act as a pathfinder: gather intelligence, organize choices, and convert the user’s decisions into a precise, bounded, verifiable execution goal.
 
-Pathfinder runs in one of two **tracks**:
+Pathfinder's work-producing flows use one of two **tracks**:
 
 - **Full exploration** (default for an unfamiliar repo): map the codebase from the source up, rank candidate work, let the user choose, then forge the goal. This is Phases 1–8 below.
 - **Prompt-to-goal** (when the user already has a task in mind): the user supplies a prompt describing the work they want; Pathfinder does targeted, prompt-anchored research, asks only the questions it still needs, and forges the same bounded `/goal`. See "Track B: Prompt-to-goal" after Phase 0.
@@ -26,17 +26,35 @@ Both modes always suggest repo-grounded answers, always name the agent's recomme
 
 ## Supported invocation
 
-If the user says “Use the pathfinder skill on this repository,” “Start the full Pathfinder process,” or similar, immediately begin Phase 0 using the current repository. Do not ask for clarification unless no repository or working directory can be identified.
+If the user invokes bare `/pathfinder` with no path, prompt, or modifier, show the entry chooser before Phase 0 or any run-artifact setup. The chooser may do only minimal read-only context detection needed to make the options honest, such as repository root, current branch, intent-file status, and the latest visible Pathfinder run. It must not create run artifacts, write `.pathfinder/` intent files, run the Deep Intent Gate, or run repo-defined commands.
 
-If the user invokes Pathfinder together with a prompt describing work to convert into a goal (for example, “turn this into a /goal: …” or pasting a task they want done), route to the prompt-to-goal track (Track B, after Phase 0) instead of beginning full exploration. If it is unclear which the user wants, ask the one-time track-selection question described in Track B.
+```text
+What do you want Pathfinder to do?
+1. Explore this repo and propose work   map the codebase, rank candidates, then forge a /goal   [recommended for an unfamiliar repo]
+2. Turn a prompt into a /goal           paste or describe the task; I research it and forge a runnable /goal
+3. Run autonomously                     use the creator model and roadmap to execute eligible work hands-off
+4. Refresh creator model                update .pathfinder/charter.md and/or .pathfinder/roadmap.md
+5. Show status/help                     inspect local Pathfinder state and available paths, then return here
+
+Agent recommends: <1 | 2 | 3 | 4 | 5> because <one-line reason from the user's words and safe local state>.
+Reply with a number, paste a prompt for option 2, or use an explicit command such as /pathfinder auto, /pathfinder charter, or /pathfinder status.
+```
+
+Option 5 and the explicit `/pathfinder status` alias are read-only status/help. Show: repository root if known; current branch if known; charter and roadmap presence, `completion` value, and last-refreshed/created date if safely readable; the latest visible `.agent-work/pathfinder/...` run folder if one is visible without crawling secrets; and the same available entry paths from the chooser. It does not create run artifacts, does not run the Deep Intent Gate, does not update intent files, and does not run repo-defined commands. After the status/help screen, Pathfinder returns to this chooser unless the user explicitly selects another path.
+
+If the user says "Show the Pathfinder options," "open the Pathfinder menu," or similar, treat it like bare `/pathfinder` and show the chooser.
+
+If the user says “Use the pathfinder skill on this repository,” “Start the full Pathfinder process,” chooses option 1 from the chooser, or similar, immediately begin Phase 0 using the current repository. Do not ask for clarification unless no repository or working directory can be identified.
+
+If the user invokes Pathfinder together with a prompt describing work to convert into a goal (for example, “turn this into a /goal: …” or pasting a task they want done) or chooses option 2 from the chooser, route to the prompt-to-goal track (Track B, after Phase 0) instead of beginning full exploration. If the user chooses option 2 without a prompt, ask for the prompt before Phase 0. If it is unclear which the user wants outside the bare chooser, ask the one-time track-selection question described in Track B.
 
 A full process normally requires at least one user response after the question funnel. On the first run, complete discovery, scout briefs, synthesis, and numbered questions, then stop for the user’s answers unless the user has explicitly supplied defaults or selected autopilot.
 
-Before any supported entry point reaches work selection, prompt-to-goal goal forging, or autonomous execution, check the local intent files outside the run folder. If `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, or explicitly refreshed, run the Deep Intent Gate at the point where the entry track has enough safe evidence for the gate's draft; do not bypass Phase 0 setup, the Phase 1 docs-deferral rule, or Phase 4b verification order where those phases apply. The gate asks by default on first use for full exploration, prompt-to-goal, autonomous mode, and `/pathfinder charter`; it is not a skippable offer. If the user chooses `continue later`, save the partial model and stop before the requested entry point continues.
+Before any work-producing entry point reaches work selection, prompt-to-goal goal forging, or autonomous execution, check the local intent files outside the run folder. If `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, or explicitly refreshed, run the Deep Intent Gate at the point where the entry track has enough safe evidence for the gate's draft; do not bypass Phase 0 setup, the Phase 1 docs-deferral rule, or Phase 4b verification order where those phases apply. The gate asks by default on first use for full exploration, prompt-to-goal, autonomous mode, and `/pathfinder charter`; it is not a skippable offer. If the user chooses `continue later`, save the partial model and stop before the requested entry point continues. The status/help path is not a work-producing entry point and never triggers this gate by itself.
 
-If the user explicitly invokes autonomous mode - for example "run Pathfinder autonomously," "/pathfinder auto," or "autonomous mode" - run the Deep Intent Gate when needed, then continue into autonomous execution from the creator model. Autonomous mode is an explicit opt-in escalation and requires explicit invocation every run; never infer it from an ordinary invocation. See "Autonomous mode (opt-in)" before Phase 7.
+If the user explicitly invokes autonomous mode - for example "run Pathfinder autonomously," "/pathfinder auto," "autonomous mode," or option 3 from the chooser - run the Deep Intent Gate when needed, then continue into autonomous execution from the creator model. Autonomous mode is an explicit opt-in escalation and requires explicit invocation every run; never infer it from an ordinary invocation. See "Autonomous mode (opt-in)" before Phase 7.
 
-To establish, refresh, or deepen the local creator model on demand, the user can invoke `/pathfinder charter` (aliases: "refresh objectives", "refresh the charter", "refresh roadmap"). This runs the Deep Intent Gate directly and may update `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or both.
+To establish, refresh, or deepen the local creator model on demand, the user can invoke `/pathfinder charter` (aliases: "refresh objectives", "refresh the charter", "refresh roadmap") or choose option 4 from the chooser. This runs the Deep Intent Gate directly and may update `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or both.
 
 ## Supplemental references
 
@@ -205,7 +223,7 @@ The user's prompt is a **trusted user instruction**: it defines the objective. R
 Run the prompt-to-goal track when either is true:
 
 - The user invoked Pathfinder with a prompt describing work to convert into a goal.
-- The user selects the prompt-to-goal track at the entry choice below.
+- The user selects prompt-to-goal from the bare `/pathfinder` chooser or the fallback track-selection question below.
 
 Otherwise run the full-exploration track (Phases 1–8). The Phase 5 mode-selection screen (Pick a move / Explore from scratch) belongs to the full-exploration track only and is not shown here; this track's analogue is the gap-driven clarifying funnel below.
 

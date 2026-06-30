@@ -188,7 +188,30 @@ else
   err "SKILL.md is missing the Track B \"How should I help?\" entry-menu screen"
 fi
 
-# (2c) Autonomous-mode safety invariants (SKILL-only presence). Autonomous mode is an
+# (2c) Bare /pathfinder entry chooser invariants (SKILL-only presence). The chooser
+#      is an entry-routing surface before Phase 0, so it deliberately is not mirrored
+#      into the Phase 5 question-funnel template. Guard the fixed option labels and
+#      status alias so the discoverability surface cannot silently regress.
+entry_chooser_invariants=(
+  "What do you want Pathfinder to do?"
+  "Explore this repo and propose work"
+  "Turn a prompt into a /goal"
+  "Run autonomously"
+  "Refresh creator model"
+  "Show status/help"
+  "/pathfinder status"
+  "returns to this chooser"
+  "does not create run artifacts"
+)
+for inv in "${entry_chooser_invariants[@]}"; do
+  if grep -qF -- "$inv" "$skill"; then
+    echo "ok: entry chooser invariant present: \"$inv\""
+  else
+    err "SKILL.md is missing entry chooser invariant: \"$inv\""
+  fi
+done
+
+# (2d) Autonomous-mode safety invariants (SKILL-only presence). Autonomous mode is an
 #      explicit opt-in tier that grants unattended commit/push/merge. Its load-bearing
 #      carve-outs have no natural Phase 5/6 mirror (they are not funnel or goal screens),
 #      so guard them here the same way the Track B entry menu is guarded. Each phrase is
