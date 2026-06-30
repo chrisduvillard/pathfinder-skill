@@ -3,7 +3,9 @@
 # comparisons in the consistency/release-hygiene guards.
 * text=auto
 .gitattributes text eol=lf
+.gitignore text eol=lf
 .github/CODEOWNERS text eol=lf
+LICENSE text eol=lf
 *.sh  text eol=lf
 *.md  text eol=lf
 *.yml text eol=lf
