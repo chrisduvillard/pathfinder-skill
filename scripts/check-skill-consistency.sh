@@ -156,6 +156,12 @@ check_pair "roadmap item id in supporting notes" "$goal" "roadmap provenance not
 check_pair "model-depth proof gate" "$goal" "autonomy model-depth proof gate"
 check_pair "full code implementation" "$goal" "full implementation goal contract"
 check_pair "deep verification/testing" "$goal" "deep verification goal contract"
+check_pair "Cross-Model Review" "$goal" "cross-model review goal constraints"
+check_pair "goal-bounded fixes and related polish" "$goal" "cross-model reviewer fix boundary"
+check_pair "manual-handoff" "$arts" "cross-model manual handoff mode"
+check_skill_section "## Cross-Model Review" "## Phase 8:" "two review/fix passes maximum" "cross-model two-pass bound"
+check_skill_section "## Cross-Model Review" "## Phase 8:" 'clean` or `fixed-clean' "cross-model clean disposition gate"
+check_skill_section "## Cross-Model Review" "## Phase 8:" "No API, OpenRouter, browser automation, or hidden credentials" "cross-model v1 backend boundary"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
