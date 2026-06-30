@@ -91,13 +91,13 @@ flowchart LR
 Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** *(opt-in)* — autonomous mode is explicit opt-in. Pathfinder first ensures the Deep Intent Gate has captured the creator model. It then derives one bounded goal at a time from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence; implements, verifies, commits, pushes, opens a PR, and self-merges where allowed; updates the roadmap; and continues until the work is complete, blocked, unsafe, ambiguous, or budget-limited:
+**⚡ Autonomous** *(opt-in)* — autonomous mode is explicit opt-in. Pathfinder first ensures the Deep Intent Gate has captured the creator model, then requires a model-depth proof gate before deriving unattended work from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence. It implements, runs deep verification/testing, commits, pushes, opens a PR, and self-merges where allowed; updates the roadmap; and continues until the work is complete, blocked, unsafe, ambiguous, or budget-limited:
 
 ```text
 Run Pathfinder autonomously on this repository.
 ```
 
-Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you can refresh them with `/pathfinder charter`. Pathfinder may isolate a recoverable per-goal failure and continue to another independent eligible goal. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you can refresh them with `/pathfinder charter`. Pathfinder may isolate a recoverable per-goal failure and continue to another independent eligible goal; parallel execution is allowed only after an independence check proves separate branches/worktrees, disjoint surfaces, and separate verification. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
 
 Two details matter when you expect questions: on first use, Pathfinder asks the Deep Intent Gate questions by default for every entry point, including autonomous mode. Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`; run `/pathfinder charter` to refresh or deepen either file.
 
@@ -120,7 +120,7 @@ A map of the full capability set:
 
 **⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
 
-**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** is explicit opt-in. Pathfinder first captures the creator model through the Deep Intent Gate, then derives one bounded goal at a time from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence — branch → implement → verify → commit → push → open a PR → conditional self-merge where the repo's rules allow — updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. See [Safety](#-safety).
+**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** is explicit opt-in. Pathfinder first captures the creator model through the Deep Intent Gate, passes a model-depth proof gate for each derived goal, then runs full code implementation plus deep verification/testing — branch → implement → verify → commit → push → open a PR → conditional self-merge where the repo's rules allow — updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. Parallel goal work is default-deny unless independence is proven first. See [Safety](#-safety).
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
@@ -195,7 +195,7 @@ Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex.
 
 Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
 
-**Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, safety/manual/ambiguity/budget boundaries stop the run, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
+**Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence after a model-depth proof gate, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, safety/manual/ambiguity/budget boundaries stop the run, parallel work requires a proven independence check, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
 
 ## 🤝 Contributing and support
 

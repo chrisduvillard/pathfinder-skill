@@ -152,6 +152,9 @@ check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
 check_pair "relevant charter plus roadmap direction" "$goal" "creator-model goal framing"
 check_pair "roadmap item id in supporting notes" "$goal" "roadmap provenance notes"
+check_pair "model-depth proof gate" "$goal" "autonomy model-depth proof gate"
+check_pair "full code implementation" "$goal" "full implementation goal contract"
+check_pair "deep verification/testing" "$goal" "deep verification goal contract"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
@@ -183,6 +186,9 @@ auto_invariants=(
   "continuous execution"
   "explicit invocation every run"
   "budget-limited"
+  "model-depth proof gate"
+  "independence check before parallel execution"
+  "separate branches or worktrees"
 )
 for inv in "${auto_invariants[@]}"; do
   # Case-insensitive: the phrase is load-bearing as a concept, whether it appears
