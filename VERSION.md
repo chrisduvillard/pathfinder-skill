@@ -2,7 +2,7 @@
 
 Generated: 2026-06-30
 
-Version: 2.20.2
+Version: 2.20.3
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.20.3:
+- Added release notes for Pathfinder's goal-binding hardening: generated goals now carry Goal Binding metadata, runtime-boundary disclosure, Binding Status checks, structured completion claims, and a Simplicity Guard, while local validation gained the `check-all.sh` preflight wrapper plus stronger manifest and portability guards.
 
 Changes in v2.20.2:
 - Tightened Pathfinder goal-pack contracts so generated implementation goals now preserve final-report proof language, deep verification/testing evidence, and protected-area stop boundaries; added validation guards, manifest parity checks, a creator-model refresh prompt, and PR reviewer prompts to keep those contracts from drifting.
