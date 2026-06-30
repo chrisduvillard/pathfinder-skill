@@ -54,17 +54,19 @@ codex plugin add pathfinder@pathfinder
 # then run /skills, or type $pathfinder to invoke it
 ```
 
-Then use it three ways:
+Then start with the options menu or jump directly:
 
+- **Show the options** — *"Show the Pathfinder options."* or bare `/pathfinder`
 - **Explore a repo** — *"Use the pathfinder skill on this repository."*
 - **Turn a task into a goal** — *"Pathfinder, turn this into a /goal: &lt;the work you want done&gt;."*
 - **Run it autonomously** *(opt-in)* — *"Run Pathfinder autonomously on this repository."*
+- **Check local state** — *"Show Pathfinder status."* or `/pathfinder status`
 
 <br>
 
 ## 🔭 How it works
 
-Three ways in — explore a repo, hand it a prompt, or let it run autonomously — all built on the same bounded, verifiable `/goal`.
+Bare `/pathfinder` first shows a compact chooser, so you can see the available paths before anything starts. The main work paths — explore a repo, hand it a prompt, or let it run autonomously — all build toward the same bounded, verifiable `/goal`.
 
 **🗺️ Explore** — point it at a repo. Pathfinder reads the code (not the docs), ranks the highest-value next moves, asks a few sharp questions, then forges the goal:
 
@@ -101,11 +103,15 @@ Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you 
 
 Two details matter when you expect questions: on first use, Pathfinder asks the Deep Intent Gate questions by default for every entry point, including autonomous mode. Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`; run `/pathfinder charter` to refresh or deepen either file.
 
+**Status/help** — want the lay of the land without starting work? Run `/pathfinder status` to inspect safe local state: current repo/branch, whether the charter and roadmap exist and are complete, the latest visible Pathfinder run, and the same entry paths shown by the chooser. It is read-only and then returns to the chooser.
+
 <br>
 
 ## 🧰 What Pathfinder can do
 
 A map of the full capability set:
+
+**🧭 Show the chooser first** — bare `/pathfinder` opens a compact menu of Pathfinder paths: explore the repo, turn a prompt into a goal, run autonomously, refresh the creator model, or show status/help.
 
 **🔍 Understand any codebase** — reads the repo from the **source up** (code, tests, configs, routes, schemas — not the README, so a stale or missing doc never misleads it). Five domain **scouts** (architecture, frontend/product, backend/data, testing/reliability, DX/security) produce located, evidence-graded findings, synthesized into a ranked **Top 5** of the highest-value next moves (impact ÷ effort; confirmed > inferred > suspected).
 
@@ -127,6 +133,8 @@ A map of the full capability set:
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
 **🧠 Understands creator intent deeply** — on first use, Pathfinder asks 8 to 12 compact questions about purpose, users, success, constraints, non-goals, finished state, autonomy policy, and future capabilities not started yet. It saves stable intent to `.pathfinder/charter.md` and evolving desired work to `.pathfinder/roadmap.md`; later runs reuse both, show their influence, and let you refresh or override them.
+
+**🧾 Show status without starting work** — `/pathfinder status` reports safe local Pathfinder state and available paths without creating run artifacts or triggering the Deep Intent Gate.
 
 **🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
 
@@ -190,7 +198,7 @@ If you would rather not use the plugin system, copy this repo's `skills/pathfind
 ~/.codex/skills/pathfinder/       # Codex
 ```
 
-Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex. See [`README-INSTALL.md`](README-INSTALL.md) for `/goal` compatibility notes.
+Then run `/pathfinder` in Claude Code to see the chooser, or `$pathfinder` (or `/skills`) in Codex. See [`README-INSTALL.md`](README-INSTALL.md) for `/goal` compatibility notes.
 
 <br>
 

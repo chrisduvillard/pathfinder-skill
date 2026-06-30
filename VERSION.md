@@ -2,7 +2,7 @@
 
 Generated: 2026-06-30
 
-Version: 2.19.0
+Version: 2.20.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,11 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.20.0:
+- Added a compact bare `/pathfinder` entry chooser that shows the main paths before Phase 0: explore the repo, turn a prompt into a `/goal`, run autonomously, refresh the creator model, or show status/help.
+- Added read-only `/pathfinder status` / "Show Pathfinder status" behavior that reports safe local Pathfinder state without creating run artifacts, triggering the Deep Intent Gate, updating intent files, or running repo-defined commands, then returns to the chooser.
+- Updated README and Codex default prompts so the chooser and status/help path are discoverable, and extended validation guards so those entry affordances cannot silently drift.
 
 Changes in v2.19.0:
 - Added optional Cross-Model Review after goal execution for both normal user-approved runs and autonomous runs. When enabled, Pathfinder writes `07b-cross-model-review.md` with the original goal, review packet, launch mode, reviewer verdicts, scoped fixes, and final disposition.
