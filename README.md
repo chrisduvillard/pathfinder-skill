@@ -60,6 +60,7 @@ Then start with the options menu or jump directly:
 - **Explore a repo** — *"Use the pathfinder skill on this repository."*
 - **Turn a task into a goal** — *"Pathfinder, turn this into a /goal: &lt;the work you want done&gt;."*
 - **Run it autonomously** *(opt-in)* — *"Run Pathfinder autonomously on this repository."*
+- **Refresh creator model** — *"/pathfinder charter"*
 - **Check local state** — *"Show Pathfinder status."* or `/pathfinder status`
 
 <br>
