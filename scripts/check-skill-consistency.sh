@@ -144,6 +144,7 @@ check_pair "future capabilities not started yet" "$funnel" "future-capabilities 
 check_pair "8 to 12 compact screens" "$funnel" "deep-intent interview depth"
 check_pair "continue later" "$funnel" "partial-intent continuation escape"
 check_pair ".pathfinder/roadmap.md" "$arts" "artifact roadmap intent file"
+check_pair "07b-cross-model-review.md" "$arts" "cross-model review artifact"
 check_pair "outside the run folder" "$arts" "intent files outside run folder"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"

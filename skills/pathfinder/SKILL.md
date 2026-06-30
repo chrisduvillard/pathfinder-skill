@@ -164,12 +164,13 @@ Required files:
 05-user-answers.md
 06-goal-command.md
 07-run-log.md
+07b-cross-model-review.md
 08-final-summary.md
 ```
 
 If the platform cannot create folders immediately, first describe the intended folder and create it as soon as file writing is available.
 
-If a phase has not yet been reached, create a short placeholder in the corresponding artifact, for example “not answered yet,” “verification not run yet,” “goal not generated yet,” or “goal not run.” This makes interrupted runs resumable without implying completion.
+If a phase has not yet been reached, create a short placeholder in the corresponding artifact, for example "not answered yet," "verification not run yet," "goal not generated yet," "goal not run," or "cross-model review not run." This makes interrupted runs resumable without implying completion.
 
 ## Phase 0: Session setup
 
