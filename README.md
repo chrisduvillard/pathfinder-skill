@@ -118,9 +118,11 @@ A map of the full capability set:
 
 **🎯 Forge a runnable goal** — produces a bounded, measurable, self-proving Claude Code **`/goal`** (or an `Implementation Goal` fallback for Codex and older clients): one end state, exact proof checks, constraints, protected areas, and stop bounds — kept under 3900 characters.
 
+**Add a second-model review** *(opt-in)* — after a goal run finishes or hits an ordinary blocker, Pathfinder can hand the original goal, diff summary, checks, and run log to the opposite local subscription tool (Claude Code after Codex/ChatGPT, or Codex after Claude). The reviewer can make simple goal-bounded fixes and related polish, then Pathfinder records the result in `07b-cross-model-review.md`. If no local launcher is available, the artifact becomes a manual handoff packet.
+
 **⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
 
-**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** is explicit opt-in. Pathfinder first captures the creator model through the Deep Intent Gate, passes a model-depth proof gate for each derived goal, then runs full code implementation plus deep verification/testing — branch → implement → verify → commit → push → open a PR → conditional self-merge where the repo's rules allow — updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. Parallel goal work is default-deny unless independence is proven first. See [Safety](#-safety).
+**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** is explicit opt-in. Pathfinder first captures the creator model through the Deep Intent Gate, passes a model-depth proof gate for each derived goal, then runs full code implementation plus deep verification/testing and optional Cross-Model Review - branch -> implement -> verify -> review when enabled -> commit -> push -> open a PR -> conditional self-merge where the repo's rules allow - updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. Parallel goal work is default-deny unless independence is proven first. See [Safety](#-safety).
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
@@ -136,16 +138,17 @@ Every run drops a clean, resumable trail inside the repo:
 
 ```text
 .agent-work/pathfinder/<date>-<task>/
-├── 00-session.md              repo root, branch, tooling, objective
-├── 01-blind-discovery.md      what the repo actually is
-├── 02-scout-briefs/           located, evidence-graded findings per domain
-├── 03-synthesis.md            ranked next moves + risks
-├── 03b-verification.md        adversarial check of the Top 5 (grades, rejects, re-rank)
-├── 04-question-funnel.md      the choices put to you
-├── 05-user-answers.md         what you picked
-├── 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
-├── 07-run-log.md              progress if the goal is run
-└── 08-final-summary.md        what was explored, found, and decided
+|-- 00-session.md              repo root, branch, tooling, objective
+|-- 01-blind-discovery.md      what the repo actually is
+|-- 02-scout-briefs/           located, evidence-graded findings per domain
+|-- 03-synthesis.md            ranked next moves + risks
+|-- 03b-verification.md        adversarial check of the Top 5 (grades, rejects, re-rank)
+|-- 04-question-funnel.md      the choices put to you
+|-- 05-user-answers.md         what you picked
+|-- 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
+|-- 07-run-log.md              progress if the goal is run
+|-- 07b-cross-model-review.md  optional second-model review packet, verdicts, and fixes
+\-- 08-final-summary.md        what was explored, found, and decided
 ```
 
 Separately, `.pathfinder/charter.md` holds stable creator intent and `.pathfinder/roadmap.md` holds evolving desired work. Both persist across runs, stay private, are gitignored via `.git/info/exclude`, are never committed, and are sanitized on every read.
@@ -196,6 +199,8 @@ Then run `/pathfinder` in Claude Code, or `$pathfinder` (or `/skills`) in Codex.
 Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
 
 **Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence after a model-depth proof gate, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, safety/manual/ambiguity/budget boundaries stop the run, parallel work requires a proven independence check, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
+
+Cross-Model Review is opt-in and does not widen authorization. It uses local subscription tools when available, never APIs or hidden credentials in v1, and falls back to a manual handoff packet when a reviewer cannot be launched. Reviewer fixes stay inside the original goal boundary; safety/manual/protected stops go back to the user.
 
 ## 🤝 Contributing and support
 
