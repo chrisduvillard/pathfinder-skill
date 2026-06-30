@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-28
+Generated: 2026-06-30
 
-Version: 2.18.0
+Version: 2.19.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,13 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.19.0:
+- Added optional Cross-Model Review after goal execution for both normal user-approved runs and autonomous runs. When enabled, Pathfinder writes `07b-cross-model-review.md` with the original goal, review packet, launch mode, reviewer verdicts, scoped fixes, and final disposition.
+- Added a protocol-first local launcher contract that prefers the opposite subscription model by default, supports configured reviewer commands, and falls back to `manual-handoff` or `failed-to-launch` without treating launcher failure as a failed Pathfinder run.
+- Bounded reviewer authority to two review/fix passes, goal-bounded fixes, and related polish only. Safety, manual-approval, protected-category, dangerous-path, credential, and publication boundaries remain hard stops for the user.
+- Gated autonomous commit, push, PR, and merge on a Cross-Model Review disposition of `clean` or `fixed-clean` when review is enabled, while preserving all existing autonomous safety gates.
+- Extended artifact, goal, funnel, README, and drift-guard documentation so the new `07b` artifact, post-save review option, manual-handoff fallback, and safety invariants cannot silently drift.
 
 Changes in v2.18.0:
 - Replaced the optional three-question objectives charter with a first-run Deep Intent Gate that asks by default for every Pathfinder entry point when the local creator model is missing, invalid, incomplete, or explicitly refreshed.

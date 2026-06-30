@@ -116,6 +116,7 @@ check_pair "1-5"                  "$funnel" "select-all range alias"
 check_pair "deep dive"            "$funnel" "Explore mode alias"
 check_pair "Goal-readiness confidence" "$funnel" "Explore goal-readiness header"
 check_pair "Audit only"           "$funnel" "post-save audit-only option"
+check_pair "Run the saved goal now with Cross-Model Review enabled" "$funnel" "post-save cross-model review option"
 
 # Phase 6 goal invariants (SKILL.md <-> goal-best-practices.md)
 check_pair "3900"            "$goal" "3900-char goal budget"
@@ -144,6 +145,7 @@ check_pair "future capabilities not started yet" "$funnel" "future-capabilities 
 check_pair "8 to 12 compact screens" "$funnel" "deep-intent interview depth"
 check_pair "continue later" "$funnel" "partial-intent continuation escape"
 check_pair ".pathfinder/roadmap.md" "$arts" "artifact roadmap intent file"
+check_pair "07b-cross-model-review.md" "$arts" "cross-model review artifact"
 check_pair "outside the run folder" "$arts" "intent files outside run folder"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
@@ -155,6 +157,26 @@ check_pair "roadmap item id in supporting notes" "$goal" "roadmap provenance not
 check_pair "model-depth proof gate" "$goal" "autonomy model-depth proof gate"
 check_pair "full code implementation" "$goal" "full implementation goal contract"
 check_pair "deep verification/testing" "$goal" "deep verification goal contract"
+check_pair "Cross-Model Review" "$goal" "cross-model review goal constraints"
+check_pair "goal-bounded fixes and related polish" "$goal" "cross-model reviewer fix boundary"
+check_pair "manual-handoff" "$arts" "cross-model manual handoff mode"
+check_pair "failed-to-launch" "$arts" "cross-model failed-to-launch mode"
+if grep -qF -- 'launch mode is `launched`, `manual-handoff`, `skipped`, or `failed-to-launch`' "$arts"; then
+  echo "ok: cross-model launch-mode contract present in $(basename "$arts")"
+else
+  err "artifact-structure.md is missing the exact cross-model launch-mode contract"
+fi
+if grep -qF -- 'final disposition is `clean`, `fixed-clean`, `needs-primary-followup`, `needs-user-review`, `blocked`, or `skipped`' "$arts"; then
+  echo "ok: cross-model final-disposition contract present in $(basename "$arts")"
+else
+  err "artifact-structure.md is missing the exact cross-model final-disposition contract"
+fi
+check_skill_section "## Cross-Model Review" "## Phase 8:" "two review/fix passes maximum" "cross-model two-pass bound"
+check_skill_section "## Cross-Model Review" "## Phase 8:" 'clean` or `fixed-clean' "cross-model clean disposition gate"
+check_skill_section "## Cross-Model Review" "## Phase 8:" "No API, OpenRouter, browser automation, or hidden credentials" "cross-model v1 backend boundary"
+check_skill_section "### Phase 7-A:" "### Reporting" "Cross-Model Review" "autonomous cross-model review gate"
+check_skill_section "### Phase 7-A:" "### Reporting" 'clean` or `fixed-clean' "autonomous clean review disposition gate"
+check_skill_section "### Phase 7-A:" "### Reporting" "before commit or publication" "autonomous review before publication"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
