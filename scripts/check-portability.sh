@@ -3,7 +3,9 @@
 # Keep local validation and release helpers runnable on common non-GNU shells,
 # and keep GitHub Actions supply-chain pins reviewable.
 # In particular, grep's Perl-regexp mode is not available in BSD grep, which
-# makes otherwise portable repo checks fail on macOS-style environments.
+# makes otherwise portable repo checks fail on macOS-style environments; and
+# GNU grep 3.0 under MSYS/Git-for-Windows aborts when -i and -F are combined
+# (e.g. `grep -qiF`), which silently fails the validators on that platform.
 
 set -uo pipefail
 
@@ -18,6 +20,15 @@ for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/wo
 
   if grep -nE '^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*P|--perl-regexp)' "$f"; then
     echo "::error file=$f::replace GNU-only grep Perl-regexp usage with portable awk, sed, or grep -E"
+    fail=1
+  fi
+
+  # GNU grep 3.0 under MSYS/Git-for-Windows aborts (SIGABRT) when -i and -F are
+  # combined in one short-flag group (e.g. `grep -qiF`), silently failing the
+  # validators on that platform; -i or -F alone is fine. Flag the combo so it
+  # cannot regress. Use awk index(tolower()) for a portable case-insensitive literal.
+  if grep -nE '^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?grep[[:space:]][^#]*(-[[:alnum:]]*i[[:alnum:]]*F|-[[:alnum:]]*F[[:alnum:]]*i)' "$f"; then
+    echo "::error file=$f::replace the GNU grep -i+-F combo (aborts on MSYS GNU grep 3.0) with awk index(tolower()) or grep -F without -i"
     fail=1
   fi
 done
