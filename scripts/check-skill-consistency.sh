@@ -162,6 +162,9 @@ check_pair "manual-handoff" "$arts" "cross-model manual handoff mode"
 check_skill_section "## Cross-Model Review" "## Phase 8:" "two review/fix passes maximum" "cross-model two-pass bound"
 check_skill_section "## Cross-Model Review" "## Phase 8:" 'clean` or `fixed-clean' "cross-model clean disposition gate"
 check_skill_section "## Cross-Model Review" "## Phase 8:" "No API, OpenRouter, browser automation, or hidden credentials" "cross-model v1 backend boundary"
+check_skill_section "### Phase 7-A:" "### Reporting" "Cross-Model Review" "autonomous cross-model review gate"
+check_skill_section "### Phase 7-A:" "### Reporting" 'clean` or `fixed-clean' "autonomous clean review disposition gate"
+check_skill_section "### Phase 7-A:" "### Reporting" "before commit or publication" "autonomous review before publication"
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
