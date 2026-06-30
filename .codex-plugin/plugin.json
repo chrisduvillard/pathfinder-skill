@@ -29,6 +29,7 @@
       "Map this codebase and propose the highest-value next move.",
       "Generate a bounded /goal for the work we just scoped.",
       "Run Pathfinder autonomously on this repository.",
+      "Refresh the Pathfinder creator model with /pathfinder charter.",
       "Turn this prompt into a runnable /goal: <describe the work you want done>.",
       "Show Pathfinder status."
     ]

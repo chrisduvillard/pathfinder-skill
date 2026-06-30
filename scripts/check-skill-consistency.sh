@@ -159,6 +159,38 @@ check_pair "full code implementation" "$goal" "full implementation goal contract
 check_pair "deep verification/testing" "$goal" "deep verification goal contract"
 check_pair "Cross-Model Review" "$goal" "cross-model review goal constraints"
 check_pair "goal-bounded fixes and related polish" "$goal" "cross-model reviewer fix boundary"
+
+# Good examples should demonstrate the same proof/safety obligations required by
+# the checklist above them, not weaker shorthand that looks acceptable in docs
+# while producing under-specified generated goals.
+good_examples="$(awk '
+  /^## Good examples/ { in_good = 1; next }
+  /^## Bad examples/ { in_good = 0 }
+  in_good && /^\/goal / { print }
+' "$goal")"
+good_example_count=$(printf '%s\n' "$good_examples" | sed '/^$/d' | wc -l | tr -d ' ')
+if [ "$good_example_count" -ne 2 ]; then
+  err "goal-best-practices.md should contain exactly 2 good /goal examples, found $good_example_count"
+fi
+good_example_i=0
+while IFS= read -r example; do
+  [ -n "$example" ] || continue
+  good_example_i=$((good_example_i + 1))
+  case "$example" in
+    *"Final report must include"*) echo "ok: good goal example $good_example_i includes final-report proof language" ;;
+    *) err "good goal example $good_example_i is missing final-report proof language" ;;
+  esac
+  case "$example" in
+    *"deep verification/testing"*) echo "ok: good goal example $good_example_i includes deep verification/testing language" ;;
+    *) err "good goal example $good_example_i is missing deep verification/testing language" ;;
+  esac
+  if [[ "$example" == *"Stop before touching"* || "$example" == *"Do not touch"* ]]; then
+    echo "ok: good goal example $good_example_i includes protected-area stop language"
+  else
+    err "good goal example $good_example_i is missing protected-area stop language"
+  fi
+done < <(printf '%s\n' "$good_examples")
+
 check_pair "manual-handoff" "$arts" "cross-model manual handoff mode"
 check_pair "failed-to-launch" "$arts" "cross-model failed-to-launch mode"
 if grep -qF -- 'launch mode is `launched`, `manual-handoff`, `skipped`, or `failed-to-launch`' "$arts"; then

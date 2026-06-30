@@ -88,7 +88,7 @@ done
 #     only the shared identity surface.
 claude_plugin="$root/.claude-plugin/plugin.json"
 codex_plugin="$root/.codex-plugin/plugin.json"
-identity_fields=(name description homepage repository license)
+identity_fields=(name description homepage repository license author.name author.url)
 for field in "${identity_fields[@]}"; do
   cv=$("$jq_bin" -r ".$field // empty" "$claude_plugin" | tr -d '\r')
   xv=$("$jq_bin" -r ".$field // empty" "$codex_plugin" | tr -d '\r')
@@ -108,14 +108,14 @@ else
   fail=1
 fi
 
-# (5) Codex default prompts are the install-time entry affordance for the three
-#     supported paths plus the bare chooser/status affordance. Guard them so a
-#     manifest edit cannot silently drop a route while every JSON/version check
-#     stays green.
+# (5) Codex default prompts are the install-time entry affordance for supported
+#     paths plus the bare chooser/status affordance. Guard them so a manifest edit
+#     cannot silently drop a route while every JSON/version check stays green.
 required_prompt_fragments=(
   "Show the Pathfinder options"
   "Use the pathfinder skill on this repository"
   "Run Pathfinder autonomously on this repository"
+  "/pathfinder charter"
   "Turn this prompt into a runnable /goal"
   "Show Pathfinder status"
 )
