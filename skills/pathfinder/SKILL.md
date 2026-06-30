@@ -901,12 +901,17 @@ Reply with edits, "accept agent recommendation", "go back" to revise the target,
 
 Do not show this screen until the recognition-first contract is accepted and `06-goal-command.md` has been written. Then ask what to do with the saved goal or goal pack:
 
+```text
 1. Show the saved `/goal` command or goal pack and wait.
 2. Keep it saved; do not run until I explicitly approve. [default]
 3. Run the saved goal now after showing the exact command. For a goal pack, ask which numbered goal to run first.
 4. Audit only, no implementation.
+5. Run the saved goal now with Cross-Model Review enabled after showing the exact command and review packet plan.
+```
 
-Default to option 2 unless the user explicitly selects another mode. Do not recommend option 3 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run. For a goal pack, saving first and asking before running remains the default. If the user approves execution of a pack, proceed one goal at a time and ask before the next goal unless the user explicitly says to run all goals in the pack.
+Default to option 2 unless the user explicitly selects another mode. Do not recommend option 3 or option 5 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run. For a goal pack, saving first and asking before running remains the default. If the user approves execution of a pack, proceed one goal at a time and ask before the next goal unless the user explicitly says to run all goals in the pack.
+
+Option 5 enables Cross-Model Review for this run only. It runs the saved goal under the normal Phase 7 approval rules, then runs optional Phase 7b after a completed-claim or ordinary blocker. Option 5 does not authorize commits, pushes, PRs, merges, or protected-area changes.
 
 ### Option reservoir
 
@@ -1270,6 +1275,7 @@ After Phase 6 writes `06-goal-command.md`, show the saved path and the post-save
 - Option 1 shows the saved goal command or goal pack, then waits.
 - Option 2, the default, leaves the goal saved and does not run anything until later explicit approval.
 - Option 4 provides audit-only output without implementation.
+- Option 5 runs the saved goal now with Cross-Model Review enabled for this run only.
 - Do not run until the user clearly approves. Confirmation to save the goal is not approval to execute it.
 
 This interactive gate is the default for the full-exploration and prompt-to-goal tracks. In autonomous mode it is replaced by the Phase 7-A execution loop (see “Autonomous mode (opt-in)” above), which the user authorized at invocation; the save-don't-run default and this menu are unchanged for every non-autonomous run.
@@ -1280,6 +1286,7 @@ If approved:
 
 - Run the goal or equivalent Implementation Goal. For a goal pack, run one numbered goal at a time unless the user explicitly asked to run all goals in the pack.
 - Log progress in `07-run-log.md`.
+- If Cross-Model Review is enabled for this run, write `07b-cross-model-review.md` and run or hand off the optional Phase 7b review after a completed-claim or ordinary blocker.
 - Keep changes scoped.
 - Pause if the implementation diverges from the goal or hits stop conditions.
 - Do not commit, create a remote repository, push, publish, release, change repo visibility, or perform other external side effects unless separately approved with repository, remote, branch, and visibility confirmed.

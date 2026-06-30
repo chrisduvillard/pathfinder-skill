@@ -116,6 +116,7 @@ check_pair "1-5"                  "$funnel" "select-all range alias"
 check_pair "deep dive"            "$funnel" "Explore mode alias"
 check_pair "Goal-readiness confidence" "$funnel" "Explore goal-readiness header"
 check_pair "Audit only"           "$funnel" "post-save audit-only option"
+check_pair "Run the saved goal now with Cross-Model Review enabled" "$funnel" "post-save cross-model review option"
 
 # Phase 6 goal invariants (SKILL.md <-> goal-best-practices.md)
 check_pair "3900"            "$goal" "3900-char goal budget"
