@@ -30,15 +30,28 @@ If the user invokes bare `/pathfinder` with no path, prompt, or modifier, show t
 
 ```text
 What do you want Pathfinder to do?
-1. Explore this repo and propose work   map the codebase, rank candidates, then forge a /goal   [recommended for an unfamiliar repo]
-2. Turn a prompt into a /goal           paste or describe the task; I research it and forge a runnable /goal
-3. Run autonomously                     use the creator model and roadmap to execute eligible work hands-off
-4. Refresh creator model                update .pathfinder/charter.md and/or .pathfinder/roadmap.md
-5. Show status/help                     inspect local Pathfinder state and available paths, then return here
+1. 🔎 Explore this repo and propose work   map the codebase, rank candidates, then forge a /goal
+2. ✍️ Turn a prompt into a /goal           paste or describe the task; I research it and forge a runnable /goal
+3. ⚡ Run autonomously                     use the creator model and roadmap to execute eligible work hands-off
+4. 🧭 Refresh creator model                update .pathfinder/charter.md and/or .pathfinder/roadmap.md
+5. 📊 Show status/help                     inspect local Pathfinder state and available paths, then return here
 
-Agent recommends: <1 | 2 | 3 | 4 | 5> because <one-line reason from the user's words and safe local state>.
+Recommendation: 🟢 <1 | 2 | 3 | 4 | 5> — <selected option label>
+State checked: <model badge> · <run badge> · <prompt badge>
+Why: <one-line reason from the user's words and safe local state>.
 Reply with a number, paste a prompt for option 2, or use an explicit command such as /pathfinder auto, /pathfinder charter, or /pathfinder status.
 ```
+
+Chooser recommendation rules:
+
+- Do not place a static [recommended] marker on option 1 before checking local state. Use the separate Recommendation block, and append any inline `[recommended]` marker only to the dynamically selected option if the host UI needs an inline cue.
+- Use emoji/color badges as a visual layer, never as the only carrier of meaning: 🟢 recommended safe default, 🟡 refresh or incomplete model, 🔵 status/info, 🟣 prompt-to-goal, ⚡ autonomous explicit opt-in, ✅ present/complete, ⚠️ missing/incomplete/stale, 🕘 prior run found, 🆕 no prior run, ✍️ prompt supplied. If ANSI color is available, tint the badge and selected label consistently, then reset formatting; the text must remain readable without color.
+- Recommend option 2 when the user supplied or clearly implies a concrete task prompt.
+- Recommend option 3 only when the user explicitly asks for autonomous mode; never recommend it from a bare chooser just because eligible roadmap work may exist.
+- Recommend option 1 only when there is no supplied prompt, no usable complete charter/roadmap, and no visible prior Pathfinder run.
+- Recommend option 4 when the creator model is missing, incomplete, schema-invalid, or stale but prior Pathfinder state exists.
+- Recommend option 5 when both intent files are complete and prior runs exist, but the user supplied no concrete task.
+- If state is mixed or uncertain, prefer option 5 so the user can inspect state before starting a work-producing path.
 
 Option 5 and the explicit `/pathfinder status` alias are read-only status/help. Show: repository root if known; current branch if known; charter and roadmap presence, `completion` value, and last-refreshed/created date if safely readable; the latest visible `.agent-work/pathfinder/...` run folder if one is visible without crawling secrets; and the same available entry paths from the chooser. It does not create run artifacts, does not run the Deep Intent Gate, does not update intent files, and does not run repo-defined commands. After the status/help screen, Pathfinder returns to this chooser unless the user explicitly selects another path.
 
@@ -231,10 +244,11 @@ If it is unclear which the user wants, ask once. This is a fixed two-option menu
 
 ```text
 How should I help?
-1. Explore the repo and propose work   map the codebase, rank candidates, then forge a /goal   [recommended for an unfamiliar repo]
-2. Turn my prompt into a /goal          you give me the task; I research it and forge a runnable /goal
+1. 🔎 Explore the repo and propose work   map the codebase, rank candidates, then forge a /goal
+2. ✍️ Turn my prompt into a /goal          you give me the task; I research it and forge a runnable /goal
 
-Agent recommends: <1 | 2> because <one-line reason, e.g. the user already described concrete work, or the repo is unfamiliar with no stated task>.
+Recommendation: 🟢 <1 | 2> — <selected option label>
+Why: <one-line reason, e.g. the user already described concrete work, or the repo is unfamiliar with no stated task>.
 Reply 1 or 2, or paste the prompt you want turned into a goal.
 ```
 

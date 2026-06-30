@@ -199,6 +199,11 @@ entry_chooser_invariants=(
   "Run autonomously"
   "Refresh creator model"
   "Show status/help"
+  "Recommendation: 🟢 <1 | 2 | 3 | 4 | 5> — <selected option label>"
+  "Recommend option 1 only when there is no supplied prompt, no usable complete charter/roadmap, and no visible prior Pathfinder run."
+  "Recommend option 4 when the creator model is missing, incomplete, schema-invalid, or stale but prior Pathfinder state exists."
+  "Recommend option 5 when both intent files are complete and prior runs exist, but the user supplied no concrete task."
+  "Do not place a static [recommended] marker on option 1 before checking local state."
   "/pathfinder status"
   "returns to this chooser"
   "does not create run artifacts"
@@ -210,6 +215,11 @@ for inv in "${entry_chooser_invariants[@]}"; do
     err "SKILL.md is missing entry chooser invariant: \"$inv\""
   fi
 done
+if grep -qF -- "[recommended for an unfamiliar repo]" "$skill"; then
+  err "SKILL.md still contains the stale static entry recommendation label"
+else
+  echo "ok: entry chooser has no stale static unfamiliar-repo recommendation label"
+fi
 
 # (2d) Autonomous-mode safety invariants (SKILL-only presence). Autonomous mode is an
 #      explicit opt-in tier that grants unattended commit/push/merge. Its load-bearing
