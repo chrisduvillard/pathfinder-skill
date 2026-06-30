@@ -2,7 +2,7 @@
 
 Generated: 2026-06-30
 
-Version: 2.20.1
+Version: 2.20.2
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.20.2:
+- Tightened Pathfinder goal-pack contracts so generated implementation goals now preserve final-report proof language, deep verification/testing evidence, and protected-area stop boundaries; added validation guards, manifest parity checks, a creator-model refresh prompt, and PR reviewer prompts to keep those contracts from drifting.
 
 Changes in v2.20.1:
 - Refined the chooser recommendation so option 1 is recommended only for a true first-run repo, while existing creator-model or prior-run state points users toward refresh or status/help; the recommendation now uses accessible emoji/color badges instead of a static option label.
