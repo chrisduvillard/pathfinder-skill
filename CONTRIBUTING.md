@@ -34,6 +34,7 @@ bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
 git diff --check                          # trailing whitespace / conflict markers
+git diff --cached --check                 # staged whitespace / conflict markers
 ```
 
 These are the same checks `.github/workflows/manifests.yml` runs, so they

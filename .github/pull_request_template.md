@@ -13,6 +13,7 @@
 - [ ] `bash scripts/check-manifests.sh`
 - [ ] `bash scripts/check-portability.sh`
 - [ ] `git diff --check`
+- [ ] `git diff --cached --check`
 - [ ] Not applicable, because:
 
 ## Security and compatibility
