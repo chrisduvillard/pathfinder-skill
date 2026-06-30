@@ -200,7 +200,7 @@ Pathfinder treats every repo file as **untrusted data**. It does not run repo sc
 
 **Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence after a model-depth proof gate, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, safety/manual/ambiguity/budget boundaries stop the run, parallel work requires a proven independence check, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
 
-Cross-Model Review is opt-in and does not widen authorization. It uses local subscription tools when available, never APIs or hidden credentials in v1, and falls back to a manual handoff packet when a reviewer cannot be launched. Reviewer fixes stay inside the original goal boundary; safety/manual/protected stops go back to the user.
+Cross-Model Review is opt-in and does not widen authorization. It uses local subscription tools when available, never APIs, OpenRouter, browser automation, or hidden credentials in v1, and falls back to a manual handoff packet when a reviewer cannot be launched. Reviewer fixes stay inside the original goal boundary; safety/manual/protected stops go back to the user.
 
 ## 🤝 Contributing and support
 

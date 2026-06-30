@@ -160,6 +160,17 @@ check_pair "deep verification/testing" "$goal" "deep verification goal contract"
 check_pair "Cross-Model Review" "$goal" "cross-model review goal constraints"
 check_pair "goal-bounded fixes and related polish" "$goal" "cross-model reviewer fix boundary"
 check_pair "manual-handoff" "$arts" "cross-model manual handoff mode"
+check_pair "failed-to-launch" "$arts" "cross-model failed-to-launch mode"
+if grep -qF -- 'launch mode is `launched`, `manual-handoff`, `skipped`, or `failed-to-launch`' "$arts"; then
+  echo "ok: cross-model launch-mode contract present in $(basename "$arts")"
+else
+  err "artifact-structure.md is missing the exact cross-model launch-mode contract"
+fi
+if grep -qF -- 'final disposition is `clean`, `fixed-clean`, `needs-primary-followup`, `needs-user-review`, `blocked`, or `skipped`' "$arts"; then
+  echo "ok: cross-model final-disposition contract present in $(basename "$arts")"
+else
+  err "artifact-structure.md is missing the exact cross-model final-disposition contract"
+fi
 check_skill_section "## Cross-Model Review" "## Phase 8:" "two review/fix passes maximum" "cross-model two-pass bound"
 check_skill_section "## Cross-Model Review" "## Phase 8:" 'clean` or `fixed-clean' "cross-model clean disposition gate"
 check_skill_section "## Cross-Model Review" "## Phase 8:" "No API, OpenRouter, browser automation, or hidden credentials" "cross-model v1 backend boundary"
