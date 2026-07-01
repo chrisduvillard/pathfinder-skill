@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.5
+Version: 2.21.6
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.6:
+- Fixed two confirmed SKILL.md spec-coherence contradictions (found by dogfooding Pathfinder on its own repository): (1) the Phase 4 type→L0-intent mapping declared "exactly one L0 label per (type, domain)" and "deterministic," but the Developer Experience/Security domain mapped to two labels ("improve developer experience" or "improve security/config/auth hardening") with no tiebreak, so two runs could bucket the same candidate differently and shift the L0 menu and its per-intent tally. It now resolves deterministically — security/auth/config/secrets surfaces → "improve security/config/auth hardening", else "improve developer experience" — so exactly one label per candidate holds for all five domains. (2) The Phase 5 mode-selection preamble unconditionally announced "<N> verified candidates (<M> rejected by verification)" even when Phase 4b did not run (`03b-verification.md` `not-run`/`in-progress`), contradicting the rule that nothing is presented as verified until the panel runs; the preamble now uses a not-verified variant ("<N> candidates (verification not run — pre-verification grades)") in that case, mirrored across SKILL.md and question-funnel-template.md.
 
 Changes in v2.21.5:
 - Fixed three confirmed Phase 5 interview-screen defects where the funnel screens did not honor the skill's own universal rules (found by dogfooding Pathfinder on its own repository), mirrored across `SKILL.md` and `question-funnel-template.md`: (1) the mode-selection screen carried a static `[recommended]` marker on option 1 that could contradict its dynamic `Agent recommends:` line (which may point to option 2) — replaced with a non-contradictory `(default)` label, honoring the chooser rule that forbids a static recommendation before checking state; (2) the Explore-from-scratch (L0–L4) options never carried the `Aligns:` north-star token the objective-awareness rule mandates for "every Explore option," so charter alignment silently vanished in Explore mode — the Explore preamble now states each candidate-bearing option carries the same `Aligns:` token as the Pick a move card; (3) the `ignore objectives` escape was mandated "at any level" but appeared in no rendered escape row — it is now shown on the Pick a move and Explore L0 escape rows when a charter is loaded.

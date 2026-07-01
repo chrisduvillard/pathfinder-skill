@@ -151,7 +151,7 @@ Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-
 ## Mode selection (ask once)
 
 ```text
-I mapped this repo and found <N> verified candidates (<M> rejected by verification).
+I mapped this repo and found <N> candidates.   (when 03b-verification.md is complete: "<N> verified candidates (<M> rejected by verification)"; when not-run/in-progress: "<N> candidates (verification not run — pre-verification grades)")
 Top pick: <top candidate symptom> — <location> (<evidence_grade>, <confidence>).
 Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>.
 Objectives: <north-star> (from your charter) — <k> of 5 top moves align.   (only when a charter is loaded)
