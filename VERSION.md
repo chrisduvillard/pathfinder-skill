@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-06-30
+Generated: 2026-07-01
 
-Version: 2.21.0
+Version: 2.21.1
 
 ## Versioning & distribution
 
@@ -15,6 +15,15 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.1:
+- Dogfood-driven consistency and safety fixes for the v2.21.0 clarity-gated autonomy feature (found by running Pathfinder end-to-end against a dummy project). No behavior was loosened; two safety gaps were tightened.
+- Fixed the anti-deadlock contradiction: a blocking unknown the creator could not resolve is now converted to a roadmap Open Question and its item marked `blocked` (creator input needed), so autonomous mode records it excluded and continues — instead of mislabeling it `manual-only` and autonomously implementing/pushing the very decision the creator deferred.
+- Fixed the model-depth proof gate so a `manual-approval` item can pass it: the Builder-intent field now proves *which* manual-approval category applies and that the item routes to an awaiting-review PR, rather than requiring proof that no manual-approval category applies (which was impossible and made disposition 2 unreachable through the gate).
+- Safety hardening: added network egress / outbound data upload to the dangerous-category list so it is screened by the *pre-execution* protected-category filter and hard floor, not only the post-execution absolute-danger scan; the pre-execution filter now also catches enabling an existing egress path by config (a `sync.enabled`/upload flag or an `*endpoint`/`*url`), which a flag-only diff could otherwise slip past.
+- Made the injection-disqualifies-autonomy and protected-category filters a hard precondition of the Phase 7-A loop's eligibility (not just surrounding prose), applied to every disposition, since the injection filter has no post-execution backstop.
+- Harmonized the `clarity` rule across SKILL.md, charter-template.md, and roadmap-template.md (roadmap-template had drifted to a weaker one-condition rule), and clarified that the model-depth proof gate is a per-item, entry-time check so `clarity: resolved` is reachable on a first interactive run (and stays fail-safe — doubt never grants autonomy).
+- Chooser: added a clarity badge/slot to the state line, a routing rule that sends a `completion: complete` but `clarity: unresolved` repo to the Deep Intent Gate (option 4) instead of the status dead-end, added `clarity: unresolved` to the gate trigger list, and disclosed that option 1 auto-escalates on a resolved-clarity repo while option 2 (prompt-to-goal) never does.
 
 Changes in v2.21.0:
 - Clarity-gated auto-escalation replaces the per-run autonomous opt-in: once the Deep Intent Gate reaches `clarity: resolved` (both intent files `completion: complete`, zero open blocking ambiguity-ledger unknowns, and a passing model-depth proof gate), an ordinary work-producing invocation auto-escalates into autonomous execution. Doubt blocks autonomy: auto-escalation never fires while `clarity: unresolved` or on a fresh repo with no charter.

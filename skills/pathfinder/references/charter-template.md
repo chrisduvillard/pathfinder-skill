@@ -54,4 +54,4 @@ clarity: resolved | unresolved
 - Never unattended: <glyph> <work Pathfinder must never run unattended> - basis: <one line> (<...>)
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Use `clarity: unresolved` whenever `completion` is incomplete on either file, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed; set `clarity: resolved` only when all three clear.
+Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Use `clarity: unresolved` whenever `completion` is incomplete on either file, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear. The proof gate is a per-item, entry-time check (see SKILL.md "Clarity gate"), so an interactive first run sets `clarity` from the first two conditions and each item's proof gate is checked before that item auto-runs.
