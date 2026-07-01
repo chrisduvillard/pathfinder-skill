@@ -68,7 +68,7 @@ check_direction() {  # <action> <qualifier-regex, lowercase ERE> <label> [strip-
 check_direction "self-merge" "never|conditional|default-deny|do not" "self-merge stays default-deny/conditional"
 check_direction "unattended" "never|cannot|neither" "unattended stays negated"
 check_direction "dangerous categories" "never|excluded|exclude|filtered out|hard-block" "dangerous categories stay excluded"
-check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared|boundary" "credentials stay isolated" "credential_exposure"
+check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared" "credentials stay isolated" "credential_exposure|credential boundary"
 
 if [ "$fail" -eq 0 ]; then
   echo "skill behavior: all invariants hold"
