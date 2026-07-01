@@ -31,6 +31,7 @@ The wrapper runs these same checks individually:
 
 ```bash
 bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
+bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-escape invariants
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
 git diff --check                          # trailing whitespace / conflict markers
@@ -59,6 +60,10 @@ before you push, not after.
   mirrored instruction, update both `SKILL.md` and the relevant `references/*.md`
   file, and add or update the matching `check_pair` or section guard in
   `scripts/check-skill-consistency.sh`, or CI will fail.
+- When you add or change an autonomous-mode safety rule or a decision screen, update
+  `scripts/check-skill-behavior.sh` too: a new controlled action needs a qualifier-set row so a
+  loosened gate with the token intact fails CI, and a new decision screen needs its `None of these`
+  escape or an entry on the exempt allowlist. Prove it with a fixture in `scripts/test-validators.sh`.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the
