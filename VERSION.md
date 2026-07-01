@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.2
+Version: 2.21.3
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.3:
+- Added `scripts/test-validators.sh`, a meta-test suite for the awk/grep parsers embedded in the drift-guard validators — the code-fence open/close tracker, the 4-backtick goal-pack compensator, the `check_skill_section` window scanner, and the VERSION.md `Version:` / release-changelog parsers. These previously had no test, so a regression in one silently weakened every invariant it scoped and was caught only by manual dogfooding (TR-3/TR-4). Each test runs the real validator (or its regex/awk extracted from the current source) against a crafted fixture and asserts the verdict, so mutating a parser's core condition now fails the suite. Wired into `scripts/check-all.sh` and `.github/workflows/manifests.yml`. Found by dogfooding Pathfinder on its own repository. The documented symmetric 4→3 goal-pack net-even blind spot is recorded as a follow-up (it needs a structural quad-wrapper assertion, not the count-based compensator).
 
 Changes in v2.21.2:
 - Second dogfood pass (targeting the older machinery the clarity-gated-autonomy feature now composes with): four verified defects fixed, two of them safety-direction bugs that auto-escalation had made reachable unattended. No behavior loosened.
