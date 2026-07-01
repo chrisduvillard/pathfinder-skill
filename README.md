@@ -68,7 +68,7 @@ Bare **`/pathfinder`** opens a chooser so you can see every path before anything
 
 <br>
 
-**🗺️ Explore** reads the code itself — never the README, so a stale or missing doc can't mislead it — ranks the moves, adversarially verifies the top ones, asks a few sharp questions, then forges the goal:
+**🗺️ Explore** reads the code itself — never the README, so a stale or missing doc can't mislead it — ranks the moves, adversarially verifies the top ones, captures your intent (the charter + clarity gate), asks a few sharp questions, then forges the goal:
 
 ```mermaid
 flowchart LR
@@ -76,14 +76,17 @@ flowchart LR
     B["<b>2 · SCOUT</b><br/><i>brief each domain</i>"]
     C["<b>3 · SYNTHESIZE</b><br/><i>rank the next moves</i>"]
     V["<b>4 · VERIFY</b><br/><i>adversarially re-check</i>"]
-    D["<b>5 · ASK</b><br/><i>a few sharp questions</i>"]
-    E["<b>6 · FORGE /goal</b><br/><i>bounded · proven · ready</i>"]
+    G["<b>5 · CHARTER</b><br/><i>capture intent · clarity gate</i>"]
+    D["<b>6 · ASK</b><br/><i>a few sharp questions</i>"]
+    E["<b>7 · FORGE /goal</b><br/><i>bounded · proven · ready</i>"]
 
-    A --> B --> C --> V --> D --> E
+    A --> B --> C --> V --> G --> D --> E
 
     classDef step fill:#0F172A,stroke:#2DD4BF,stroke-width:2px,color:#E6EDF3;
+    classDef gate fill:#0F172A,stroke:#A78BFA,stroke-width:2px,color:#DDD6FE;
     classDef forge fill:#0F172A,stroke:#F59E0B,stroke-width:2px,color:#FBBF24;
-    class A,B,C,V,D step;
+    class A,B,C,V step;
+    class G gate;
     class E forge;
 ```
 
