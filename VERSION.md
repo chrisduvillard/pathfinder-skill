@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.1
+Version: 2.21.2
 
 ## Versioning & distribution
 
@@ -15,6 +15,12 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.2:
+- Second dogfood pass (targeting the older machinery the clarity-gated-autonomy feature now composes with): four verified defects fixed, two of them safety-direction bugs that auto-escalation had made reachable unattended. No behavior loosened.
+- SAFETY (autonomous verification): the Phase 7-A verification panel reused Phase 4b's median + two-vote aggregation for BOTH fidelity and absolute-danger — so a real danger caught by only one of three verifiers was "washed out" below the quarantine bar and never triggered the global safety stop. Fidelity and absolute-danger now aggregate differently: fidelity keeps the median/majority + hallucination-guard machinery; absolute-danger is a single-vote destructive signal (any grounded flag, including the degraded single pass, is a hard `blocked` stop, and the hallucination guard may never overrule it). Also replaced the underspecified "aggregate exactly as Phase 4b does" with an explicit two-domain rule.
+- SAFETY (stale intent): reuse-and-reconcile's conflict detection lived only inside Phase 4c, which does not trigger on a `completion: complete` + `clarity: resolved` repo — so a charter whose non-goal is now contradicted by the code (e.g. a "no multi-currency" charter with an FX module in the tree) was never reconciled and auto-escalation ran on stale intent. The charter-vs-evidence re-check now runs on every work-producing entry; a detected conflict sets `clarity: unresolved` and re-opens a blocking unknown until reconciled. Autonomous entry gained a charter-wide freshness/consistency precondition (an item-scoped proof gate cannot catch charter-wide drift), and the model-depth proof gate now fails when the charter is contradicted by present code.
+- Cross-Model Review composition with the new dispositions: removed the stale "manual-approval boundary" / "manual-only boundary" entries from the CMR trigger-suppression and autonomous-CMR-gate lists (those items are now worked to a completed claim, a normal CMR trigger), and clarified that a manual-approval item's own already-declared class does not by itself return `needs-user-review` — a clean review still lands it as its disposition-2 awaiting-review PR; `needs-user-review` is reserved for work the reviewer newly surfaces.
 
 Changes in v2.21.1:
 - Dogfood-driven consistency and safety fixes for the v2.21.0 clarity-gated autonomy feature (found by running Pathfinder end-to-end against a dummy project). No behavior was loosened; two safety gaps were tightened.
