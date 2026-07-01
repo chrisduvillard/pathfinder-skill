@@ -22,7 +22,7 @@ This template is the interactive funnel. In autonomous mode (see "Autonomous mod
 
 ## Phase 4c: Deep Intent Gate (runs before entry-point continuation)
 
-When `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, or explicitly refreshed, Phase 4c runs the Deep Intent Gate before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked manual-only (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when both files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
+When `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, marked `clarity: unresolved` with a still-open blocking unknown, or explicitly refreshed, Phase 4c runs the Deep Intent Gate before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked `blocked` on creator input (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when both files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
 
 The gate opens with an evidence draft, then asks a recognition-first interview that usually spans 8 to 12 compact screens. Every screen shows inferred answers with evidence and confidence, offers 3 to 6 concrete options where possible, includes `Agent recommends:`, includes free text, and asks directly about future capabilities not started yet.
 
@@ -140,7 +140,8 @@ For each, pick the answer that removes the doubt:
 Agent recommends: <the option that best removes the blocking doubt>.
 Escape: None of these - describe it yourself; continue later; or
 "I can't answer this" to convert it to a roadmap Open Question (the item becomes
-manual-only and is excluded from unattended work, and clarity resolves for the rest).
+`blocked` on creator input and is excluded from unattended work until answered, and
+clarity resolves for the rest).
 ```
 
 Clarity resolves (`clarity: resolved`) only when every blocking unknown is resolved or converted.

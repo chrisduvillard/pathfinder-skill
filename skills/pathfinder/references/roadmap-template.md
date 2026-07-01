@@ -37,10 +37,10 @@ clarity: resolved | unresolved
 
 ## Open Questions
 - <question that must be answered before Pathfinder can safely derive a goal>
-- <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked manual-only and excluded from the autonomous run until this is answered>
+- <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked `blocked` (creator input needed) and excluded from the autonomous run until this is answered — distinct from an ordinary manual-only item, which is worked and landed as an awaiting-review PR>
 ```
 
-Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` only while a blocking unknown is still `open`; a blocking unknown that has been *converted* to an Open Question no longer blocks clarity (it becomes a manual-only item), so clarity can resolve for the rest of the roadmap even while that Open Question stays unanswered.
+Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` whenever `completion` is incomplete on either file, any blocking ambiguity-ledger unknown is still `open`, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear (mirroring charter-template.md and SKILL.md "Clarity gate"; the proof gate is a per-item, entry-time check). A blocking unknown that has been *converted* to an Open Question no longer counts as `open` — its item becomes `blocked` on creator input, excluded from the autonomous run until answered — so once every remaining blocking unknown is resolved or converted, both files are `completion: complete`, and each auto-run item's proof gate passes, clarity can resolve for the rest of the roadmap even while that Open Question stays unanswered.
 
 ## Status Semantics
 
