@@ -40,7 +40,7 @@ clarity: resolved | unresolved
 - <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked manual-only and excluded from the autonomous run until this is answered>
 ```
 
-Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` while any Open Question converted from a blocking unknown remains unanswered; the rest of the roadmap may still be clarity-eligible for the eligible items.
+Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` only while a blocking unknown is still `open`; a blocking unknown that has been *converted* to an Open Question no longer blocks clarity (it becomes a manual-only item), so clarity can resolve for the rest of the roadmap even while that Open Question stays unanswered.
 
 ## Status Semantics
 
