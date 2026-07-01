@@ -86,12 +86,27 @@ awk 'BEGIN{done=0} /^````/ && done==0 {done=1; next} {print}' \
   && mv "$R/skills/pathfinder/SKILL.md.new" "$R/skills/pathfinder/SKILL.md"
 assert_catch "$R" "4-backtick|goal-pack|fence" "quad compensator catches an odd 4-backtick count (removed one goal-pack fence)"
 
+echo "== parser 2b: structural quad-wrapper assertion (the net-even trap) =="
+# Append a stray 4-backtick pair that wraps NO triple fence. The count guard still passes (count is
+# even and >= 2), so only the STRUCTURAL guard can catch a 4-backtick region enclosing no nested
+# triple — the exact blind spot the count-only compensator missed (TR-4).
+R="$(newroot)"
+printf '\n````\nstray quad pair that wraps no triple fence\n````\n' >> "$R/skills/pathfinder/SKILL.md"
+assert_catch "$R" "quad-wrapper structure|encloses no 3-backtick" "structural guard catches a 4-backtick region with no nested triple (net-even trap)"
+
 echo "== parser 3: check_skill_section window scanner =="
 # Removing a guarded autonomous-safety token from inside the '## Autonomous mode'..'## Phase 7:'
 # window must be caught (the token is required IN that section).
 R="$(newroot)"
 sed -i '/never self-merge/d' "$R/skills/pathfinder/SKILL.md"
 assert_catch "$R" "never self-merge|autonomous-mode safety" "check_skill_section catches a safety token removed from its section"
+
+echo "== parser 3b: section-boundary existence guard (a heading rename fails loudly) =="
+# Rename a boundary heading check_skill_section keys on; the existence guard must catch the rename
+# rather than let the section window silently re-scope past the renamed stop (BE-5 fail-open).
+R="$(newroot)"
+sed -i 's/^## Phase 7: Approval/## Phase Seven: Approval/' "$R/skills/pathfinder/SKILL.md"
+assert_catch "$R" "section-boundary heading missing or renamed" "boundary-heading guard catches a renamed ## Phase 7: heading"
 
 echo "== parser 4a: VERSION.md 'Version:' regex (extracted from check-manifests.sh) =="
 # Pull the REAL version_re out of check-manifests.sh and prove it (a) matches exactly one clean
