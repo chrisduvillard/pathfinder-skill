@@ -110,14 +110,22 @@ else
   fi
 fi
 
-echo "== parser 4b: 'Changes in v<version>:' changelog-heading contract (mirrors check-manifests.sh) =="
-# The heading-present check is grep -qF "Changes in v$v:"; a file missing the heading is rejected.
-printf 'Changes in v2.0.0:\n- entry\n' > "$tmp/CLg"
-printf 'Release notes:\n- entry\n'      > "$tmp/CLb"
-if grep -qF "Changes in v2.0.0:" "$tmp/CLg" && ! grep -qF "Changes in v2.0.0:" "$tmp/CLb"; then
-  ok "changelog-heading check finds a present heading and rejects a missing one"
+echo "== parser 4b: 'Changes in v<version>:' changelog-heading check (pattern extracted from check-manifests.sh) =="
+# Pull the REAL heading pattern out of check-manifests.sh (the `grep -qF "Changes in v$v:"` line) so
+# this test tracks the source like 4a/4c, instead of re-validating a hand-copied literal that would
+# keep passing if the source check changed or broke.
+heading_fmt="$(sed -n 's/.*grep -qF "\(Changes in v[^"]*\)".*/\1/p' "$mansrc" | head -1)"
+if [ -z "$heading_fmt" ]; then
+  bad "could not extract the changelog-heading pattern from check-manifests.sh (parser 4b)"
 else
-  bad "changelog-heading contract failed (parser 4b)"
+  heading="$(printf '%s' "$heading_fmt" | sed 's/[$]v/2.0.0/')"   # substitute a concrete version for $v
+  printf 'Changes in v2.0.0:\n- entry\n' > "$tmp/CLg"
+  printf 'Release notes:\n- entry\n'      > "$tmp/CLb"
+  if grep -qF "$heading" "$tmp/CLg" && ! grep -qF "$heading" "$tmp/CLb"; then
+    ok "changelog-heading check (extracted pattern \"$heading_fmt\") finds a present heading and rejects a missing one"
+  else
+    bad "changelog-heading check failed with extracted pattern \"$heading_fmt\" (parser 4b)"
+  fi
 fi
 
 echo "== parser 4c: release.yml changelog block-extractor (awk extracted from the real workflow) =="
