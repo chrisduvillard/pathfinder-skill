@@ -697,7 +697,7 @@ Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>
 Objectives: <north-star> (from your charter) — <k> of 5 top moves align.   (only when a charter is loaded)
 
 How do you want to choose the work?
-1. Pick a move          show the ranked candidates, pick one or more   [recommended]
+1. Pick a move          show the ranked candidates, pick one or more   (default)
 2. Explore from scratch drill down by intent → area → surface, ignoring my ranking
 
 Agent recommends: <1 | 2> because <one-line reason from findings, e.g. one confirmed
@@ -758,7 +758,7 @@ Pick a move:
   • select all: all, a, 1-5, or 1,2,3,4,5
 
 narrow by area/intent: switch to Explore from scratch (L0)
-None of these: describe your own (free text)   show the full map
+None of these: describe your own (free text)   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 Glyphs: `✓` confirmed, `~` inferred, `?` suspected. The card text should be understandable without opening `03-synthesis.md`: plain outcome, exact location, evidence basis, likely fix shape, proof/checks, risk/protected areas, and grouping hint are all visible.
@@ -862,7 +862,7 @@ Next: how aggressive should the fix be?
 
 `Goal-readiness confidence` is the agent's estimate of whether it can already write a measurable `/goal`. Use it for adaptive stopping (see below); only trigger adaptive early-stopping when goal-readiness is high AND verified.
 
-Render this trail-and-confidence header before every level below (L0 through L4). The per-level example screens omit it only for brevity; it is shown each time, never skipped.
+Render this trail-and-confidence header before every level below (L0 through L4). The per-level example screens omit it only for brevity; it is shown each time, never skipped. When a charter is loaded, each candidate-bearing Explore option also carries the same `Aligns:` north-star token as the Pick a move card (omit when neutral), so charter alignment is not mode-dependent.
 
 #### L0. Intent
 
@@ -877,7 +877,7 @@ Ask what kind of outcome the user wants. List only intents that have at least on
 
 Agent recommends: <option n> because <one-line reason from findings>.
 None of these: describe the outcome you want.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 #### L1. Domain

@@ -157,7 +157,7 @@ Verified: <panel verdict, e.g. 3/3 confirm | downgraded ✓→~ | n/a (not run)>
 Objectives: <north-star> (from your charter) — <k> of 5 top moves align.   (only when a charter is loaded)
 
 How do you want to choose the work?
-1. Pick a move          show the ranked candidates, pick one or more   [recommended]
+1. Pick a move          show the ranked candidates, pick one or more   (default)
 2. Explore from scratch drill down by intent → area → surface, ignoring my ranking
 
 Agent recommends: <1 | 2> because <one-line reason from findings>.
@@ -204,7 +204,7 @@ Pick a move:
   • select all: all, a, 1-5, or 1,2,3,4,5
 
 narrow by area/intent: switch to Explore from scratch (L0)
-None of these: describe your own (free text)   show the full map
+None of these: describe your own (free text)   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 Glyphs: `✓` confirmed, `~` inferred, `?` suspected. Picking one number jumps straight to L4 (Boundaries).
@@ -288,7 +288,7 @@ Goal-readiness confidence: high (Verified: <verdict>)
 Next: how aggressive should the fix be?
 ```
 
-Render this header before every level (L0–L4); the per-level screens below omit it only for brevity, never because it is skipped. Only trigger adaptive early-stopping when goal-readiness is high AND verified.
+Render this header before every level (L0–L4); the per-level screens below omit it only for brevity, never because it is skipped. Only trigger adaptive early-stopping when goal-readiness is high AND verified. When a charter is loaded, each candidate-bearing Explore option also carries the same `Aligns:` north-star token as the Pick a move card (omit when neutral), so charter alignment is not mode-dependent.
 
 ### L0. Intent (only intents with candidates, annotated)
 
@@ -301,7 +301,7 @@ Render this header before every level (L0–L4); the per-level screens below omi
 
 Agent recommends: <option n> because <one-line reason from findings>.
 None of these: describe the outcome you want.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 ### L1. Domain (real candidates from the owning scout)
