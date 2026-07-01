@@ -79,12 +79,16 @@ check_pair() {
   fi
 }
 
+# (BE-5) Anchor the section boundaries to a column-0 heading (index()==1), not any substring,
+# so an incidental `## Heading` mentioned inside prose can no longer open or close the window and
+# mis-scope a safety guard (fail-open). The boundary headings themselves are guarded for existence
+# below, so a heading RENAME fails loudly instead of silently swallowing the wrong region.
 check_skill_section() {
   local start="$1" end="$2" token="$3" label="$4"
   if awk -v start="$start" -v stop="$end" -v token="$token" '
     BEGIN { token = tolower(token); found = 0 }
-    index($0, start) { in_section = 1 }
-    in_section && index($0, stop) { exit }
+    index($0, start) == 1 { in_section = 1 }
+    in_section && index($0, stop) == 1 { exit }
     in_section && index(tolower($0), token) { found = 1 }
     END { exit found ? 0 : 1 }
   ' "$skill"; then
@@ -93,6 +97,18 @@ check_skill_section() {
     err "$label drift: token \"$token\" missing from section \"$start\""
   fi
 }
+
+# (BE-5) Existence guard for the section boundaries check_skill_section keys on. Anchoring above
+# stops a prose substring from opening/closing a window; this stops a heading rename from silently
+# re-scoping one (the window would otherwise extend past the renamed stop and a deleted safety phrase
+# could then read as present). Keep this list in sync with the start/stop args passed below.
+for heading in "## Autonomous mode" "## Phase 7:" "### Phase 7-A:" "### Reporting" "## Cross-Model Review" "## Phase 8:"; do
+  if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "$skill"; then
+    echo "ok: section-boundary heading present: \"$heading\""
+  else
+    err "section-boundary heading missing or renamed: \"$heading\" (check_skill_section keys on it; update both together)"
+  fi
+done
 
 # Phase 5 funnel invariants (SKILL.md <-> question-funnel-template.md)
 check_pair "Default to option 2" "$funnel" "execution-mode default"
@@ -414,6 +430,28 @@ if [ "$quad" -ge 2 ] && [ $((quad % 2)) -eq 0 ]; then
   echo "ok: goal-pack 4-backtick wrapper present and balanced ($quad) in SKILL.md"
 else
   err "goal-pack 4-backtick wrapper drift in SKILL.md: found $quad 4-backtick fence line(s) (need an even count >= 2; a 4->3 downgrade corrupts the nested goal-pack render)"
+fi
+
+# (TR-4) The count guard above is blind to the "net-even" trap: a symmetric 4->3 downgrade of the
+# goal-pack wrapper (removing its two real quad fences) plus an unrelated even pair of stray
+# 4-backtick lines keeps the count even and >= 2 while the goal-pack render is corrupted. Assert
+# STRUCTURE, not just count: every 4-backtick-wrapped region must enclose at least one 3-backtick
+# (triple) fence — which the real goal-pack wrapper does and a stray even quad pair does not.
+if awk '
+  {
+    n = 0; while (substr($0, n + 1, 1) == "`") n++
+    if (n >= 4) {
+      if (!open) { open = 1; inner = 0 }
+      else { open = 0; if (!inner) bad = 1 }
+    } else if (open && n == 3) {
+      inner = 1
+    }
+  }
+  END { exit (bad || open) ? 1 : 0 }
+' "$skill"; then
+  echo "ok: every 4-backtick wrapper in SKILL.md encloses a nested triple fence"
+else
+  err "goal-pack quad-wrapper structure drift in SKILL.md: a 4-backtick-wrapped region encloses no 3-backtick fence (the net-even trap: a 4->3 goal-pack downgrade plus a stray even quad pair nets even but corrupts the render)"
 fi
 
 if [ "$fail" -eq 0 ]; then

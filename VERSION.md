@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.6
+Version: 2.21.7
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.7:
+- Hardened two fail-open / blind-spot risks in the drift guard `scripts/check-skill-consistency.sh` (found by dogfooding Pathfinder on its own repository), each covered by a new meta-test in `scripts/test-validators.sh`: (1) `check_skill_section` opened and closed its section windows on an unanchored substring match, so an incidental `## Heading` mentioned in prose could open/close a window, and a heading rename could silently re-scope one (letting a deleted safety phrase read as present) — boundaries are now anchored to a column-0 heading (`index()==1`), and the six section-boundary headings the guard keys on are guarded for existence so a rename fails CI loudly. (2) The 4-backtick goal-pack wrapper guard only counted fences (even, >= 2), blind to the "net-even" trap (a symmetric 4→3 downgrade of the wrapper plus an unrelated even quad pair nets even while corrupting the render) — a new structural assertion now requires every 4-backtick-wrapped region to enclose at least one nested triple fence, which the count-only guard could not verify. (BE-5 / DX-2 / TR-4.)
 
 Changes in v2.21.6:
 - Fixed two confirmed SKILL.md spec-coherence contradictions (found by dogfooding Pathfinder on its own repository): (1) the Phase 4 type→L0-intent mapping declared "exactly one L0 label per (type, domain)" and "deterministic," but the Developer Experience/Security domain mapped to two labels ("improve developer experience" or "improve security/config/auth hardening") with no tiebreak, so two runs could bucket the same candidate differently and shift the L0 menu and its per-intent tally. It now resolves deterministically — security/auth/config/secrets surfaces → "improve security/config/auth hardening", else "improve developer experience" — so exactly one label per candidate holds for all five domains. (2) The Phase 5 mode-selection preamble unconditionally announced "<N> verified candidates (<M> rejected by verification)" even when Phase 4b did not run (`03b-verification.md` `not-run`/`in-progress`), contradicting the rule that nothing is presented as verified until the panel runs; the preamble now uses a not-verified variant ("<N> candidates (verification not run — pre-verification grades)") in that case, mirrored across SKILL.md and question-funnel-template.md.
