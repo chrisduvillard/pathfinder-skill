@@ -19,6 +19,7 @@ created: <YYYY-MM-DD HH:MM>
 last-refreshed: <YYYY-MM-DD HH:MM>
 source-basis: creator interview + repo evidence + later refreshes
 completion: complete | incomplete
+clarity: resolved | unresolved
 
 ## Future State
 - <capability or quality the creator wants but the repo does not yet show>
@@ -36,9 +37,10 @@ completion: complete | incomplete
 
 ## Open Questions
 - <question that must be answered before Pathfinder can safely derive a goal>
+- <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked manual-only and excluded from the autonomous run until this is answered>
 ```
 
-Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation.
+Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` while any Open Question converted from a blocking unknown remains unanswered; the rest of the roadmap may still be clarity-eligible for the eligible items.
 
 ## Status Semantics
 
@@ -46,7 +48,7 @@ Use `completion: incomplete` when the user chose `continue later`, left future s
 - `active`: current repo work or an in-flight Pathfinder run is addressing it.
 - `complete`: evidence shows the intended outcome is satisfied.
 - `blocked`: progress needs creator input, missing access, failed verification, or a dependency.
-- `manual-only`: desired work that crosses a safety or approval boundary.
+- `manual-only`: desired work that crosses an approval boundary. In autonomous mode it is worked and landed as an awaiting-review PR (never self-merged), unless it also matches the hard safety floor (dangerous categories or a charter `Never unattended` category), in which case it is excluded and never worked.
 - `obsolete`: no longer desired after refresh.
 
-Roadmap items can guide goal selection, but they never authorize dangerous categories, protected-area edits, credential access, publication, deployments, migrations, or data deletion.
+Roadmap items can guide goal selection, but they never authorize dangerous categories, protected-area edits, credential access, deployments, migrations, or data deletion. In autonomous mode the `safety:` field maps to dispositions: `autonomous-eligible` is worked and may conditionally self-merge; `manual-approval-required` is worked but only ever landed as an awaiting-review PR; `blocked-by-safety` (or missing/ambiguous safety) and any dangerous-category or charter `Never unattended` scope are the hard floor — never worked autonomously.

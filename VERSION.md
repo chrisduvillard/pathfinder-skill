@@ -2,7 +2,7 @@
 
 Generated: 2026-06-30
 
-Version: 2.20.3
+Version: 2.21.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,14 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.0:
+- Clarity-gated auto-escalation replaces the per-run autonomous opt-in: once the Deep Intent Gate reaches `clarity: resolved` (both intent files `completion: complete`, zero open blocking ambiguity-ledger unknowns, and a passing model-depth proof gate), an ordinary work-producing invocation auto-escalates into autonomous execution. Doubt blocks autonomy: auto-escalation never fires while `clarity: unresolved` or on a fresh repo with no charter.
+- The Deep Intent Gate now runs an enforced "ask until no doubt" loop backed by an ambiguity ledger, with an anti-deadlock rule that converts an unresolvable blocking unknown into a roadmap Open Question (item marked `manual-only`) so clarity can resolve for the rest of the work.
+- Added a `clarity: resolved | unresolved` field to the charter and roadmap, distinct from `completion`.
+- Autonomous mode now pushes as far as possible: `manual-approval-required` / `manual-only` items are worked and landed as awaiting-review PRs (never self-merged) and the loop continues, instead of stopping. The hard safety floor — the fixed dangerous categories and charter `Never unattended` items — is never attempted and is recorded as excluded.
+- Kept every existing guardrail: the trust boundary, credential separation, hooks disabled on credentialed steps, the blind three-verifier fidelity/absolute-danger panel, the diff-grounded protected-path and absolute-danger gates, the injection-disqualifies-autonomy filter (now explicitly applied to the manual-approval/PR path), and default-deny self-merge for autonomous-eligible items. Added a per-run PR cap to bound scope creep.
+- Extended `scripts/check-skill-consistency.sh` with clarity-gate and autonomous-scope invariants (`clarity: resolved | unresolved`, `ambiguity ledger`, `Open Question`, `awaiting-review`, `hard safety floor`, never-self-merge, per-run PR cap).
 
 Changes in v2.20.3:
 - Added release notes for Pathfinder's goal-binding hardening: generated goals now carry Goal Binding metadata, runtime-boundary disclosure, Binding Status checks, structured completion claims, and a Simplicity Guard, while local validation gained the `check-all.sh` preflight wrapper plus stronger manifest and portability guards.

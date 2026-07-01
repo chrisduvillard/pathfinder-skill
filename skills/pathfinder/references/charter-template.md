@@ -6,7 +6,7 @@ It holds the creator model that should stay true across many runs: purpose, user
 
 ## Format
 
-Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:charter v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema.
+Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:charter v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep the `clarity: resolved | unresolved` line, which is distinct from `completion` (see SKILL.md "Clarity gate").
 
 ```text
 # Pathfinder Charter
@@ -20,6 +20,7 @@ last-refreshed: <YYYY-MM-DD HH:MM>
 established-by: pathfinder vX.Y.Z (<repo-root basename>)
 source-basis: creator interview + repo evidence + git-history
 completion: complete | incomplete
+clarity: resolved | unresolved
 
 ## Purpose
 - North-star: <glyph> <one durable sentence> - basis: <one line> (<your charter | inferred, unconfirmed | incomplete>)
@@ -53,4 +54,4 @@ completion: complete | incomplete
 - Never unattended: <glyph> <work Pathfinder must never run unattended> - basis: <one line> (<...>)
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered.
+Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Use `clarity: unresolved` whenever `completion` is incomplete on either file, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed; set `clarity: resolved` only when all three clear.
