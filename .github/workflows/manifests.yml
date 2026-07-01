@@ -49,5 +49,8 @@ jobs:
       - name: Check validation/release portability
         run: bash scripts/check-portability.sh
 
+      - name: Meta-test the validator parsers
+        run: bash scripts/test-validators.sh
+
       - name: Check diff cleanliness
         run: git diff --check
