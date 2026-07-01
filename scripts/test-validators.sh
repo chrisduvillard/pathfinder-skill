@@ -166,10 +166,34 @@ EOF
   fi
 fi
 
+echo "== parser 5: SHA-pin scan covers composite actions (BE-3/SEC-1) =="
+# check-portability.sh must flag an unpinned uses: inside a composite action definition
+# (.github/actions/<name>/action.yml), not only top-level workflows. Build a minimal fixture with an
+# unpinned composite action and assert the scan fails.
+P="$(mktemp -d "$tmp/port.XXXXXX")"
+mkdir -p "$P/.github/actions/demo"
+cat > "$P/.github/actions/demo/action.yml" <<'YAML'
+runs:
+  using: composite
+  steps:
+    - uses: some/unpinned-action@v1
+YAML
+if bash "$here/scripts/check-portability.sh" "$P" >/dev/null 2>&1; then
+  bad "SHA-pin scan MISSED an unpinned composite action under .github/actions/ (parser 5)"
+else
+  ok "SHA-pin scan catches an unpinned composite action (parser 5)"
+fi
+
+echo "== parser 6: orphan-reference guard (TR-5) =="
+# check-skill-consistency.sh must flag a references/*.md that exists on disk but is not a required
+# (cited + expected) reference. Drop an uncited orphan into a fixture and assert the guard fails.
+R="$(newroot)"
+printf '# orphan reference\nnot cited by SKILL.md and not in expected_refs\n' > "$R/skills/pathfinder/references/orphan.md"
+assert_catch "$R" "orphan reference file" "orphan-reference guard catches an uncited references/*.md"
+
 if [ "$fail" -eq 0 ]; then
   echo "test-validators: all parser meta-tests pass"
 fi
-# NOTE (TR-4 follow-up): the symmetric 4->3 goal-pack downgrade + an unrelated even quad pair
-# (the "net-even" trap) is a documented blind spot of the count-based compensator and is NOT
-# asserted as caught here — closing it needs a structural quad-wrapper assertion (its own goal).
+# The net-even quad trap (a symmetric 4->3 goal-pack downgrade + a stray even quad pair) is CAUGHT by
+# the structural quad-wrapper assertion, exercised by parser 2b above — closing the v2.21.3 TR-4 follow-up.
 exit "$fail"

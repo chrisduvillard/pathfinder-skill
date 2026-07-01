@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.7
+Version: 2.21.8
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.8:
+- Closed two latent drift-guard coverage gaps (found by dogfooding Pathfinder on its own repository), each with a new meta-test in `scripts/test-validators.sh`: (1) the SHA-pin scanner in `check-portability.sh` only scanned `.github/workflows/*`, so an unpinned `uses:` inside a composite action (`.github/actions/<name>/action.yml`) would ship unguarded while the success message still claimed "workflow actions are SHA-pinned" — the scan now also covers composite-action definitions and the message reflects it (BE-3/SEC-1). (2) `check-skill-consistency.sh` verified that every cited reference exists and that the cited set equals the required set, but never enumerated `references/*.md` on disk, so a new reference file added but never cited (and not added to `expected_refs`) would ship unguarded, compared by no `check_pair`; an orphan-reference guard now fails when a `references/*.md` exists that is not a required reference (TR-5). Also corrected a stale comment in `test-validators.sh` that claimed the net-even quad trap was untested — it is caught by parser 2b as of v2.21.7.
 
 Changes in v2.21.7:
 - Hardened two fail-open / blind-spot risks in the drift guard `scripts/check-skill-consistency.sh` (found by dogfooding Pathfinder on its own repository), each covered by a new meta-test in `scripts/test-validators.sh`: (1) `check_skill_section` opened and closed its section windows on an unanchored substring match, so an incidental `## Heading` mentioned in prose could open/close a window, and a heading rename could silently re-scope one (letting a deleted safety phrase read as present) — boundaries are now anchored to a column-0 heading (`index()==1`), and the six section-boundary headings the guard keys on are guarded for existence so a rename fails CI loudly. (2) The 4-backtick goal-pack wrapper guard only counted fences (even, >= 2), blind to the "net-even" trap (a symmetric 4→3 downgrade of the wrapper plus an unrelated even quad pair nets even while corrupting the render) — a new structural assertion now requires every 4-backtick-wrapped region to enclose at least one nested triple fence, which the count-only guard could not verify. (BE-5 / DX-2 / TR-4.)

@@ -65,6 +65,20 @@ else
   echo "  unexpected in SKILL.md: $(comm -13 <(printf '%s\n' "$expected_refs") <(printf '%s\n' "$cited_refs") | tr '\n' ' ')"
 fi
 
+# (TR-5) Orphan-reference guard. The checks above verify every CITED reference exists and that the
+# cited set equals expected_refs, but neither enumerates references/*.md ON DISK — so a new reference
+# file added but never cited (and not added to expected_refs) would ship unguarded, never compared by
+# any check_pair. Fail if a references/*.md exists that is not in the required set.
+for path in "$root"/skills/pathfinder/references/*.md; do
+  [ -f "$path" ] || continue
+  ref="references/$(basename "$path")"
+  if printf '%s\n' "$expected_refs" | grep -Fxq -- "$ref"; then
+    echo "ok: reference file is in the required set: $ref"
+  else
+    err "orphan reference file: $ref exists on disk but is not a required reference (cite it in SKILL.md and add it to expected_refs, or remove it)"
+  fi
+done
+
 # (2) Cross-file invariants. Each token must appear in BOTH the canonical
 #     SKILL.md and the named mirror; present-in-one-only (drift) or absent-in-
 #     both fails.
