@@ -1,6 +1,6 @@
 {
   "name": "pathfinder",
-  "version": "2.21.8",
+  "version": "2.21.9",
   "description": "Map an unfamiliar repository, choose the highest-value next move, and generate a bounded Claude Code /goal or fallback implementation goal.",
   "author": {
     "name": "Chris Duvillard",

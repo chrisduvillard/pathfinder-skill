@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.8
+Version: 2.21.9
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.9:
+- Added a behavioral invariant harness `scripts/check-skill-behavior.sh` (TR-1), wired into `check-all.sh` and CI, that asserts DIRECTION rather than token presence — closing the class where an autonomous-mode safety gate keeps its token but has its rule loosened or inverted (the class that reached `main` in v2.21.1/.2 and was caught only by manual dogfooding). Family A: inside the `## Autonomous mode` window, every line naming a controlled action (self-merge, unattended, dangerous categories, credential) must carry a governing qualifier on the same line. Family B: every fenced decision screen (contains `Agent recommends:`) must carry its `None of these` escape unless it is an allowlisted fixed/exception screen. Each invariant is proven by an adversarial fixture in `scripts/test-validators.sh` (a qualifier-dropping self-merge reword and a dropped screen escape are both caught; a clean tree passes). Design and plan in `docs/superpowers/`.
 
 Changes in v2.21.8:
 - Closed two latent drift-guard coverage gaps (found by dogfooding Pathfinder on its own repository), each with a new meta-test in `scripts/test-validators.sh`: (1) the SHA-pin scanner in `check-portability.sh` only scanned `.github/workflows/*`, so an unpinned `uses:` inside a composite action (`.github/actions/<name>/action.yml`) would ship unguarded while the success message still claimed "workflow actions are SHA-pinned" — the scan now also covers composite-action definitions and the message reflects it (BE-3/SEC-1). (2) `check-skill-consistency.sh` verified that every cited reference exists and that the cited set equals the required set, but never enumerated `references/*.md` on disk, so a new reference file added but never cited (and not added to `expected_refs`) would ship unguarded, compared by no `check_pair`; an orphan-reference guard now fails when a `references/*.md` exists that is not a required reference (TR-5). Also corrected a stale comment in `test-validators.sh` that claimed the net-even quad trap was untested — it is caught by parser 2b as of v2.21.7.
