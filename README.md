@@ -4,7 +4,7 @@
 
 # 🧭 Pathfinder
 
-### Map the codebase. Pick the path. Forge the goal.
+### Map the codebase&nbsp; ·&nbsp; Pick the path&nbsp; ·&nbsp; Forge the goal
 
 <br>
 
@@ -21,32 +21,29 @@
 <a href="https://scorecard.dev/viewer/?uri=github.com/chrisduvillard/pathfinder-skill"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/chrisduvillard/pathfinder-skill/badge"></a>
 </p>
 
-<p><b>Drop it on any unfamiliar repo, hand it a prompt, or let it run hands-off — get back a bounded goal you can run, or the merged PRs themselves.</b></p>
+<p><b>Drop it on any unfamiliar repo — get back a bounded goal you can run,<br>or the reviewed pull requests themselves.</b></p>
 
 </div>
 
 <br>
 
-Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent — or, once it understands your intent deeply enough (the clarity gate), runs the work itself: landing reviewable pull requests and self-merging eligible ones where the repo allows.
-
-> [!TIP]
-> **Already know what you want?** Hand it a prompt instead — it researches just what that prompt touches and forges the same goal, faster. Ideal if you just want a prompt → loop (`/goal`) tool.
+Pathfinder is a small **agent skill** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks the highest-value next moves, asks a few sharp questions, and forges a bounded, verifiable **`/goal`** you can run or hand to another agent — or, once it understands your intent deeply enough, runs the work itself and lands reviewable pull requests.
 
 No micro-managing exploration. No guessing where to start.
 
 <br>
 
-## 🚀 Get started
+## 🚀 Install
 
-### <img alt="" src="https://img.shields.io/badge/-Claude_Code-F59E0B?style=flat-square&labelColor=0F172A"> &nbsp;Claude Code
+**Claude Code**
 
 ```text
 /plugin marketplace add chrisduvillard/pathfinder-skill
 /plugin install pathfinder@pathfinder
-/pathfinder:pathfinder
+/pathfinder
 ```
 
-### <img alt="" src="https://img.shields.io/badge/-Codex-38BDF8?style=flat-square&labelColor=0F172A"> &nbsp;Codex
+**Codex**
 
 ```bash
 codex plugin marketplace add chrisduvillard/pathfinder-skill
@@ -54,31 +51,33 @@ codex plugin add pathfinder@pathfinder
 # then run /skills, or type $pathfinder to invoke it
 ```
 
-Then start with the options menu or jump directly:
-
-- **Show the options** — *"Show the Pathfinder options."* or bare `/pathfinder`
-- **Explore a repo** — *"Use the pathfinder skill on this repository."*
-- **Turn a task into a goal** — *"Pathfinder, turn this into a /goal: &lt;the work you want done&gt;."*
-- **Run it autonomously** *(clarity-gated)* — *"Run Pathfinder autonomously on this repository."*
-- **Refresh creator model** — *"/pathfinder charter"*
-- **Check local state** — *"Show Pathfinder status."* or `/pathfinder status`
+> [!NOTE]
+> Prefer no plugin system? Copy `skills/pathfinder/` into `~/.claude/skills/` (Claude Code) or `~/.codex/skills/` (Codex). Full notes in [`README-INSTALL.md`](README-INSTALL.md).
 
 <br>
 
-## 🔭 How it works
+## 🧭 Three ways to use it
 
-Bare `/pathfinder` first shows a compact chooser, so you can see the available paths before anything starts. The main work paths — explore a repo, hand it a prompt, or let it run autonomously — all build toward the same bounded, verifiable `/goal`.
+Bare **`/pathfinder`** opens a chooser so you can see every path before anything starts. All three build toward the same bounded, self-proving `/goal`.
 
-**🗺️ Explore** — point it at a repo. Pathfinder reads the code (not the docs), ranks the highest-value next moves, asks a few sharp questions, then forges the goal:
+| | Reach for it when | Kick it off with |
+|:--|:--|:--|
+| 🗺️ **Explore** | you're new to the repo and want the best next move | `Use the pathfinder skill on this repository.` |
+| 🎯 **Prompt&#8209;to&#8209;goal** | you already know the task | `Pathfinder, turn this into a /goal: <the work>` |
+| ⚡ **Autonomous**<br><sub>*(clarity-gated)*</sub> | you want it done hands-off | `Run Pathfinder autonomously on this repository.` |
+
+<br>
+
+**🗺️ Explore** reads the code itself — never the README, so a stale or missing doc can't mislead it — ranks the moves, adversarially verifies the top ones, asks a few sharp questions, then forges the goal:
 
 ```mermaid
 flowchart LR
     A["<b>1 · DISCOVER</b><br/><i>read code, not docs</i>"]
     B["<b>2 · SCOUT</b><br/><i>brief each domain</i>"]
     C["<b>3 · SYNTHESIZE</b><br/><i>rank the next moves</i>"]
-    V["<b>4 · VERIFY</b><br/><i>adversarially check the top moves</i>"]
+    V["<b>4 · VERIFY</b><br/><i>adversarially re-check</i>"]
     D["<b>5 · ASK</b><br/><i>a few sharp questions</i>"]
-    E["<b>6 · FORGE /goal</b><br/><i>bounded · proven · ready to run</i>"]
+    E["<b>6 · FORGE /goal</b><br/><i>bounded · proven · ready</i>"]
 
     A --> B --> C --> V --> D --> E
 
@@ -88,87 +87,17 @@ flowchart LR
     class E forge;
 ```
 
-**🎯 Prompt-to-goal** — already know the task? Hand Pathfinder a prompt and it researches only what that prompt touches, then forges the same goal — skipping the full sweep:
+**🎯 Prompt-to-goal** skips the full sweep and researches only what your prompt touches, then forges the same bounded goal:
 
 ```text
-Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
+Pathfinder, turn this into a /goal: stop the dashboard empty-state from crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** *(clarity-gated)* — autonomous mode runs once the clarity gate resolves (the Deep Intent Gate has captured the creator model with no open blocking unknowns) — by explicit invocation or by auto-escalation. It requires a model-depth proof gate before deriving unattended work from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence. It implements, runs deep verification/testing, commits, pushes, opens a PR, and self-merges eligible work where allowed; manual-approval work is landed as awaiting-review PRs instead of stopping the run; it updates the roadmap; and continues until the work is complete, blocked, unsafe, ambiguous, or budget-limited:
-
-```text
-Run Pathfinder autonomously on this repository.
-```
-
-Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you can refresh them with `/pathfinder charter`. Pathfinder may isolate a recoverable per-goal failure and continue to another independent eligible goal; parallel execution is allowed only after an independence check proves separate branches/worktrees, disjoint surfaces, and separate verification. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs, network egress / outbound data upload). Autonomy is clarity-gated: it auto-escalates only after the clarity gate resolves, never on a fresh repo or while any blocking doubt remains. See [Safety](#-safety).
-
-Two details matter when you expect questions: on first use, Pathfinder asks the Deep Intent Gate questions by default for every entry point, including autonomous mode, and keeps asking until no blocking doubt remains (the clarity gate). Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`; run `/pathfinder charter` to refresh or deepen either file.
-
-**Status/help** — want the lay of the land without starting work? Run `/pathfinder status` to inspect safe local state: current repo/branch, whether the charter and roadmap exist and are complete, the latest visible Pathfinder run, and the same entry paths shown by the chooser. It is read-only and then returns to the chooser.
+**⚡ Autonomous** kicks in only once the **clarity gate** resolves — Pathfinder has interviewed you into a doubt-free picture of the project (saved as its charter + roadmap) and each goal clears a model-depth proof gate. Then it runs the loop hands-off: **branch → implement → verify → commit → push → open a PR → self-merge** eligible work where the repo allows, landing anything that needs sign-off as an awaiting-review PR and continuing until the work is done, blocked, unsafe, or out of budget. It never escalates on a fresh repo or while any doubt remains. → [Safety](#-safety)
 
 <br>
 
-## 🧰 What Pathfinder can do
-
-A map of the full capability set:
-
-**🧭 Show the chooser first** — bare `/pathfinder` opens a compact menu of Pathfinder paths: explore the repo, turn a prompt into a goal, run autonomously, refresh the creator model, or show status/help.
-
-**🔍 Understand any codebase** — reads the repo from the **source up** (code, tests, configs, routes, schemas — not the README, so a stale or missing doc never misleads it). Five domain **scouts** (architecture, frontend/product, backend/data, testing/reliability, DX/security) produce located, evidence-graded findings, synthesized into a ranked **Top 5** of the highest-value next moves (impact ÷ effort; confirmed > inferred > suspected).
-
-**✅ Trust the findings** — an adversarial, blind **three-verifier panel** re-checks every Top-5 candidate, downgrades or rejects the weak ones, and surfaces a `Verified:` grade — so you act on confirmed work, not a hunch.
-
-**🎛️ Pick the work, your way** — choose the move through whichever lens fits:
-- **Pick a move** — select from ranked, evidence-bearing candidate cards.
-- **Explore from scratch** — drill down intent → domain → surface → target → boundaries.
-- **Goal packs** — select several moves and Pathfinder groups them into numbered, separately-bounded goals.
-
-**🎯 Forge a runnable goal** — produces a bounded, measurable, self-proving Claude Code **`/goal`** (or an `Implementation Goal` fallback for Codex and older clients): one end state, exact proof checks, constraints, protected areas, and stop bounds — kept under 3900 characters.
-
-**🧾 Bind proof to the goal** — each saved goal records a compact Goal Binding, then run logs and summaries record the Runtime Boundary and Binding Status so completion evidence can be checked against the original objective instead of drifting into "looks done" prose.
-
-**Add a second-model review** *(opt-in)* — after a goal run finishes or hits an ordinary blocker, Pathfinder can hand the original goal, diff summary, checks, and run log to the opposite local subscription tool (Claude Code after Codex/ChatGPT, or Codex after Claude). The reviewer can make simple goal-bounded fixes and related polish, then Pathfinder records the result in `07b-cross-model-review.md`. If no local launcher is available, the artifact becomes a manual handoff packet.
-
-**⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
-
-**⚡ Run it hands-off** *(clarity-gated)* — **autonomous mode** runs once the clarity gate resolves. Pathfinder first captures the creator model through the Deep Intent Gate (looping until no blocking doubt remains), passes a model-depth proof gate for each derived goal, then runs full code implementation plus deep verification/testing and optional Cross-Model Review - branch -> implement -> verify -> review when enabled -> commit -> push -> open a PR -> conditional self-merge where the repo's rules allow - landing manual-approval work as awaiting-review PRs, updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. Parallel goal work is default-deny unless independence is proven first. See [Safety](#-safety).
-
-**🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
-
-**🧠 Understands creator intent deeply** — on first use, Pathfinder asks 8 to 12 compact questions about purpose, users, success, constraints, non-goals, finished state, autonomy policy, and future capabilities not started yet. It saves stable intent to `.pathfinder/charter.md` and evolving desired work to `.pathfinder/roadmap.md`; later runs reuse both, show their influence, and let you refresh or override them.
-
-**🧾 Show status without starting work** — `/pathfinder status` reports safe local Pathfinder state and available paths without creating run artifacts or triggering the Deep Intent Gate.
-
-**🧩 Run anywhere** — works as a plugin or a manual install, in both **Claude Code** and **Codex**.
-
-<br>
-
-## 📦 What you get
-
-Every run drops a clean, resumable trail inside the repo:
-
-```text
-.agent-work/pathfinder/<date>-<task>/
-|-- 00-session.md              repo root, branch, tooling, objective
-|-- 01-blind-discovery.md      what the repo actually is
-|-- 02-scout-briefs/           located, evidence-graded findings per domain
-|-- 03-synthesis.md            ranked next moves + risks
-|-- 03b-verification.md        adversarial check of the Top 5 (grades, rejects, re-rank)
-|-- 04-question-funnel.md      the choices put to you
-|-- 05-user-answers.md         what you picked
-|-- 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
-|-- 07-run-log.md              progress if the goal is run
-|-- 07b-cross-model-review.md  optional second-model review packet, verdicts, and fixes
-\-- 08-final-summary.md        what was explored, found, and decided
-```
-
-Separately, `.pathfinder/charter.md` holds stable creator intent and `.pathfinder/roadmap.md` holds evolving desired work. Both persist across runs, stay private, are gitignored via `.git/info/exclude`, are never committed, and are sanitized on every read.
-
-In plain terms: **what the repo does, the best next moves with file-level evidence, the risks, your scope choices, and a goal command** you can paste straight into Claude Code or Codex.
-
-<br>
-
-## ✨ Example
+## ✨ What a run looks like
 
 You say:
 
@@ -176,7 +105,7 @@ You say:
 Use the pathfinder skill on this repository. Start the full Pathfinder process.
 ```
 
-Pathfinder maps the repo, then hands back a route:
+Pathfinder maps the repo and hands back a route:
 
 ```text
 Best next move : fix the dashboard empty-state crash
@@ -185,50 +114,97 @@ Proof          : regression test passes, typecheck passes, changed files listed
 Goal           : /goal Fix the dashboard empty-state crash so users see a useful
                  empty state instead of a blank page; npm test exits 0; tsc clean;
                  no schema change; between loops note what changed and pick the next
-                 fix; stop after 12 turns, then report the blocker and the next input needed
+                 fix; stop after 12 turns, then report the blocker and next input needed.
 ```
 
-That `/goal` is bounded, measurable, and self-proving, so Claude Code keeps working toward it across turns until the condition holds.
+That `/goal` is **bounded, measurable, and self-proving** — paste it into Claude Code or Codex and it works toward the condition across turns until it holds.
 
 <br>
 
-## 🛠 Manual install
+## 📦 What you get
 
-If you would rather not use the plugin system, copy this repo's `skills/pathfinder/` folder (it holds `SKILL.md` and `references/`) directly to:
+Every run leaves a clean, resumable trail inside the repo:
 
 ```text
-~/.claude/skills/pathfinder/      # Claude Code
-~/.codex/skills/pathfinder/       # Codex
+.agent-work/pathfinder/<date>-<task>/
+├─ 00-session.md              repo root, branch, tooling, objective
+├─ 01-blind-discovery.md      what the repo actually is
+├─ 02-scout-briefs/           located, evidence-graded findings per domain
+├─ 03-synthesis.md            ranked next moves + risks
+├─ 03b-verification.md        adversarial check of the Top 5 (grades, rejects, re-rank)
+├─ 04-question-funnel.md      the choices put to you
+├─ 05-user-answers.md         what you picked
+├─ 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
+├─ 07-run-log.md              progress if the goal is run
+├─ 07b-cross-model-review.md  optional second-model review packet
+└─ 08-final-summary.md        what was explored, found, and decided
 ```
 
-Then run `/pathfinder` in Claude Code to see the chooser, or `$pathfinder` (or `/skills`) in Codex. See [`README-INSTALL.md`](README-INSTALL.md) for `/goal` compatibility notes.
+Two private files persist across runs — **`.pathfinder/charter.md`** (stable intent) and **`.pathfinder/roadmap.md`** (evolving work). Both are gitignored via `.git/info/exclude`, never committed, and sanitized on every read.
 
 <br>
 
 ## 🔒 Safety
 
-Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
+Every repo file is treated as **untrusted data**. Pathfinder won't run scripts, install packages, read secrets, or push changes without your say-so, and it redacts tokens and private paths from its artifacts.
 
-**Autonomous mode** is the one path that runs and merges without a per-step prompt — reached by explicit invocation or by auto-escalation once the clarity gate resolves (it never escalates on a fresh repo or while any blocking doubt remains). Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence after a model-depth proof gate, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs, network egress / outbound data upload) are excluded from automated execution and hard-blocked on the real diff, manual-approval work is landed as awaiting-review PRs (never self-merged), safety/ambiguity/budget boundaries stop the run, parallel work requires a proven independence check, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
+Autonomous mode is the one path that commits and merges without a per-step prompt. Even then:
 
-Cross-Model Review is opt-in and does not widen authorization. It uses local subscription tools when available, never APIs, OpenRouter, browser automation, or hidden credentials in v1, and falls back to a manual handoff packet when a reviewer cannot be launched. Reviewer fixes stay inside the original goal boundary; safety/manual/protected stops go back to the user.
+- 🚫 **Dangerous categories are never auto-touched** — auth, payments, migrations, secrets, CI, public APIs, network egress — filtered out before work *and* hard-blocked on the real diff.
+- 🧱 **The trust boundary holds** — repo content can't redirect the goal or widen authorization.
+- 🔑 **Credentials stay out** of the environment while repo code runs.
+- ✅ **Self-merge is default-deny** — only on a positive branch-protection signal; anything that needs review lands as an awaiting-review PR.
+- 🛑 **Doubt blocks autonomy** — no escalation on a fresh repo or while any blocking question is open.
 
-## 🤝 Contributing and support
+<br>
 
-Contributions are welcome when they keep Pathfinder safe, bounded, and easy to run on unfamiliar repositories. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), use the issue templates, and keep pull requests focused.
+## 🔬 Under the hood
 
-For usage help, see [`SUPPORT.md`](SUPPORT.md). Please report vulnerabilities privately through [`SECURITY.md`](SECURITY.md), not in public issues.
+<details>
+<summary><b>How it ranks, verifies, and proves work</b></summary>
 
-## 🧪 Project health
+<br>
 
-This repository uses GitHub Actions for manifest/version consistency, CodeQL workflow scanning, OpenSSF Scorecard security-health checks, and dependency review. `VERSION.md` remains the version and changelog source of truth.
+- **Reads the source, not the docs.** Five domain scouts (architecture, frontend/product, backend/data, testing/reliability, DX/security) produce located, evidence-graded findings, synthesized into a ranked **Top 5** by impact ÷ effort (`confirmed > inferred > suspected`).
+- **Adversarial verification.** A blind **three-verifier panel** re-checks every Top-5 candidate, downgrades or rejects the weak ones, and surfaces a `Verified:` grade — so you act on confirmed work, not a hunch.
+- **Pick the work your way.** Choose from ranked candidate cards, drill down *intent → domain → surface → target → boundaries*, or select several moves as a numbered **goal pack**.
+- **Proof bound to the goal.** Each goal records a Goal Binding; run logs and summaries record the Runtime Boundary and Binding Status, so "done" is checked against the original objective instead of drifting into looks-done prose.
+- **Optional cross-model review.** After a run, Pathfinder can hand the goal, diff, and checks to the opposite local tool (Claude ⇄ Codex) for goal-bounded fixes — recorded in `07b-cross-model-review.md`, or a manual handoff packet if no launcher is available.
+
+</details>
+
+<details>
+<summary><b>How it learns your intent (the charter)</b></summary>
+
+<br>
+
+On first use, Pathfinder asks 8–12 compact questions — purpose, users, success, constraints, non-goals, finished state, autonomy policy, and future capabilities not started yet — and keeps asking until no blocking doubt remains (the **clarity gate**). It saves stable intent to `.pathfinder/charter.md` and evolving work to `.pathfinder/roadmap.md`. Later runs reuse both, show their influence, reconcile them against the current code, and let you refresh or override with `/pathfinder charter`.
+
+</details>
+
+<details>
+<summary><b>Checking state without starting work</b></summary>
+
+<br>
+
+Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state — repo/branch, whether the charter and roadmap exist and are complete, the latest run, and the available paths — without creating artifacts or triggering the interview.
+
+</details>
+
+<br>
+
+## 🤝 Contributing & support
+
+Contributions are welcome when they keep Pathfinder **safe, bounded, and easy to run** on unfamiliar repos. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md); get usage help in [`SUPPORT.md`](SUPPORT.md); report vulnerabilities privately via [`SECURITY.md`](SECURITY.md), not public issues. Version and changelog live in [`VERSION.md`](VERSION.md).
+
+<sub>CI guards manifest/version consistency, CodeQL scanning, OpenSSF Scorecard, and dependency review.</sub>
 
 <br>
 
 <div align="center">
 
-**Map the codebase. Pick the path. Forge the goal.**
+**Map the codebase&nbsp; ·&nbsp; Pick the path&nbsp; ·&nbsp; Forge the goal**
 
-MIT licensed · built for Claude Code and Codex
+<sub>MIT licensed · built for Claude Code and Codex</sub>
 
 </div>
