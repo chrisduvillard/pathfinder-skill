@@ -2,7 +2,7 @@
 
 Generated: 2026-07-01
 
-Version: 2.21.4
+Version: 2.21.5
 
 ## Versioning & distribution
 
@@ -15,6 +15,9 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.21.5:
+- Fixed three confirmed Phase 5 interview-screen defects where the funnel screens did not honor the skill's own universal rules (found by dogfooding Pathfinder on its own repository), mirrored across `SKILL.md` and `question-funnel-template.md`: (1) the mode-selection screen carried a static `[recommended]` marker on option 1 that could contradict its dynamic `Agent recommends:` line (which may point to option 2) — replaced with a non-contradictory `(default)` label, honoring the chooser rule that forbids a static recommendation before checking state; (2) the Explore-from-scratch (L0–L4) options never carried the `Aligns:` north-star token the objective-awareness rule mandates for "every Explore option," so charter alignment silently vanished in Explore mode — the Explore preamble now states each candidate-bearing option carries the same `Aligns:` token as the Pick a move card; (3) the `ignore objectives` escape was mandated "at any level" but appeared in no rendered escape row — it is now shown on the Pick a move and Explore L0 escape rows when a charter is loaded.
 
 Changes in v2.21.4:
 - Re-anchored two generic `check_pair` drift-guard tokens in `scripts/check-skill-consistency.sh` so a meaning-inverting reword that keeps the token can no longer pass CI (the guard was substring-in-both, and so failed open). The `1-5` select-all range alias is now anchored to the full rule-bearing phrase `all, a, 1-5, or 1,2,3,4,5` — which appears once per file, in the alias line only, instead of twice — so deleting the rule no longer leaves an incidental copy that keeps the guard green. Added the missing `not-run` Binding-Status guard to the goal mirror for parity with the artifact mirror (BE-2). Verified by a seeded-regression proof (old bare guard passes on the drift; anchored guard fails). Found by dogfooding Pathfinder on its own repository.
