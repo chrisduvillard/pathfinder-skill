@@ -70,10 +70,19 @@ tokens, not line numbers):
 
 | Controlled action | Must co-occur with one of | Anchor lines |
 |---|---|---|
-| `self-merge` | `never` / `default-deny` / `conditional` / `do not` / `only after` ... `clean` or `fixed-clean` / `awaiting-review` | 1282, 1301-1302, 1360, 1470 |
-| `unattended` | `never` / `not` / `cannot` | 613, 1305, 1329 |
+| `self-merge` | `never` / `default-deny` / `conditional` / `do not` / `only after` ... `clean` or `fixed-clean` / `awaiting-review` | 1282, 1301-1302, 1360 |
+| `unattended` | `never` / `not` / `cannot` | 1305, 1329 |
 | `dangerous categories` | `never` / `excluded` / `filtered out` / `hard-block` | 1287 |
 | `credential`(s) near exec steps | `separation` / `separate` / `isolat` / `disabled` | 1341, 1362-1363 |
+
+Coverage is bounded to the `## Autonomous mode` .. `## Phase 7:` window (roughly lines 1276–1379); the
+anchors above are the in-window occurrences the check actually scans. Two related safety statements sit
+**outside** that window and are therefore **not** scanned in this pass: the charter "Autonomy policy"
+field (~line 613, `must never run unattended`) and the Phase 7-A Cross-Model-Review self-merge gate
+(~line 1470, `self-merge only after ... clean or fixed-clean`). Both are defense-in-depth beyond the
+primary autonomous-section gates the window does cover (default-deny/conditional self-merge, the
+`Never unattended` charter category); extending Family A to reach the Phase 7-A gate — with its own
+adversarial fixture — is a recorded follow-up, stated here rather than silently implied as covered.
 
 This is the anchoring `check_pair` lacked: the qualifier must be near its action, not merely somewhere
 in the file. Matching is case-insensitive via the portable `awk index(tolower())` idiom already used
