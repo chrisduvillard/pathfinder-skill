@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see "Autonomous mode (opt-in)" in `SKILL.md`) the Deep Intent Gate may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate, autonomous mode selects goals from the sanitized charter plus roadmap and runs continuous execution until a stop condition is reached.
+This template is the interactive funnel. In autonomous mode (see "Autonomous mode" in `SKILL.md`) the Deep Intent Gate may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate resolves clarity (`clarity: resolved`), autonomous mode selects goals from the sanitized charter plus roadmap — by explicit invocation or by auto-escalation — and runs continuous execution until a stop condition is reached.
 
 ## Universal rules
 
@@ -22,7 +22,7 @@ This template is the interactive funnel. In autonomous mode (see "Autonomous mod
 
 ## Phase 4c: Deep Intent Gate (runs before entry-point continuation)
 
-When `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, or explicitly refreshed, Phase 4c runs the Deep Intent Gate before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing.
+When `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, or explicitly refreshed, Phase 4c runs the Deep Intent Gate before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked manual-only (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when both files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
 
 The gate opens with an evidence draft, then asks a recognition-first interview that usually spans 8 to 12 compact screens. Every screen shows inferred answers with evidence and confidence, offers 3 to 6 concrete options where possible, includes `Agent recommends:`, includes free text, and asks directly about future capabilities not started yet.
 
@@ -125,7 +125,27 @@ The normal screens are below. Keep them compact: each screen mirrors the best in
 - Agent recommends: the strictest option that still permits safe low-risk work.
 - Escape: `None of these - describe autonomy policy yourself`, or `continue later`.
 
-Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, and evolving desired work in `.pathfinder/roadmap.md`.
+### Ambiguity loop screen (repeats until no blocking unknowns)
+
+After the normal screens, run the ambiguity-resolution loop. Maintain an **ambiguity ledger** of unknowns, each tagged `blocking` or `non-blocking`, and regenerate targeted screens aimed only at the still-open blocking unknowns until none remain.
+
+```text
+Deep Intent Gate - Clarity check
+Open blocking unknowns (must clear before autonomy):
+1. <unknown> - affects <charter/roadmap field or item> - basis: <evidence>
+2. <unknown> - affects <...> - basis: <...>
+
+For each, pick the answer that removes the doubt:
+- <3 to 6 concrete options grounded in repo evidence>
+Agent recommends: <the option that best removes the blocking doubt>.
+Escape: None of these - describe it yourself; continue later; or
+"I can't answer this" to convert it to a roadmap Open Question (the item becomes
+manual-only and is excluded from unattended work, and clarity resolves for the rest).
+```
+
+Clarity resolves (`clarity: resolved`) only when every blocking unknown is resolved or converted.
+
+Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, and evolving desired work in `.pathfinder/roadmap.md`. Also record the ambiguity ledger, each loop pass, the final `clarity` value on both files, and any blocking-unknown conversions to roadmap Open Questions.
 
 ## Mode selection (ask once)
 

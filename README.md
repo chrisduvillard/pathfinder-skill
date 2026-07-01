@@ -27,7 +27,7 @@
 
 <br>
 
-Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent — or, opt-in, runs the work itself all the way to a merged pull request.
+Pathfinder is a small agent skill for **Claude Code** and **Codex**. It reads a codebase from the source up, proposes useful work, asks a few sharp questions, then writes a bounded, verifiable goal you can execute or hand to another agent — or, once it understands your intent deeply enough (the clarity gate), runs the work itself: landing reviewable pull requests and self-merging eligible ones where the repo allows.
 
 > [!TIP]
 > **Already know what you want?** Hand it a prompt instead — it researches just what that prompt touches and forges the same goal, faster. Ideal if you just want a prompt → loop (`/goal`) tool.
@@ -59,7 +59,7 @@ Then start with the options menu or jump directly:
 - **Show the options** — *"Show the Pathfinder options."* or bare `/pathfinder`
 - **Explore a repo** — *"Use the pathfinder skill on this repository."*
 - **Turn a task into a goal** — *"Pathfinder, turn this into a /goal: &lt;the work you want done&gt;."*
-- **Run it autonomously** *(opt-in)* — *"Run Pathfinder autonomously on this repository."*
+- **Run it autonomously** *(clarity-gated)* — *"Run Pathfinder autonomously on this repository."*
 - **Refresh creator model** — *"/pathfinder charter"*
 - **Check local state** — *"Show Pathfinder status."* or `/pathfinder status`
 
@@ -94,15 +94,15 @@ flowchart LR
 Pathfinder, turn this into a /goal: make the dashboard empty-state stop crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** *(opt-in)* — autonomous mode is explicit opt-in. Pathfinder first ensures the Deep Intent Gate has captured the creator model, then requires a model-depth proof gate before deriving unattended work from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence. It implements, runs deep verification/testing, commits, pushes, opens a PR, and self-merges where allowed; updates the roadmap; and continues until the work is complete, blocked, unsafe, ambiguous, or budget-limited:
+**⚡ Autonomous** *(clarity-gated)* — autonomous mode runs once the clarity gate resolves (the Deep Intent Gate has captured the creator model with no open blocking unknowns) — by explicit invocation or by auto-escalation. It requires a model-depth proof gate before deriving unattended work from `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and current repo evidence. It implements, runs deep verification/testing, commits, pushes, opens a PR, and self-merges eligible work where allowed; manual-approval work is landed as awaiting-review PRs instead of stopping the run; it updates the roadmap; and continues until the work is complete, blocked, unsafe, ambiguous, or budget-limited:
 
 ```text
 Run Pathfinder autonomously on this repository.
 ```
 
-Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you can refresh them with `/pathfinder charter`. Pathfinder may isolate a recoverable per-goal failure and continue to another independent eligible goal; parallel execution is allowed only after an independence check proves separate branches/worktrees, disjoint surfaces, and separate verification. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). It's an explicit escalation — Pathfinder never enters this mode on an ordinary invocation. See [Safety](#-safety).
+Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, and you can refresh them with `/pathfinder charter`. Pathfinder may isolate a recoverable per-goal failure and continue to another independent eligible goal; parallel execution is allowed only after an independence check proves separate branches/worktrees, disjoint surfaces, and separate verification. It **never** auto-touches the dangerous categories (auth, payments, migrations, secrets, CI, public APIs). Autonomy is clarity-gated: it auto-escalates only after the clarity gate resolves, never on a fresh repo or while any blocking doubt remains. See [Safety](#-safety).
 
-Two details matter when you expect questions: on first use, Pathfinder asks the Deep Intent Gate questions by default for every entry point, including autonomous mode. Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`; run `/pathfinder charter` to refresh or deepen either file.
+Two details matter when you expect questions: on first use, Pathfinder asks the Deep Intent Gate questions by default for every entry point, including autonomous mode, and keeps asking until no blocking doubt remains (the clarity gate). Later runs reuse `.pathfinder/charter.md` and `.pathfinder/roadmap.md`; run `/pathfinder charter` to refresh or deepen either file.
 
 **Status/help** — want the lay of the land without starting work? Run `/pathfinder status` to inspect safe local state: current repo/branch, whether the charter and roadmap exist and are complete, the latest visible Pathfinder run, and the same entry paths shown by the chooser. It is read-only and then returns to the chooser.
 
@@ -131,7 +131,7 @@ A map of the full capability set:
 
 **⌨️ Skip the sweep when you already know the task** — **Prompt-to-goal**: hand it a task description and it researches only what that prompt touches, then forges the same bounded goal.
 
-**⚡ Run it hands-off** *(opt-in)* — **autonomous mode** is explicit opt-in. Pathfinder first captures the creator model through the Deep Intent Gate, passes a model-depth proof gate for each derived goal, then runs full code implementation plus deep verification/testing and optional Cross-Model Review - branch -> implement -> verify -> review when enabled -> commit -> push -> open a PR -> conditional self-merge where the repo's rules allow - updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. Parallel goal work is default-deny unless independence is proven first. See [Safety](#-safety).
+**⚡ Run it hands-off** *(clarity-gated)* — **autonomous mode** runs once the clarity gate resolves. Pathfinder first captures the creator model through the Deep Intent Gate (looping until no blocking doubt remains), passes a model-depth proof gate for each derived goal, then runs full code implementation plus deep verification/testing and optional Cross-Model Review - branch -> implement -> verify -> review when enabled -> commit -> push -> open a PR -> conditional self-merge where the repo's rules allow - landing manual-approval work as awaiting-review PRs, updating the roadmap and continuing until the work is complete, blocked, unsafe, ambiguous, or budget-limited. Parallel goal work is default-deny unless independence is proven first. See [Safety](#-safety).
 
 **🗂️ Leave a clean trail** — every run writes a resumable `00–08` artifact set under `.agent-work/` (see [What you get](#-what-you-get)).
 
@@ -209,7 +209,7 @@ Then run `/pathfinder` in Claude Code to see the chooser, or `$pathfinder` (or `
 
 Pathfinder treats every repo file as **untrusted data**. It does not run repo scripts, install packages, open secrets, or push changes unless you approve. Tokens, credentials, and private paths are redacted from its artifacts.
 
-**Autonomous mode** is the one path that runs and merges without a per-step prompt — and only when you invoke it explicitly. Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence after a model-depth proof gate, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, safety/manual/ambiguity/budget boundaries stop the run, parallel work requires a proven independence check, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
+**Autonomous mode** is the one path that runs and merges without a per-step prompt — reached by explicit invocation or by auto-escalation once the clarity gate resolves (it never escalates on a fresh repo or while any blocking doubt remains). Even then the trust boundary holds: goals come from sanitized intent files plus current repo evidence after a model-depth proof gate, repo content can't redirect the work, dangerous-category changes (auth, payments, migrations, secrets, CI, public APIs) are excluded from automated execution and hard-blocked on the real diff, manual-approval work is landed as awaiting-review PRs (never self-merged), safety/ambiguity/budget boundaries stop the run, parallel work requires a proven independence check, the push credential is kept out of the environment while repo code runs, and a self-merge happens only on a positive branch-protection signal — never just because nothing blocked it.
 
 Cross-Model Review is opt-in and does not widen authorization. It uses local subscription tools when available, never APIs, OpenRouter, browser automation, or hidden credentials in v1, and falls back to a manual handoff packet when a reviewer cannot be launched. Reviewer fixes stay inside the original goal boundary; safety/manual/protected stops go back to the user.
 

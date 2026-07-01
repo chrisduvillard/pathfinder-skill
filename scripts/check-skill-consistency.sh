@@ -157,6 +157,15 @@ check_pair "pathfinder:roadmap v1" "$roadmap" "roadmap schema marker"
 check_pair ".pathfinder/roadmap.md" "$roadmap" "roadmap file path"
 check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
 check_pair "completion: complete | incomplete" "$roadmap" "roadmap completion marker"
+# Clarity gate (v2.21.0): the clarity field and ambiguity-ledger / anti-deadlock tokens
+# must be mirrored, the same way the completion marker is, so dropping one from a single
+# file fails CI instead of silently regressing the "ask until no doubt" gate.
+check_pair "clarity: resolved | unresolved" "$charter" "charter clarity marker"
+check_pair "clarity: resolved | unresolved" "$roadmap" "roadmap clarity marker"
+check_pair "ambiguity ledger" "$funnel" "ambiguity ledger mirror"
+check_pair "Open Question" "$roadmap" "anti-deadlock open question"
+check_pair "awaiting-review" "$arts" "autonomous awaiting-review disposition"
+check_pair "manual-approval-required" "$roadmap" "roadmap manual-approval class"
 check_pair "Deep Intent Gate" "$funnel" "deep-intent gate mirror"
 check_pair "not a skippable offer" "$funnel" "deep-intent non-skippable default"
 check_pair "future capabilities not started yet" "$funnel" "future-capabilities question"
@@ -306,6 +315,12 @@ auto_invariants=(
   "model-depth proof gate"
   "independence check before parallel execution"
   "separate branches or worktrees"
+  "clarity: resolved"
+  "auto-escalat"
+  "awaiting-review"
+  "hard safety floor"
+  "never self-merge"
+  "per-run PR cap"
 )
 for inv in "${auto_invariants[@]}"; do
   # Case-insensitive: the phrase is load-bearing as a concept, whether it appears
