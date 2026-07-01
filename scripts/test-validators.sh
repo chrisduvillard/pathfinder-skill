@@ -191,6 +191,52 @@ R="$(newroot)"
 printf '# orphan reference\nnot cited by SKILL.md and not in expected_refs\n' > "$R/skills/pathfinder/references/orphan.md"
 assert_catch "$R" "orphan reference file" "orphan-reference guard catches an uncited references/*.md"
 
+# ---- Behavioral invariant harness (check-skill-behavior.sh) ----
+skillbeh="$here/scripts/check-skill-behavior.sh"
+csb() { MSYS_NO_PATHCONV=1 bash "$skillbeh" "$1" 2>&1; }
+assert_pass_b() {  # <root> <label>
+  local out ec
+  out="$(csb "$1")"; ec=$?
+  if [ "$ec" -eq 0 ]; then ok "$2"; else bad "$2 (exit=$ec, expected 0)"; printf '%s\n' "$out" | tail -4; fi
+}
+assert_catch_b() {  # <root> <regex> <label>
+  local out ec
+  out="$(csb "$1")"; ec=$?
+  if [ "$ec" -ne 0 ] && printf '%s' "$out" | grep -Eq "$2"; then
+    ok "$3"
+  else
+    bad "$3 (exit=$ec; expected non-zero output matching /$2/)"
+  fi
+}
+
+echo "== behavior baseline: a clean copy passes check-skill-behavior =="
+assert_pass_b "$(newroot)" "baseline: clean tree passes check-skill-behavior"
+
+echo "== behavior 1: self-merge must carry a gating qualifier (the loosened-gate class) =="
+# Drop the qualifier from the core authorization grant while keeping the token. This is TR-1's
+# literal acceptance test: a safety-token-preserving-but-logic-inverting change must be caught.
+R="$(newroot)"
+sed -i 's/and a conditional self-merge/and a self-merge/' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "self-merge|governing qualifier|loosened gate" "self-merge polarity: dropping the qualifier (token intact) is caught"
+
+echo "== behavior 2: 'unattended' must carry a negation =="
+# Remove the sole negation attached to an 'unattended' mention; the line then permits what it forbade.
+R="$(newroot)"
+sed -i 's/a charter `Never unattended` category/a charter always-unattended category/' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "unattended|governing qualifier" "unattended inversion: removing the negation is caught"
+
+echo "== behavior 3: a decision screen must carry its 'None of these' escape =="
+# Delete the gap-driven-clarification screen's own "None of these" escape line, orphaning that
+# non-exempt decision screen from its escape. (Anchored on the exact escape line rather than the
+# first substring match: SKILL.md's prompt-to-goal routing prose now mentions "None of these"
+# descriptively — in an exempt fixed-menu screen with no "Agent recommends:" line at all — before
+# the real escape line, so a bare first-match would orphan nothing.)
+R="$(newroot)"
+awk 'BEGIN{d=0} /^None of these, let me describe it\.$/ && d==0 {d=1; next} {print}' \
+  "$R/skills/pathfinder/SKILL.md" > "$R/skills/pathfinder/SKILL.md.new" \
+  && mv "$R/skills/pathfinder/SKILL.md.new" "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "screen-escape|None of these|allowlist" "screen-escape: dropping a screen's escape is caught"
+
 if [ "$fail" -eq 0 ]; then
   echo "test-validators: all parser meta-tests pass"
 fi
