@@ -113,7 +113,11 @@ check_pair "Rejected by verification" "$funnel" "rejected-by-verification surfac
 # the post-save audit-only option. The changelog shows these exact rules drifting
 # (v2.7.0 / v2.9.1 "mirror the template" fixes), so guard them like the rest.
 check_pair "1,2,3,4,5"            "$funnel" "select-all explicit alias"
-check_pair "1-5"                  "$funnel" "select-all range alias"
+# (BE-1) Anchor the range alias to the whole rule-bearing alias line, not bare "1-5".
+# "1-5" occurs twice in the funnel (the rule line AND a second reference), so deleting the
+# rule line left an incidental copy and this guard stayed green on real drift. The full
+# phrase appears once per file, in the alias line only, so it co-varies with the rule.
+check_pair "all, a, 1-5, or 1,2,3,4,5" "$funnel" "select-all range alias"
 check_pair "deep dive"            "$funnel" "Explore mode alias"
 check_pair "Goal-readiness confidence" "$funnel" "Explore goal-readiness header"
 check_pair "Audit only"           "$funnel" "post-save audit-only option"
@@ -136,6 +140,10 @@ check_pair "Runtime Boundary" "$goal" "runtime boundary goal contract"
 check_pair "Binding Status" "$goal" "binding status goal contract"
 check_pair "stale-objective" "$goal" "stale binding status goal contract"
 check_pair "mismatched" "$goal" "mismatched binding status goal contract"
+# (BE-2) not-run was guarded on the artifact mirror (below) but not the goal mirror, though
+# goal-best-practices.md lists all five Binding-Status values on one line. Guard it here too
+# so dropping not-run from only one of SKILL.md / goal-best-practices.md fails CI.
+check_pair "not-run" "$goal" "not-run binding status goal contract"
 check_pair "complexity_notes" "$goal" "structured completion complexity field"
 check_pair "changed_files" "$goal" "structured completion changed-files field"
 check_pair "checks_run_with_exit_results" "$goal" "structured completion check-results field"
