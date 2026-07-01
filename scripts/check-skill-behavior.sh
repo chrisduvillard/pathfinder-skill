@@ -70,6 +70,44 @@ check_direction "unattended" "never|cannot|neither" "unattended stays negated"
 check_direction "dangerous categories" "never|excluded|exclude|filtered out|hard-block" "dangerous categories stay excluded"
 check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared" "credentials stay isolated" "credential_exposure|credential boundary"
 
+# Family B: screen-escape. Walk fenced blocks honoring fence length (3- vs 4-backtick nesting), the
+# same tracker check-skill-consistency.sh uses. A block that presents a decision menu ("Agent
+# recommends:") must contain its "None of these" escape, unless it is one of the deliberately exempt
+# fixed/exception screens: the Phase 5 mode-selection preamble, the all-candidates-rejected screen,
+# the Explore full-surface map, and the Phase 6 recognition-first goal contract. Keep this allowlist
+# in sync with the funnel's fixed-menu rules.
+check_screens() {
+  if awk '
+    BEGIN {
+      na = split("I mapped this repo and found|Verification rejected all candidates|Full surface map|Here is the /goal I assembled from your answers", allow, "|")
+    }
+    {
+      n = 0; while (substr($0, n + 1, 1) == "`") n++
+      if (n >= 3) {
+        rest = substr($0, n + 1); sub(/[ \t]+$/, "", rest)
+        if (depth == 0) { depth = 1; openlen = n; block = ""; bstart = NR; next }
+        if (rest == "" && n >= openlen) {
+          if (index(block, "Agent recommends:") && !index(block, "None of these")) {
+            exempt = 0
+            for (i = 1; i <= na; i++) if (index(block, allow[i])) exempt = 1
+            if (!exempt) { bad = 1; printf "  decision screen opened at line %d has no \"None of these\" escape and is not allowlisted\n", bstart }
+          }
+          depth = 0; next
+        }
+        block = block $0 "\n"; next
+      }
+      if (depth) block = block $0 "\n"
+    }
+    END { exit bad ? 1 : 0 }
+  ' "$skill"; then
+    echo "ok: every non-exempt decision screen carries its \"None of these\" escape"
+  else
+    err "screen-escape drift: a fenced decision screen (contains \"Agent recommends:\") is missing its \"None of these\" escape and is not on the exempt allowlist"
+  fi
+}
+
+check_screens
+
 if [ "$fail" -eq 0 ]; then
   echo "skill behavior: all invariants hold"
 fi

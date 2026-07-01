@@ -225,6 +225,18 @@ R="$(newroot)"
 sed -i 's/a charter `Never unattended` category/a charter always-unattended category/' "$R/skills/pathfinder/SKILL.md"
 assert_catch_b "$R" "unattended|governing qualifier" "unattended inversion: removing the negation is caught"
 
+echo "== behavior 3: a decision screen must carry its 'None of these' escape =="
+# Delete the gap-driven-clarification screen's own "None of these" escape line, orphaning that
+# non-exempt decision screen from its escape. (Anchored on the exact escape line rather than the
+# first substring match: SKILL.md's prompt-to-goal routing prose now mentions "None of these"
+# descriptively — in an exempt fixed-menu screen with no "Agent recommends:" line at all — before
+# the real escape line, so a bare first-match would orphan nothing.)
+R="$(newroot)"
+awk 'BEGIN{d=0} /^None of these, let me describe it\.$/ && d==0 {d=1; next} {print}' \
+  "$R/skills/pathfinder/SKILL.md" > "$R/skills/pathfinder/SKILL.md.new" \
+  && mv "$R/skills/pathfinder/SKILL.md.new" "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "screen-escape|None of these|allowlist" "screen-escape: dropping a screen's escape is caught"
+
 if [ "$fail" -eq 0 ]; then
   echo "test-validators: all parser meta-tests pass"
 fi
