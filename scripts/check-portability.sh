@@ -52,7 +52,12 @@ for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/wo
   fi
 done
 
-for f in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
+# (BE-3/SEC-1) Scan workflow files AND composite-action definitions
+# (.github/actions/<name>/action.yml) for uses: pins, so the SHA-pin guarantee covers any local
+# composite action too — not only top-level workflows. A non-matching glob stays literal and is
+# skipped by the [ -f ] test below, so this is safe when .github/actions/ does not exist.
+for f in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml \
+         "$root"/.github/actions/*/action.yml "$root"/.github/actions/*/action.yaml; do
   [ -f "$f" ] || continue
   line_no=0
   while IFS= read -r line || [ -n "$line" ]; do
@@ -94,6 +99,6 @@ for f in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
 done
 
 if [ "$fail" -eq 0 ]; then
-  echo "portability: no GNU-only grep usage found and workflow actions are SHA-pinned"
+  echo "portability: no GNU-only grep usage found and workflow + composite-action actions are SHA-pinned"
 fi
 exit "$fail"
