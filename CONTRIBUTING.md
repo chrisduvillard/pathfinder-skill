@@ -34,9 +34,14 @@ bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-escape invariants
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
+bash scripts/test-validators.sh           # meta-tests for the drift-guard parsers themselves
 git diff --check                          # trailing whitespace / conflict markers
 git diff --cached --check                 # staged whitespace / conflict markers
 ```
+
+These run cleanly on Linux, macOS, and Windows Git-Bash/MSYS with no extra environment
+(`check-manifests.sh` scopes `MSYS_NO_PATHCONV=1` around its own jq call so the `/pathfinder charter`
+prompt check does not path-mangle on MSYS).
 
 These are the same checks `.github/workflows/manifests.yml` runs, so they
 catch common mistakes — such as bumping `VERSION.md` without mirroring both
