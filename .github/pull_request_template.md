@@ -10,8 +10,10 @@
 
 - [ ] `bash scripts/check-all.sh`
 - [ ] `bash scripts/check-skill-consistency.sh`
+- [ ] `bash scripts/check-skill-behavior.sh`
 - [ ] `bash scripts/check-manifests.sh`
 - [ ] `bash scripts/check-portability.sh`
+- [ ] `bash scripts/test-validators.sh`
 - [ ] `git diff --check`
 - [ ] `git diff --cached --check`
 - [ ] Not applicable, because:

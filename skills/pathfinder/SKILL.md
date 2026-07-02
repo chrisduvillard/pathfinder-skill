@@ -891,9 +891,9 @@ Given "fix a defect", the strongest candidates from scouting (glyph = evidence g
 3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n, the highest-confidence candidate> because <reason>.
-None of these: describe the area you care about.
+None of these: describe your own — the area you care about.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 #### L2. Surface
@@ -907,9 +907,9 @@ Within <chosen domain>, which surface?
 3. <real surface> — <glyph> <strongest finding symptom>   Verified: <verdict>
 
 Agent recommends: <option n, the best surface> because <reason>.
-None of these: name the file/area.
+None of these: describe your own — name the file/area.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 #### L3. Target
@@ -923,10 +923,10 @@ Best target: <glyph> <exact behavior/function/symptom, e.g. empty-state crash in
 DashboardView.loadData when the payload is empty> — <one-line evidence basis> (<evidence_grade>, <confidence>).
 Verified: <verdict>.
 1. Confirm this target
-2. None of these: describe the precise behavior in your own words
+2. None of these: describe your own — the precise behavior
 Agent recommends: 1 because <one-line reason the target is the right call from the findings>.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 - If several plausible targets remain, offer them as numbered options plus an `Agent recommends:` line and the escapes:
@@ -937,9 +937,9 @@ Within <surface>, which exact target?
 2. <glyph> <behavior/function/symptom #2> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n> because <reason>.
-None of these: describe the precise behavior.
+None of these: describe your own — the precise behavior.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 #### L4. Boundaries
@@ -952,8 +952,8 @@ For <target>, set the boundaries:
 - Protect (avoid without approval): <detected protected areas relevant to this target>
 - Done when: <2-3 concrete checks discovered from the repo, flagged if they need to run repo code>
 Agent recommends: Scope 2 (moderate) because <one-line reason from findings>.
-None of these: describe the scope, protected areas, or success criteria in your own words.
-Reply with edits, "accept agent recommendation", "go back" to revise the target, "back to candidates" to return to the ranked Top 5, or "show the full map".
+None of these: describe your own — the scope, protected areas, or success criteria.
+Reply with edits, "accept agent recommendation", "go back" to revise the target, "back to candidates" to return to the ranked Top 5, "show the full map", or "ignore objectives" (when a charter is loaded).
 ```
 
 #### Adaptive stopping

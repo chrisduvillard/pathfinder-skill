@@ -70,6 +70,78 @@ check_direction "unattended" "never|cannot|neither" "unattended stays negated"
 check_direction "dangerous categories" "never|excluded|exclude|filtered out|hard-block" "dangerous categories stay excluded"
 check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared" "credentials stay isolated" "credential_exposure|credential boundary"
 
+# (C1/TR-B6) Existence guard for the window boundaries check_direction keys on. Anchoring the Family-A
+# window on headings is only safe if the headings exist: a rename leaves `insec` permanently unset, so
+# every check_direction above passes VACUOUSLY (fail-open) with the token intact. This makes the file
+# self-guarding rather than silently relying on check-skill-consistency.sh's separate heading list.
+# Keep this list in sync with the start/stop args passed to check_direction above.
+for heading in "## Autonomous mode" "## Phase 7:"; do
+  if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "$skill"; then
+    echo "ok: Family-A window boundary present: \"$heading\""
+  else
+    err "Family-A window boundary heading missing or renamed: \"$heading\" (check_direction keys on it; the window would fail open — update both together)"
+  fi
+done
+
+# (C1/SEC-1) The Stop-conditions autonomous carve-out (## Stop conditions section) restates the
+# autonomous authorization limits but sits OUTSIDE the '## Autonomous mode'..'## Phase 7:' window, so
+# the Family-A guards above never see it. That line is qualifier-saturated (many negations), so the
+# same-line check_direction discipline cannot catch a partial inversion of it. Guard its two
+# load-bearing commitments directly: self-merge must stay CONDITIONAL, and the trust-boundary /
+# dangerous-category carve-out must stay "never waived". For this one sentence those phrases ARE the
+# direction — an inversion removes them. Fails CLOSED if '## Stop conditions' is renamed (insec never
+# sets -> token reads absent). Scope, stated honestly: a fluent reword preserving meaning with
+# different words is out of scope, the same limit the rest of this harness declares.
+check_carveout() {  # <token> <label>
+  local token="$1" label="$2"
+  if awk -v start="## Stop conditions" -v stop="## Style" -v token="$token" '
+    BEGIN { token = tolower(token); found = 0 }
+    index($0, start) == 1 { insec = 1 }
+    insec && index($0, stop) == 1 { exit }
+    insec && index(tolower($0), token) { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$skill"; then
+    echo "ok: carve-out keeps \"$token\""
+  else
+    err "Stop-conditions autonomous carve-out lost its safety direction: \"$token\" missing — the carve-out may have been inverted (self-merge no longer conditional, or the boundary no longer \"never waived\")"
+  fi
+}
+
+check_carveout "conditional self-merge" "carve-out: self-merge stays conditional"
+check_carveout "never waived" "carve-out: trust boundary / carve-out stays never-waived"
+
+# (C2/TR-B1) The whole-line check_direction above passes a self-merge line as long as SOME qualifier
+# (never|conditional|default-deny|do not) appears ANYWHERE on it. Self-merge is stated across MANY
+# in-window lines with different qualifiers, so inverting one clause while an unrelated qualifier word
+# survives on the same line can still ship green — the documented multi-qualifier evasion, and the
+# exact polarity-inversion class that reached main in v2.21.1/.2. Close that gap for the flagship
+# default-deny control with a forbidden-inversion guard: no autonomous-window line may grant self-merge
+# UNCONDITIONALLY. It fires only on the concrete phrasings a polarity inversion produces (unconditional
+# / always / auto-approve / for-all-items / self-merge without a gate), which legitimate conditional
+# text never uses — so it adds real coverage the whole-line check misses, with no false-red on valid
+# rewordings. (The other three check_direction actions invert by removing their guarded literal, which
+# the check-skill-consistency.sh presence guards already catch; extending this discipline to them is a
+# scoped follow-on, not claimed here.)
+check_no_unconditional_selfmerge() {
+  if awk -v start="## Autonomous mode" -v stop="## Phase 7:" '
+    index($0, start) == 1 { insec = 1 }
+    insec && index($0, stop) == 1 { insec = 0 }
+    insec {
+      line = tolower($0)
+      if (index(line, "self-merge") && \
+          line ~ /unconditional|always self-merg|auto-?merge|auto-?approv|self-merge(s|d)? (all|any|every)|for all items|any item|self-merge[^.]*without (a )?(gate|approval|review|branch)/) {
+        bad = 1
+      }
+    }
+    END { exit bad ? 1 : 0 }
+  ' "$skill"; then
+    echo "ok: no unconditional self-merge grant in the autonomous window"
+  else
+    err "self-merge default-deny inverted: an autonomous-section line grants self-merge unconditionally (unconditional/always/auto/for-all/without-a-gate) — the default-deny guarantee has been loosened even though the whole-line qualifier check still passes"
+  fi
+}
+check_no_unconditional_selfmerge
+
 # Family B: screen-escape. Walk fenced blocks honoring fence length (3- vs 4-backtick nesting), the
 # same tracker check-skill-consistency.sh uses. A block that presents a decision menu ("Agent
 # recommends:") must contain its "None of these" escape, unless it is one of the deliberately exempt

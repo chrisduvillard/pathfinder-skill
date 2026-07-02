@@ -191,6 +191,22 @@ R="$(newroot)"
 printf '# orphan reference\nnot cited by SKILL.md and not in expected_refs\n' > "$R/skills/pathfinder/references/orphan.md"
 assert_catch "$R" "orphan reference file" "orphan-reference guard catches an uncited references/*.md"
 
+echo "== parser 7: Explore-level universal-escape guard (C5/FE-1,FE-2) =="
+# Drop the canonical 'describe your own' escape from the L1 Domain screen; the guard must catch that an
+# Explore level lost a universal escape the funnel rules require at every level. [^ ]* matches the
+# em-dash separator so no multibyte literal is embedded in this script.
+R="$(newroot)"
+sed -i 's/None of these: describe your own [^ ]* the area you care about/None of these: the area you care about/' "$R/skills/pathfinder/SKILL.md"
+assert_catch "$R" "Explore level|universal escape|describe your own" "Explore-escape guard catches a level that dropped 'describe your own'"
+
+echo "== parser 8: clarity-gate coherence guard (C3) =="
+# Relax ONE of the two `clarity: resolved` definitions by dropping its model-depth proof gate
+# condition; the coherence guard must catch that the two SKILL.md definitions no longer enumerate the
+# same conditions. Targets the "### Clarity gate" definition's phrasing (unique to that region).
+R="$(newroot)"
+sed -i 's/a passing model-depth proof gate for each/a passing model-depth heuristic for each/' "$R/skills/pathfinder/SKILL.md"
+assert_catch "$R" "clarity-gate definition|model-depth proof gate" "clarity-gate coherence guard catches a dropped condition in one definition"
+
 # ---- Behavioral invariant harness (check-skill-behavior.sh) ----
 skillbeh="$here/scripts/check-skill-behavior.sh"
 csb() { MSYS_NO_PATHCONV=1 bash "$skillbeh" "$1" 2>&1; }
@@ -236,6 +252,36 @@ awk 'BEGIN{d=0} /^None of these, let me describe it\.$/ && d==0 {d=1; next} {pri
   "$R/skills/pathfinder/SKILL.md" > "$R/skills/pathfinder/SKILL.md.new" \
   && mv "$R/skills/pathfinder/SKILL.md.new" "$R/skills/pathfinder/SKILL.md"
 assert_catch_b "$R" "screen-escape|None of these|allowlist" "screen-escape: dropping a screen's escape is caught"
+
+echo "== behavior 4: renaming a Family-A window boundary heading fails closed (C1/TR-B6) =="
+# Rename the '## Autonomous mode' window-start heading check_direction keys on. Without the existence
+# guard the four Family-A direction checks would pass VACUOUSLY (insec never sets); the guard must
+# catch the rename instead of letting the safety window fail open.
+R="$(newroot)"
+sed -i 's/^## Autonomous mode (clarity-gated)/## Autonomous section (clarity-gated)/' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "Family-A window boundary|missing or renamed" "boundary-existence guard catches a renamed ## Autonomous mode heading (fail-open closed)"
+
+echo "== behavior 5: inverting the Stop-conditions autonomous carve-out is caught (C1/SEC-1) =="
+# The carve-out sits outside the Family-A window, so check_direction never saw it. Invert its
+# trust-boundary commitment (never waived -> waived); the dedicated carve-out guard must catch it.
+R="$(newroot)"
+sed -i 's/are never waived/are waived/' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "carve-out|never waived|inverted" "carve-out guard catches an inverted Stop-conditions autonomous carve-out"
+
+echo "== behavior 6: an unconditional self-merge grant is caught though the whole-line check passes (C2/TR-B1) =="
+# Invert an in-window self-merge clause to grant it unconditionally while leaving the line's other
+# qualifier ("default-deny") intact — check_direction still passes, so only the forbidden-inversion
+# guard can catch it. Targets line 1301's unique context so the Stop-conditions carve-out stays intact.
+R="$(newroot)"
+sed -i 's/\*\*conditional self-merge\*\*/\*\*unconditional self-merge\*\*/' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "unconditional self-merge|default-deny inverted" "self-merge inversion caught: unconditional grant survives the whole-line qualifier check"
+
+echo "== behavior 7: a benign self-merge reword preserving direction still passes (C2 false-red guard) =="
+# Reword the same bold-wrapped self-merge phrase without inverting meaning (still conditional). The
+# forbidden-inversion guard must NOT fire — proving it does not block legitimate future rewordings.
+R="$(newroot)"
+sed -i 's/\*\*conditional self-merge\*\*/\*\*self-merge, kept conditional\*\*/' "$R/skills/pathfinder/SKILL.md"
+assert_pass_b "$R" "benign self-merge reword (still conditional) does not false-red"
 
 if [ "$fail" -eq 0 ]; then
   echo "test-validators: all parser meta-tests pass"

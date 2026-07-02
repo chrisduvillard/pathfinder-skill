@@ -313,9 +313,9 @@ Given "<intent>", the strongest candidates (glyph = evidence grade: ✓ confirme
 3. <glyph> <candidate #3 symptom> — <basis>   confidence: <HIGH|MED|LOW>   Verified: <verdict>
 
 Agent recommends: <option n, highest-confidence candidate> because <reason>.
-None of these: describe the area you care about.
+None of these: describe your own — the area you care about.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 ### L2. Surface (concrete surfaces from the repo)
@@ -327,9 +327,9 @@ Within <domain>, which surface?
 3. <real surface> — <glyph> <strongest finding symptom>   Verified: <verdict>
 
 Agent recommends: <option n, best surface> because <reason>.
-None of these: name the file/area.
+None of these: describe your own — name the file/area.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 ### L3. Target (exact behavior/function/symptom)
@@ -340,10 +340,10 @@ If one clear target dominates, confirm rather than manufacture a menu:
 Best target: <glyph> <exact behavior/function/symptom> — <one-line basis> (<evidence_grade>, <confidence>).
 Verified: <verdict>.
 1. Confirm this target
-2. None of these: describe the precise behavior in your own words
+2. None of these: describe your own — the precise behavior
 Agent recommends: 1 because <one-line reason>.
 Go back: return to the previous question.
-back to candidates: return to the ranked Top 5.   show the full map
+back to candidates: return to the ranked Top 5.   show the full map   ignore objectives (when a charter is loaded)
 ```
 
 Otherwise offer numbered targets plus `Agent recommends` and the escapes, appending `   Verified: <verdict>` to each option line.
@@ -356,8 +356,8 @@ For <target>, set the boundaries:
 - Protect (avoid without approval): <detected protected areas for this target>
 - Done when: <2-3 concrete checks from the repo, flagged if they need to run repo code>
 Agent recommends: Scope 2 (moderate) because <reason>.
-None of these: describe the scope, protected areas, or success criteria in your own words.
-Reply with edits, "accept agent recommendation", "go back", "back to candidates", or "show the full map".
+None of these: describe your own — the scope, protected areas, or success criteria.
+Reply with edits, "accept agent recommendation", "go back", "back to candidates", "show the full map", or "ignore objectives" (when a charter is loaded).
 ```
 
 Before saving, the Phase 6 recognition-first contract must show proof, protected areas, and runtime authority as separate lines with confirmed/inferred/missing provenance. Do not ask extra questions for Runtime Boundary fields the environment already supplies; derive them from the current runtime, sandbox, repo-code execution plan, and consent state, and mark unknown fields as unknown instead of blocking goal saving.

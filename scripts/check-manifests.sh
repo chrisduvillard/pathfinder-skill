@@ -120,7 +120,12 @@ required_prompt_fragments=(
   "Show Pathfinder status"
 )
 for fragment in "${required_prompt_fragments[@]}"; do
-  if "$jq_bin" -e --arg fragment "$fragment" 'any(.interface.defaultPrompt[]?; contains($fragment))' "$codex_plugin" >/dev/null; then
+  # (C4/BE-1) Scope MSYS_NO_PATHCONV=1 to THIS jq call so Git-Bash/MSYS does not path-mangle the
+  # leading-slash "/pathfinder charter" fragment into a Windows path (which made this check falsely
+  # FAIL locally while Linux CI stayed green). Scoped, not global: $codex_plugin is a relative path,
+  # so disabling path conversion here cannot break the file argument (the caveat test-validators.sh
+  # documents applies only to ABSOLUTE POSIX path args). Linux ignores the variable.
+  if MSYS_NO_PATHCONV=1 "$jq_bin" -e --arg fragment "$fragment" 'any(.interface.defaultPrompt[]?; contains($fragment))' "$codex_plugin" >/dev/null; then
     echo "ok: Codex default prompt covers \"$fragment\""
   else
     echo "::error file=$codex_plugin::missing Codex defaultPrompt containing \"$fragment\""

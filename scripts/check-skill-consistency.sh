@@ -222,6 +222,27 @@ check_pair "mismatched" "$arts" "mismatched binding status artifact contract"
 check_pair "not-run" "$arts" "not-run binding status artifact contract"
 check_pair "Aligns:"           "$funnel" "objective alignment signal"
 check_pair "ignore objectives" "$funnel" "ignore-objectives escape"
+
+# (C5/FE-1,FE-2) Every Explore drill-down level (L1-L4) must render BOTH universal escapes the funnel
+# rules promise "at any level": the `ignore objectives` charter-bias off-switch (SKILL.md universal
+# rule) and the canonical `describe your own` free-text escape (two-channel rule). L0 already carries
+# both; without this guard an Explore level can silently drop one (as L1-L4 did before) while every
+# check_pair still passes. Scan each level's subsection up to the next column-0 '#### ' heading.
+for lvl in "#### L1. Domain" "#### L2. Surface" "#### L3. Target" "#### L4. Boundaries"; do
+  for tok in "ignore objectives" "describe your own"; do
+    if awk -v start="$lvl" -v tok="$tok" '
+      index($0, start) == 1 { insec = 1; next }
+      insec && index($0, "#### ") == 1 { exit }
+      insec && index($0, tok) { found = 1 }
+      END { exit found ? 0 : 1 }
+    ' "$skill"; then
+      echo "ok: Explore level \"$lvl\" carries escape \"$tok\""
+    else
+      err "Explore level \"$lvl\" is missing its universal escape \"$tok\" (the funnel two-channel + ignore-objectives rules require both at every level)"
+    fi
+  done
+done
+
 check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
@@ -365,6 +386,20 @@ for inv in "${auto_invariants[@]}"; do
   # as a heading (capitalized) or inline (lowercase); reformatting case must not
   # silently disable the guard.
   check_skill_section "## Autonomous mode" "## Phase 7:" "$inv" "autonomous-mode safety invariant \"$inv\""
+done
+
+# (C3) The `clarity: resolved` gate — the safety definition that authorizes unattended auto-escalation —
+# is stated TWICE in SKILL.md: the "### Clarity gate" definition and the "### Ambiguity ledger and the
+# clarity gate" definition. The check_pair "clarity: resolved | unresolved" guard above only proves the
+# MARKER co-exists across the mirror files; it does NOT prove both SKILL.md definitions still enumerate
+# all three load-bearing conditions. Relaxing one copy (dropping the model-depth proof gate, or the
+# blocking-unknowns / completion condition) would leave the two definitions contradictory — the
+# coherence class VERSION.md v2.21.6 already had to fix. Assert each region names each condition; this
+# checks presence of the condition TOKENS, not prose token-identity, so legitimate rewording stays free.
+clarity_conditions=("completion: complete" "unknowns" "model-depth proof gate")
+for cond in "${clarity_conditions[@]}"; do
+  check_skill_section "### Clarity gate" "## Claude Code" "$cond" "clarity-gate definition 1 keeps condition \"$cond\""
+  check_skill_section "### Ambiguity ledger and the clarity gate" "### Reuse and reconcile" "$cond" "clarity-gate definition 2 keeps condition \"$cond\""
 done
 
 # Objectives-charter SKILL-only presence invariants (no Phase 5/6 mirror; guard like Track B).
