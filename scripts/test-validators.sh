@@ -199,6 +199,14 @@ R="$(newroot)"
 sed -i 's/None of these: describe your own [^ ]* the area you care about/None of these: the area you care about/' "$R/skills/pathfinder/SKILL.md"
 assert_catch "$R" "Explore level|universal escape|describe your own" "Explore-escape guard catches a level that dropped 'describe your own'"
 
+echo "== parser 8: clarity-gate coherence guard (C3) =="
+# Relax ONE of the two `clarity: resolved` definitions by dropping its model-depth proof gate
+# condition; the coherence guard must catch that the two SKILL.md definitions no longer enumerate the
+# same conditions. Targets the "### Clarity gate" definition's phrasing (unique to that region).
+R="$(newroot)"
+sed -i 's/a passing model-depth proof gate for each/a passing model-depth heuristic for each/' "$R/skills/pathfinder/SKILL.md"
+assert_catch "$R" "clarity-gate definition|model-depth proof gate" "clarity-gate coherence guard catches a dropped condition in one definition"
+
 # ---- Behavioral invariant harness (check-skill-behavior.sh) ----
 skillbeh="$here/scripts/check-skill-behavior.sh"
 csb() { MSYS_NO_PATHCONV=1 bash "$skillbeh" "$1" 2>&1; }

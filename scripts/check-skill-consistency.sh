@@ -388,6 +388,20 @@ for inv in "${auto_invariants[@]}"; do
   check_skill_section "## Autonomous mode" "## Phase 7:" "$inv" "autonomous-mode safety invariant \"$inv\""
 done
 
+# (C3) The `clarity: resolved` gate — the safety definition that authorizes unattended auto-escalation —
+# is stated TWICE in SKILL.md: the "### Clarity gate" definition and the "### Ambiguity ledger and the
+# clarity gate" definition. The check_pair "clarity: resolved | unresolved" guard above only proves the
+# MARKER co-exists across the mirror files; it does NOT prove both SKILL.md definitions still enumerate
+# all three load-bearing conditions. Relaxing one copy (dropping the model-depth proof gate, or the
+# blocking-unknowns / completion condition) would leave the two definitions contradictory — the
+# coherence class VERSION.md v2.21.6 already had to fix. Assert each region names each condition; this
+# checks presence of the condition TOKENS, not prose token-identity, so legitimate rewording stays free.
+clarity_conditions=("completion: complete" "unknowns" "model-depth proof gate")
+for cond in "${clarity_conditions[@]}"; do
+  check_skill_section "### Clarity gate" "## Claude Code" "$cond" "clarity-gate definition 1 keeps condition \"$cond\""
+  check_skill_section "### Ambiguity ledger and the clarity gate" "### Reuse and reconcile" "$cond" "clarity-gate definition 2 keeps condition \"$cond\""
+done
+
 # Objectives-charter SKILL-only presence invariants (no Phase 5/6 mirror; guard like Track B).
 charter_invariants=(
   ".pathfinder/charter.md"
