@@ -145,37 +145,39 @@ assert_downgrade_reflected() {
 }
 
 assert_protected_surface_boundary() {
-  local combined surfaces surface
-  combined="$EVAL_TMP/$CASE_ID.combined.md"
+  local file surfaces surface found_surface=0
 
-  if ! find "$ARTIFACT_DIR" -type f -name '*.md' -exec cat {} + > "$combined"; then
-    case_error "could not read artifact markdown files"
-    return
-  fi
+  while IFS= read -r -d '' file; do
+    surfaces="$(
+      awk -F':[[:space:]]*' '
+        tolower($1) == "protected-surface" { print tolower($2) }
+      ' "$file"
+    )"
 
-  surfaces="$(awk -F':[[:space:]]*' '
-    tolower($1) == "protected-surface" { print tolower($2) }
-  ' "$combined")"
+    [ -z "$surfaces" ] && continue
+    found_surface=1
 
-  if [ -z "$surfaces" ]; then
+    if ! awk '
+      {
+        line = tolower($0)
+        if (line ~ /^(manual-review-boundary|doctrine-proof-boundary|safety-boundary):[[:space:]]*yes$/) found = 1
+      }
+      END { exit found ? 0 : 1 }
+    ' "$file"; then
+      for surface in $surfaces; do
+        case_error "missing manual/proof/safety boundary for $surface surface"
+      done
+    fi
+  done < <(find "$ARTIFACT_DIR" -type f -name '*.md' -print0)
+
+  if [ "$found_surface" -eq 0 ]; then
     case_error "no protected-surface lines found"
     return
   fi
 
-  if awk '
-    {
-      line = tolower($0)
-      if (line ~ /^(manual-review-boundary|doctrine-proof-boundary|safety-boundary):[[:space:]]*yes$/) found = 1
-    }
-    END { exit found ? 0 : 1 }
-  ' "$combined"; then
+  if [ "$CASE_FAIL" -eq 0 ]; then
     echo "ok: $CASE_ID: protected surface boundary present"
-    return
   fi
-
-  for surface in $surfaces; do
-    case_error "missing manual/proof/safety boundary for $surface surface"
-  done
 }
 
 assert_track_b_phase4b_not_applicable() {
