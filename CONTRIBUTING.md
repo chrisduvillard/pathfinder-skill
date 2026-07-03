@@ -16,7 +16,7 @@ unfamiliar repositories.
 
 ## Before opening a pull request
 
-Run the local preflight — it runs the same logic CI does, so green locally means green in CI:
+Run the local preflight — it runs the CI checks plus the local artifact eval suite, so green locally means the CI checks passed and the eval suite passed:
 
 ```bash
 bash scripts/check-all.sh
@@ -35,6 +35,7 @@ bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-e
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
 bash scripts/test-validators.sh           # meta-tests for the drift-guard parsers themselves
+bash scripts/check-evals.sh              # seeded artifact evals for Pathfinder run-trail contracts
 git diff --check                          # trailing whitespace / conflict markers
 git diff --cached --check                 # staged whitespace / conflict markers
 ```
@@ -43,8 +44,9 @@ These run cleanly on Linux, macOS, and Windows Git-Bash/MSYS with no extra envir
 (`check-manifests.sh` scopes `MSYS_NO_PATHCONV=1` around its own jq call so the `/pathfinder charter`
 prompt check does not path-mangle on MSYS).
 
-These are the same checks `.github/workflows/manifests.yml` runs, so they
-catch common mistakes — such as bumping `VERSION.md` without mirroring both
+These match the checks `.github/workflows/manifests.yml` runs, with the local
+artifact eval suite added only for contributor preflight in v1. They catch
+common mistakes — such as bumping `VERSION.md` without mirroring both
 `plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
 before you push, not after.
 
@@ -69,6 +71,9 @@ before you push, not after.
   `scripts/check-skill-behavior.sh` too: a new controlled action needs a qualifier-set row so a
   loosened gate with the token intact fails CI, and a new decision screen needs its `None of these`
   escape or an entry on the exempt allowlist. Prove it with a fixture in `scripts/test-validators.sh`.
+- When you add or change a Pathfinder run artifact contract, add or update an artifact eval under
+  `evals/cases/` and `evals/fixtures/`. Expected-fail cases are harness self-tests: they should pass
+  the suite only when the seeded bad artifact fails for the intended reason.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the
