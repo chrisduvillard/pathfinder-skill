@@ -11,7 +11,7 @@
 #
 # This asserts RELATIONAL invariants a polarity inversion violates:
 #   Family A (safety-direction): inside the '## Autonomous mode'..'## Phase 7:' window, every line
-#     naming a controlled action (self-merge, unattended, dangerous categories, credential) must
+#     naming a controlled action (self-merge, unattended, irreversible/external hard stops, credential) must
 #     also carry a governing qualifier ON THE SAME LINE. A qualifier-less occurrence is a loosened
 #     gate with the token intact.
 #   Family B (screen-escape): every fenced decision screen (contains "Agent recommends:") must carry
@@ -67,8 +67,8 @@ check_direction() {  # <action> <qualifier-regex, lowercase ERE> <label> [strip-
 
 check_direction "self-merge" "never|conditional|default-deny|do not" "self-merge stays default-deny/conditional"
 check_direction "unattended" "never|cannot|neither" "unattended stays negated"
-check_direction "dangerous categories" "never|excluded|exclude|filtered out|hard-block" "dangerous categories stay excluded"
-check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared" "credentials stay isolated" "credential_exposure|credential boundary"
+check_direction "irreversible/external hard stops" "blocked|remain|never|absolute" "irreversible/external hard stops stay blocked"
+check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared|exclude|blocked|stop" "credentials stay isolated or blocked" "credential_exposure|credential boundary"
 
 # (C1/TR-B6) Existence guard for the window boundaries check_direction keys on. Anchoring the Family-A
 # window on headings is only safe if the headings exist: a rename leaves `insec` permanently unset, so
@@ -88,7 +88,7 @@ done
 # the Family-A guards above never see it. That line is qualifier-saturated (many negations), so the
 # same-line check_direction discipline cannot catch a partial inversion of it. Guard its two
 # load-bearing commitments directly: self-merge must stay CONDITIONAL, and the trust-boundary /
-# dangerous-category carve-out must stay "never waived". For this one sentence those phrases ARE the
+# irreversible/external carve-out must stay "never waived". For this one sentence those phrases ARE the
 # direction — an inversion removes them. Fails CLOSED if '## Stop conditions' is renamed (insec never
 # sets -> token reads absent). Scope, stated honestly: a fluent reword preserving meaning with
 # different words is out of scope, the same limit the rest of this harness declares.
@@ -108,7 +108,7 @@ check_carveout() {  # <token> <label>
 }
 
 check_carveout "conditional self-merge" "carve-out: self-merge stays conditional"
-check_carveout "never waived" "carve-out: trust boundary / carve-out stays never-waived"
+check_carveout "irreversible/external hard-stop carve-out" "carve-out: irreversible/external floor stays never-waived"
 
 # (C2/TR-B1) The whole-line check_direction above passes a self-merge line as long as SOME qualifier
 # (never|conditional|default-deny|do not) appears ANYWHERE on it. Self-merge is stated across MANY
@@ -141,6 +141,26 @@ check_no_unconditional_selfmerge() {
   fi
 }
 check_no_unconditional_selfmerge
+
+check_autonomy_token() {  # <token> <label>
+  local token="$1" label="$2"
+  if awk -v start="## Autonomous mode" -v stop="## Phase 7:" -v token="$token" '
+    BEGIN { token = tolower(token); found = 0 }
+    index($0, start) == 1 { insec = 1 }
+    insec && index($0, stop) == 1 { insec = 0 }
+    insec && index(tolower($0), token) { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$skill"; then
+    echo "ok: $label"
+  else
+    err "$label: autonomous-section token \"$token\" missing or inverted"
+  fi
+}
+
+check_autonomy_token "protected code areas are eligible with doctrine proof" "protected code areas require doctrine proof, not blanket exclusion"
+check_autonomy_token "force-pushes" "irreversible/external hard stops keep force-pushes blocked"
+check_autonomy_token "create a mission worktree before edits" "autonomous mode creates a mission worktree before edits"
+check_autonomy_token "absent branch protection produces awaiting-review" "absent branch protection stays awaiting-review"
 
 # Family B: screen-escape. Walk fenced blocks honoring fence length (3- vs 4-backtick nesting), the
 # same tracker check-skill-consistency.sh uses. A block that presents a decision menu ("Agent

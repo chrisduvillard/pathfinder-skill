@@ -2,7 +2,7 @@
 
 Generated: 2026-07-02
 
-Version: 2.21.11
+Version: 2.22.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,14 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.22.0:
+- Upgraded `/pathfinder auto` into doctrine-gated Full Autonomous Mission Mode. Autonomous runs now require the local-only `.pathfinder/doctrine.md` file with marker `pathfinder:doctrine v1`, complete charter/roadmap/doctrine state, a resolved clarity gate, and a per-goal model-depth proof before edits.
+- Added the mission worktree requirement: autonomous mode creates `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto` before production edits, falling back only to an ignored local Pathfinder work folder when sibling worktree creation is unavailable. Runtime Boundary and artifact docs now record `mission_worktree`.
+- Replaced blanket protected-category exclusion with a proof gate. Auth, payments, CI/CD, schemas, migrations, public APIs, and network-related code are eligible only with explicit doctrine alignment, scoped proof, verification, diff safety review, and branch-protected merge gates. Irreversible/external hard stops remain blocked: secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, and real-world external side effects.
+- Added the Autonomous Opportunity Scout so `/pathfinder auto` can derive multiple doctrine-aligned candidate goals when roadmap items run out, write them back to the roadmap, and continue until a cap, blocker, or hard stop.
+- Preserved default-deny self-merge: self-merge requires a positive branch-protection signal; absent or ambiguous branch protection produces an awaiting-review PR. The auto-resume ledger now records the mission worktree, branch/PR state, next eligible item, blockers, and the exact resume action when caps or runtime/context limits stop a run.
+- Added and updated drift guards and meta-tests for doctrine marker/path, mission worktree creation before edits, protected-area eligibility with proof, irreversible/external hard stops including force-pushes, branch-protection-gated self-merge, and missing/stale doctrine interview behavior. Synced README, Codex prompt copy, manifests, artifact docs, and mirrored references.
 
 Changes in v2.21.11:
 - Added a clarity-gate coherence guard to `scripts/check-skill-consistency.sh` (found by dogfooding Pathfinder on its own repository). The `clarity: resolved` gate — the safety definition that authorizes unattended auto-escalation — is stated in two SKILL.md sections (`### Clarity gate` and `### Ambiguity ledger and the clarity gate`). The existing `check_pair "clarity: resolved | unresolved"` guard only proved the marker co-exists across the charter/roadmap mirror files, not that both SKILL.md definitions still enumerate all three load-bearing conditions (`completion: complete` on both intent files, zero blocking unknowns, and a passing model-depth proof gate). Relaxing one copy — dropping a condition from one definition — would leave the two contradictory, the same spec-coherence class v2.21.6 had to fix. The guard now asserts each definition names each condition (presence of the condition token, not prose token-identity, so legitimate rewording stays free), proven by a new meta-test (parser 8) in `scripts/test-validators.sh` that drops one definition's model-depth condition and confirms it is caught. A companion attempt to extend forbidden-inversion direction guards to the unattended / dangerous-categories / credential controls was investigated and deliberately NOT shipped: those controls appear in procedural prose a direction/denylist guard false-reds on (verified against 7 legitimate clauses), and unlike self-merge their lines are not qualifier-saturated, so the existing whole-line `check_direction` already catches their inversions.

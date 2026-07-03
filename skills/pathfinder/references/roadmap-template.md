@@ -1,8 +1,8 @@
 # Pathfinder Roadmap Template
 
-`.pathfinder/roadmap.md` is Pathfinder's durable, **local-only** model of evolving desired work. It lives beside `.pathfinder/charter.md`, is gitignored through `.git/info/exclude`, and is never committed.
+`.pathfinder/roadmap.md` is Pathfinder's durable, **local-only** model of evolving desired work. It lives beside `.pathfinder/charter.md` and `.pathfinder/doctrine.md`, is gitignored through `.git/info/exclude`, and is never committed.
 
-It stores future capabilities not started yet, unstarted goals, milestones, priorities, completion state, evidence, and safety classification. The charter holds stable creator intent; the roadmap holds changing work.
+It stores future capabilities not started yet, unstarted goals, milestones, priorities, completion state, evidence, and safety classification. The charter holds stable creator intent, the roadmap holds changing work, and the doctrine holds the deep end-state model that can derive more work when the roadmap runs out.
 
 ## Format
 
@@ -40,7 +40,7 @@ clarity: resolved | unresolved
 - <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked `blocked` (creator input needed) and excluded from the autonomous run until this is answered — distinct from an ordinary manual-only item, which is worked and landed as an awaiting-review PR>
 ```
 
-Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` whenever `completion` is incomplete on either file, any blocking ambiguity-ledger unknown is still `open`, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear (mirroring charter-template.md and SKILL.md "Clarity gate"; the proof gate is a per-item, entry-time check). A blocking unknown that has been *converted* to an Open Question no longer counts as `open` — its item becomes `blocked` on creator input, excluded from the autonomous run until answered — so once every remaining blocking unknown is resolved or converted, both files are `completion: complete`, and each auto-run item's proof gate passes, clarity can resolve for the rest of the roadmap even while that Open Question stays unanswered.
+Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` whenever `completion` is incomplete on `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md`, any blocking ambiguity-ledger unknown is still `open`, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear (mirroring charter-template.md, doctrine-template.md, and SKILL.md "Clarity gate"; the proof gate is a per-item, entry-time check). A blocking unknown that has been *converted* to an Open Question no longer counts as `open` — its item becomes `blocked` on creator input, excluded from the autonomous run until answered — so once every remaining blocking unknown is resolved or converted, all three local intent files are `completion: complete`, and each auto-run item's proof gate passes, clarity can resolve for the rest of the roadmap even while that Open Question stays unanswered.
 
 ## Status Semantics
 
@@ -48,7 +48,7 @@ Use `completion: incomplete` when the user chose `continue later`, left future s
 - `active`: current repo work or an in-flight Pathfinder run is addressing it.
 - `complete`: evidence shows the intended outcome is satisfied.
 - `blocked`: progress needs creator input, missing access, failed verification, or a dependency.
-- `manual-only`: desired work that crosses an approval boundary. In autonomous mode it is worked and landed as an awaiting-review PR (never self-merged), unless it also matches the hard safety floor (dangerous categories or a charter `Never unattended` category), in which case it is excluded and never worked.
+- `manual-only`: desired work that crosses an approval boundary. In autonomous mode it is worked and landed as an awaiting-review PR (never self-merged without branch protection), unless it also matches the irreversible/external hard stops, in which case it is excluded and never worked.
 - `obsolete`: no longer desired after refresh.
 
-Roadmap items can guide goal selection, but they never authorize dangerous categories, protected-area edits, credential access, deployments, migrations, or data deletion. In autonomous mode the `safety:` field maps to dispositions: `autonomous-eligible` is worked and may conditionally self-merge; `manual-approval-required` is worked but only ever landed as an awaiting-review PR; `blocked-by-safety` (or missing/ambiguous safety) and any dangerous-category or charter `Never unattended` scope are the hard floor — never worked autonomously.
+Roadmap items can guide goal selection, but they never authorize secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, or real-world external side effects. In autonomous mode the `safety:` field maps to dispositions: `autonomous-eligible` is worked and may conditionally self-merge only with a positive branch-protection signal; `manual-approval-required` is worked but lands as an awaiting-review PR when branch protection does not authorize merge; `blocked-by-safety` (or missing/ambiguous safety) is excluded unless the Doctrine Interview reclassifies it with proof. Protected code areas are eligible with doctrine proof and scoped verification.

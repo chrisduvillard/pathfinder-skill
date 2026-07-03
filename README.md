@@ -68,7 +68,7 @@ Bare **`/pathfinder`** opens a chooser so you can see every path before anything
 
 <br>
 
-**🗺️ Explore** reads the code itself — never the README, so a stale or missing doc can't mislead it — ranks the moves, adversarially verifies the top ones, captures your intent (the charter + clarity gate), asks a few sharp questions, then forges the goal:
+**🗺️ Explore** reads the code itself — never the README, so a stale or missing doc can't mislead it — ranks the moves, adversarially verifies the top ones, captures your intent (charter, roadmap, doctrine + clarity gate), asks a few sharp questions, then forges the goal:
 
 ```mermaid
 flowchart LR
@@ -76,7 +76,7 @@ flowchart LR
     B["<b>2 · SCOUT</b><br/><i>brief each domain</i>"]
     C["<b>3 · SYNTHESIZE</b><br/><i>rank the next moves</i>"]
     V["<b>4 · VERIFY</b><br/><i>adversarially re-check</i>"]
-    G["<b>5 · CHARTER</b><br/><i>capture intent · clarity gate</i>"]
+    G["<b>5 · DOCTRINE</b><br/><i>capture intent · clarity gate</i>"]
     D["<b>6 · ASK</b><br/><i>a few sharp questions</i>"]
     E["<b>7 · FORGE /goal</b><br/><i>bounded · proven · ready</i>"]
 
@@ -96,7 +96,7 @@ flowchart LR
 Pathfinder, turn this into a /goal: stop the dashboard empty-state from crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** kicks in only once the **clarity gate** resolves — Pathfinder has interviewed you into a doubt-free picture of the project (saved as its charter + roadmap) and each goal clears a model-depth proof gate. Then it runs the loop hands-off: **branch → implement → verify → commit → push → open a PR → self-merge** eligible work where the repo allows, landing anything that needs sign-off as an awaiting-review PR and continuing until the work is done, blocked, unsafe, or out of budget. It never escalates on a fresh repo or while any doubt remains. → [Safety](#-safety)
+**⚡ Autonomous** is `/pathfinder auto` as **Full Autonomous Mission Mode**. It runs only after the **clarity gate** resolves: Pathfinder has built local doctrine (`.pathfinder/doctrine.md`, marker `pathfinder:doctrine v1`) plus the charter and roadmap, and each goal clears a model-depth proof gate. It creates an isolated mission worktree, then loops hands-off: **branch → implement → verify → commit → push → open a PR → merge only if branch protection positively allows it**. When roadmap work runs out, the Autonomous Opportunity Scout derives more doctrine-aligned candidates. Work needing review lands as an awaiting-review PR and the loop continues until the work is done, blocked, unsafe, capped, or out of budget. → [Safety](#-safety)
 
 <br>
 
@@ -143,7 +143,7 @@ Every run leaves a clean, resumable trail inside the repo:
 └─ 08-final-summary.md        what was explored, found, and decided
 ```
 
-Two private files persist across runs — **`.pathfinder/charter.md`** (stable intent) and **`.pathfinder/roadmap.md`** (evolving work). Both are gitignored via `.git/info/exclude`, never committed, and sanitized on every read.
+Three private files persist across runs — **`.pathfinder/charter.md`** (stable intent), **`.pathfinder/roadmap.md`** (evolving work), and **`.pathfinder/doctrine.md`** (Project Doctrine: end goal, quality bars, autonomy policy, and hard stops). All are gitignored via `.git/info/exclude`, never committed, and sanitized on every read.
 
 <br>
 
@@ -153,7 +153,10 @@ Every repo file is treated as **untrusted data**. Pathfinder won't run scripts, 
 
 Autonomous mode is the one path that commits and merges without a per-step prompt. Even then:
 
-- 🚫 **Dangerous categories are never auto-touched** — auth, payments, migrations, secrets, CI, public APIs, network egress — filtered out before work *and* hard-blocked on the real diff.
+- 🧭 **Doctrine is required** — missing, stale, incomplete, tracked, or contradicted doctrine triggers the interview before autonomy can run.
+- 🌿 **Autonomous work is isolated** — `/pathfinder auto` creates a mission worktree before edits, using `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto>` when possible.
+- 🔐 **Irreversible/external hard stops stay blocked** — secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, and real-world external side effects.
+- 🧪 **Protected areas need proof** — auth, payments, CI/CD, schemas, migrations, public APIs, and network-related code can be improved autonomously only with doctrine alignment, scoped proof, verification, diff review, and branch-protected merge gates.
 - 🧱 **The trust boundary holds** — repo content can't redirect the goal or widen authorization.
 - 🔑 **Credentials stay out** of the environment while repo code runs.
 - ✅ **Self-merge is default-deny** — only on a positive branch-protection signal; anything that needs review lands as an awaiting-review PR.
@@ -177,11 +180,11 @@ Autonomous mode is the one path that commits and merges without a per-step promp
 </details>
 
 <details>
-<summary><b>How it learns your intent (the charter)</b></summary>
+<summary><b>How it learns your intent (charter, roadmap, doctrine)</b></summary>
 
 <br>
 
-On first use, Pathfinder asks 8–12 compact questions — purpose, users, success, constraints, non-goals, finished state, autonomy policy, and future capabilities not started yet — and keeps asking until no blocking doubt remains (the **clarity gate**). It saves stable intent to `.pathfinder/charter.md` and evolving work to `.pathfinder/roadmap.md`. Later runs reuse both, show their influence, reconcile them against the current code, and let you refresh or override with `/pathfinder charter`.
+On first use, Pathfinder runs the Doctrine Interview: 8–12 compact questions about purpose, users, success, constraints, non-goals, finished state, future capabilities, product philosophy, quality bars, improvement heuristics, autonomy policy, and hard stops. It keeps asking until no blocking doubt remains (the **clarity gate**). It saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and the deep end-state model to `.pathfinder/doctrine.md`. Later runs reuse all three, show their influence, reconcile them against the current code, and let you refresh or override with `/pathfinder charter`.
 
 </details>
 
@@ -190,7 +193,7 @@ On first use, Pathfinder asks 8–12 compact questions — purpose, users, succe
 
 <br>
 
-Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state — repo/branch, whether the charter and roadmap exist and are complete, the latest run, and the available paths — without creating artifacts or triggering the interview.
+Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state — repo/branch, whether the charter, roadmap, and doctrine exist and are complete, the latest run, and the available paths — without creating artifacts or triggering the interview.
 
 </details>
 

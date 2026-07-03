@@ -25,13 +25,14 @@ goal="$root/skills/pathfinder/references/goal-best-practices.md"
 arts="$root/skills/pathfinder/references/artifact-structure.md"
 charter="$root/skills/pathfinder/references/charter-template.md"
 roadmap="$root/skills/pathfinder/references/roadmap-template.md"
+doctrine="$root/skills/pathfinder/references/doctrine-template.md"
 scout="$root/skills/pathfinder/references/scout-brief-template.md"
 contributing="$root/CONTRIBUTING.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$scout" "$contributing"; do
+for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$doctrine" "$scout" "$contributing"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -44,6 +45,7 @@ cited_refs="$(grep -oE 'references/[a-z0-9-]+\.md' "$skill" | sort -u)"
 expected_refs="$(printf '%s\n' \
   'references/artifact-structure.md' \
   'references/charter-template.md' \
+  'references/doctrine-template.md' \
   'references/goal-best-practices.md' \
   'references/question-funnel-template.md' \
   'references/roadmap-template.md' \
@@ -168,6 +170,8 @@ check_pair "Stop bound" "$goal" "Phase 6 stop-bound row"
 check_pair "Goal Binding" "$goal" "goal binding goal contract"
 check_pair "Runtime Boundary" "$goal" "runtime boundary goal contract"
 check_pair "Binding Status" "$goal" "binding status goal contract"
+check_pair "doctrine_refs" "$goal" "goal binding doctrine refs"
+check_pair "mission_worktree" "$goal" "runtime boundary mission worktree field"
 check_pair "stale-objective" "$goal" "stale binding status goal contract"
 check_pair "mismatched" "$goal" "mismatched binding status goal contract"
 # (BE-2) not-run was guarded on the artifact mirror (below) but not the goal mirror, though
@@ -195,11 +199,17 @@ check_pair "pathfinder:roadmap v1" "$roadmap" "roadmap schema marker"
 check_pair ".pathfinder/roadmap.md" "$roadmap" "roadmap file path"
 check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
 check_pair "completion: complete | incomplete" "$roadmap" "roadmap completion marker"
+check_pair "pathfinder:doctrine v1" "$doctrine" "doctrine schema marker"
+check_pair ".pathfinder/doctrine.md" "$doctrine" "doctrine file path"
+check_pair "Project Doctrine" "$doctrine" "doctrine purpose"
+check_pair "irreversible/external hard stops" "$doctrine" "doctrine hard-stop floor"
+check_pair "protected code areas are eligible with doctrine proof" "$doctrine" "protected-area doctrine proof"
 # Clarity gate (v2.21.0): the clarity field and ambiguity-ledger / anti-deadlock tokens
 # must be mirrored, the same way the completion marker is, so dropping one from a single
 # file fails CI instead of silently regressing the "ask until no doubt" gate.
 check_pair "clarity: resolved | unresolved" "$charter" "charter clarity marker"
 check_pair "clarity: resolved | unresolved" "$roadmap" "roadmap clarity marker"
+check_pair "clarity: resolved | unresolved" "$doctrine" "doctrine clarity marker"
 check_pair "ambiguity ledger" "$funnel" "ambiguity ledger mirror"
 check_pair "Open Question" "$roadmap" "anti-deadlock open question"
 check_pair "awaiting-review" "$arts" "autonomous awaiting-review disposition"
@@ -210,11 +220,14 @@ check_pair "future capabilities not started yet" "$funnel" "future-capabilities 
 check_pair "8 to 12 compact screens" "$funnel" "deep-intent interview depth"
 check_pair "continue later" "$funnel" "partial-intent continuation escape"
 check_pair ".pathfinder/roadmap.md" "$arts" "artifact roadmap intent file"
+check_pair ".pathfinder/doctrine.md" "$arts" "artifact doctrine intent file"
 check_pair "07b-cross-model-review.md" "$arts" "cross-model review artifact"
 check_pair "outside the run folder" "$arts" "intent files outside run folder"
 check_pair "Goal Binding" "$arts" "goal binding artifact contract"
 check_pair "Runtime Boundary" "$arts" "runtime boundary artifact contract"
 check_pair "Binding Status" "$arts" "binding status artifact contract"
+check_pair "doctrine_refs" "$arts" "artifact goal binding doctrine refs"
+check_pair "mission_worktree" "$arts" "artifact runtime mission worktree field"
 check_pair "tool_allowlist_enforced" "$arts" "runtime tool-allowlist field"
 check_pair "credential_exposure" "$arts" "runtime credential-exposure field"
 check_pair "stale-objective" "$arts" "stale binding status artifact contract"
@@ -246,8 +259,8 @@ done
 check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
-check_pair "relevant charter plus roadmap direction" "$goal" "creator-model goal framing"
-check_pair "roadmap item id in supporting notes" "$goal" "roadmap provenance notes"
+check_pair "relevant direction from all three" "$goal" "creator-model goal framing"
+check_pair "roadmap item id and doctrine section ids in supporting notes" "$goal" "roadmap/doctrine provenance notes"
 check_pair "model-depth proof gate" "$goal" "autonomy model-depth proof gate"
 check_pair "full code implementation" "$goal" "full implementation goal contract"
 check_pair "deep verification/testing" "$goal" "deep verification goal contract"
@@ -330,9 +343,9 @@ entry_chooser_invariants=(
   "Refresh creator model"
   "Show status/help"
   "Recommendation: 🟢 <1 | 2 | 3 | 4 | 5> — <selected option label>"
-  "Recommend option 1 only when there is no supplied prompt, no usable complete charter/roadmap, and no visible prior Pathfinder run."
+  "Recommend option 1 only when there is no supplied prompt, no usable complete charter/roadmap/doctrine, and no visible prior Pathfinder run."
   "Recommend option 4 when the creator model is missing, incomplete, schema-invalid, or stale but prior Pathfinder state exists."
-  "Recommend option 5 when both intent files are complete and prior runs exist, but the user supplied no concrete task."
+  "Recommend option 5 when all three intent files are complete and prior runs exist, but the user supplied no concrete task."
   "Do not place a static [recommended] marker on option 1 before checking local state."
   "/pathfinder status"
   "returns to this chooser"
@@ -363,6 +376,18 @@ auto_invariants=(
   "manual-approval-required"
   "Never unattended"
   "excluded from autonomous execution"
+  "pathfinder:doctrine v1"
+  ".pathfinder/doctrine.md"
+  "Doctrine Interview"
+  "Project Doctrine"
+  "protected code areas are eligible with doctrine proof"
+  "irreversible/external hard stops"
+  "force-pushes"
+  "mission worktree"
+  "<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto"
+  "Autonomous Opportunity Scout"
+  "auto-resume ledger"
+  "absent branch protection produces awaiting-review"
   "post-execution protected-path gate"
   "credential separation"
   "must not run repo-defined hooks"
@@ -377,7 +402,6 @@ auto_invariants=(
   "clarity: resolved"
   "auto-escalat"
   "awaiting-review"
-  "hard safety floor"
   "never self-merge"
   "per-run PR cap"
 )
