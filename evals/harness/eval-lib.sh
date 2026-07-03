@@ -86,11 +86,75 @@ assert_goal_contract() {
   fi
 }
 
+assert_rejected_not_selectable() {
+  local verification funnel ids id
+  verification="$(artifact_path "03b-verification.md")"
+  funnel="$(artifact_path "04-question-funnel.md")"
+
+  assert_artifact_exists "03b-verification.md"
+  assert_artifact_exists "04-question-funnel.md"
+  [ -f "$verification" ] && [ -f "$funnel" ] || return
+
+  ids="$(awk -F':[[:space:]]*' '
+    tolower($1) == "rejected-candidate-id" { print $2 }
+  ' "$verification")"
+
+  if [ -z "$ids" ]; then
+    case_error "03b-verification.md has no rejected-candidate-id lines"
+    return
+  fi
+
+  for id in $ids; do
+    if awk -F':[[:space:]]*' -v id="$id" '
+      tolower($1) == "selectable-candidate-id" && $2 == id { found = 1 }
+      END { exit found ? 0 : 1 }
+    ' "$funnel"; then
+      case_error "04-question-funnel.md rejected candidate $id appears selectable"
+    fi
+  done
+}
+
+assert_downgrade_reflected() {
+  local verification funnel pairs pair id grade
+  verification="$(artifact_path "03b-verification.md")"
+  funnel="$(artifact_path "04-question-funnel.md")"
+
+  assert_artifact_exists "03b-verification.md"
+  assert_artifact_exists "04-question-funnel.md"
+  [ -f "$verification" ] && [ -f "$funnel" ] || return
+
+  pairs="$(awk '
+    tolower($1) == "downgrade:" && tolower($3) == "to" { print $2 ":" tolower($4) }
+  ' "$verification")"
+
+  if [ -z "$pairs" ]; then
+    case_error "03b-verification.md has no downgrade lines"
+    return
+  fi
+
+  for pair in $pairs; do
+    id="${pair%%:*}"
+    grade="${pair#*:}"
+    if ! awk -v id="$id" -v grade="$grade" '
+      tolower($1) == "candidate-grade:" && $2 == id && tolower($3) == grade { found = 1 }
+      END { exit found ? 0 : 1 }
+    ' "$funnel"; then
+      case_error "04-question-funnel.md missing reflected downgrade for $id to $grade"
+    fi
+  done
+}
+
 run_assertion() {  # <assertion-name>
   local assertion="$1"
   case "$assertion" in
     goal_contract)
       assert_goal_contract
+      ;;
+    rejected_not_selectable)
+      assert_rejected_not_selectable
+      ;;
+    downgrade_reflected)
+      assert_downgrade_reflected
       ;;
     artifact_exists:*)
       assert_artifact_exists "${assertion#artifact_exists:}"
