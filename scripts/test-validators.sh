@@ -207,6 +207,14 @@ R="$(newroot)"
 sed -i 's/a passing model-depth proof gate for each/a passing model-depth heuristic for each/' "$R/skills/pathfinder/SKILL.md"
 assert_catch "$R" "clarity-gate definition|model-depth proof gate" "clarity-gate coherence guard catches a dropped condition in one definition"
 
+echo "== parser 9: doctrine-gated autonomy invariants =="
+# Full Autonomous Mission Mode depends on the local Project Doctrine contract. Dropping the schema
+# marker from SKILL.md must fail the mirror/section guard rather than leaving `.pathfinder/doctrine.md`
+# as undocumented local state.
+R="$(newroot)"
+sed -i 's/pathfinder:doctrine v1/pathfinder:doctrine vX/' "$R/skills/pathfinder/SKILL.md"
+assert_catch "$R" "doctrine|pathfinder:doctrine v1" "doctrine marker removal is caught"
+
 # ---- Behavioral invariant harness (check-skill-behavior.sh) ----
 skillbeh="$here/scripts/check-skill-behavior.sh"
 csb() { MSYS_NO_PATHCONV=1 bash "$skillbeh" "$1" 2>&1; }
@@ -238,7 +246,7 @@ assert_catch_b "$R" "self-merge|governing qualifier|loosened gate" "self-merge p
 echo "== behavior 2: 'unattended' must carry a negation =="
 # Remove the sole negation attached to an 'unattended' mention; the line then permits what it forbade.
 R="$(newroot)"
-sed -i 's/a charter `Never unattended` category/a charter always-unattended category/' "$R/skills/pathfinder/SKILL.md"
+sed -i 's/A Doctrine `Never unattended` category/A Doctrine always-unattended category/' "$R/skills/pathfinder/SKILL.md"
 assert_catch_b "$R" "unattended|governing qualifier" "unattended inversion: removing the negation is caught"
 
 echo "== behavior 3: a decision screen must carry its 'None of these' escape =="
@@ -258,15 +266,15 @@ echo "== behavior 4: renaming a Family-A window boundary heading fails closed (C
 # guard the four Family-A direction checks would pass VACUOUSLY (insec never sets); the guard must
 # catch the rename instead of letting the safety window fail open.
 R="$(newroot)"
-sed -i 's/^## Autonomous mode (clarity-gated)/## Autonomous section (clarity-gated)/' "$R/skills/pathfinder/SKILL.md"
+sed -i 's/^## Autonomous mode (doctrine-gated full mission)/## Autonomous section (doctrine-gated full mission)/' "$R/skills/pathfinder/SKILL.md"
 assert_catch_b "$R" "Family-A window boundary|missing or renamed" "boundary-existence guard catches a renamed ## Autonomous mode heading (fail-open closed)"
 
-echo "== behavior 5: inverting the Stop-conditions autonomous carve-out is caught (C1/SEC-1) =="
-# The carve-out sits outside the Family-A window, so check_direction never saw it. Invert its
-# trust-boundary commitment (never waived -> waived); the dedicated carve-out guard must catch it.
+echo "== behavior 5: dropping the Stop-conditions irreversible/external carve-out is caught (C1/SEC-1) =="
+# The carve-out sits outside the Family-A window, so check_direction never sees it. Drop its
+# validator token; the dedicated carve-out guard must catch it.
 R="$(newroot)"
-sed -i 's/are never waived/are waived/' "$R/skills/pathfinder/SKILL.md"
-assert_catch_b "$R" "carve-out|never waived|inverted" "carve-out guard catches an inverted Stop-conditions autonomous carve-out"
+sed -i 's/irreversible\/external hard-stop carve-out/irreversible external stop floor/g' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "carve-out|irreversible/external" "carve-out guard catches a dropped irreversible/external hard-stop carve-out"
 
 echo "== behavior 6: an unconditional self-merge grant is caught though the whole-line check passes (C2/TR-B1) =="
 # Invert an in-window self-merge clause to grant it unconditionally while leaving the line's other
@@ -282,6 +290,33 @@ echo "== behavior 7: a benign self-merge reword preserving direction still passe
 R="$(newroot)"
 sed -i 's/\*\*conditional self-merge\*\*/\*\*self-merge, kept conditional\*\*/' "$R/skills/pathfinder/SKILL.md"
 assert_pass_b "$R" "benign self-merge reword (still conditional) does not false-red"
+
+echo "== behavior 8: protected-area work stays eligible only with doctrine proof =="
+# The new stronger autonomy model deliberately makes protected code areas eligible, but only under
+# doctrine proof + scoped verification. Reverting the clause to blanket exclusion must fail.
+R="$(newroot)"
+sed -i -e 's/Protected code areas are eligible with doctrine proof/Protected code areas are excluded/' \
+       -e 's/protected code areas are eligible with doctrine proof/protected code areas are excluded/' \
+       "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "protected code areas|doctrine proof|eligible" "protected-area eligibility proof guard catches blanket exclusion"
+
+echo "== behavior 9: irreversible/external hard stops keep the force-push boundary =="
+# The hard floor is narrowed to irreversible/external actions; force-pushes must remain in that floor.
+R="$(newroot)"
+sed -i 's/, force-pushes//' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "irreversible/external hard stops|force-push" "hard-stop guard catches dropped force-push boundary"
+
+echo "== behavior 10: autonomous mode must create a mission worktree before edits =="
+R="$(newroot)"
+sed -i 's/create a mission worktree before edits/may edit in the current checkout/' "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "mission worktree|before edits" "mission-worktree guard catches current-checkout edits"
+
+echo "== behavior 11: absent branch protection remains awaiting-review, not self-merge =="
+R="$(newroot)"
+sed -i -e 's/Absent branch protection produces awaiting-review/Absent branch protection may self-merge/' \
+       -e 's/absent branch protection produces awaiting-review/absent branch protection may self-merge/' \
+       "$R/skills/pathfinder/SKILL.md"
+assert_catch_b "$R" "absent branch protection|awaiting-review|self-merge" "branch-protection guard catches absent-protection self-merge"
 
 if [ "$fail" -eq 0 ]; then
   echo "test-validators: all parser meta-tests pass"

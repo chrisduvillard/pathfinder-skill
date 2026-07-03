@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see "Autonomous mode" in `SKILL.md`) the Deep Intent Gate may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate resolves clarity (`clarity: resolved`), autonomous mode selects goals from the sanitized charter plus roadmap — by explicit invocation or by auto-escalation — and runs continuous execution until a stop condition is reached.
+This template is the interactive funnel. In autonomous mode (see "Autonomous mode" in `SKILL.md`) the Deep Intent Gate and Doctrine Interview may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate resolves clarity (`clarity: resolved`), autonomous mode selects or derives goals from the sanitized charter, roadmap, doctrine, and current repo evidence — by explicit invocation or by auto-escalation — and runs continuous execution until a stop condition, cap, or auto-resume boundary is reached.
 
 ## Universal rules
 
@@ -22,7 +22,7 @@ This template is the interactive funnel. In autonomous mode (see "Autonomous mod
 
 ## Phase 4c: Deep Intent Gate (runs before entry-point continuation)
 
-When `.pathfinder/charter.md` or `.pathfinder/roadmap.md` is missing, schema-invalid, incomplete, marked `clarity: unresolved` with a still-open blocking unknown, explicitly refreshed, or contradicted by a light re-inference of current evidence (a charter non-goal now has implementing code, or a stable field the code now contradicts — a stale intent model, caught on every work-producing entry and re-opened as a blocking unknown), Phase 4c runs the Deep Intent Gate before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked `blocked` on creator input (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when both files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
+When `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md` is missing, schema-invalid, incomplete, marked `clarity: unresolved` with a still-open blocking unknown, explicitly refreshed, or contradicted by a light re-inference of current evidence (a charter non-goal now has implementing code, a stable field the code now contradicts, or the Project Doctrine no longer matches the repo — a stale intent model, caught on every work-producing entry and re-opened as a blocking unknown), Phase 4c runs the Deep Intent Gate and Doctrine Interview before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked `blocked` on creator input (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when all three files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
 
 The gate opens with an evidence draft, then asks a recognition-first interview that usually spans 8 to 12 compact screens. Every screen shows inferred answers with evidence and confidence, offers 3 to 6 concrete options where possible, includes `Agent recommends:`, includes free text, and asks directly about future capabilities not started yet.
 
@@ -38,8 +38,9 @@ The repo cannot tell me these future-facing parts:
 - roadmap priority and sequencing
 - optional finished state
 - autonomy policy
+- Project Doctrine: end goal, product philosophy, quality bars, improvement heuristics, and irreversible/external hard stops
 
-Agent recommends: continue the Deep Intent Gate now because every Pathfinder entry point needs the creator model.
+Agent recommends: continue the Deep Intent Gate and Doctrine Interview now because every Pathfinder entry point needs the creator model.
 Reply "continue" to answer now, or "continue later" to save a partial model and stop.
 ```
 
@@ -120,10 +121,18 @@ The normal screens are below. Keep them compact: each screen mirrors the best in
 ### Screen 10 - Autonomy policy and manual-approval boundaries
 
 - Purpose: define what may run unattended, what needs approval, and what must never run unattended.
-- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, and branch-protection/self-merge rules.
-- Options: 1) autonomous only for explicitly marked `autonomous-eligible` roadmap items, 2) manual approval for scripts/workflows/manifests/public interfaces, 3) never unattended for dangerous categories, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
+- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, branch-protection/self-merge rules, and irreversible/external hard stops.
+- Options: 1) autonomous for doctrine-proven roadmap and opportunity-scout items, 2) awaiting-review PR for work without branch-protection self-merge authority, 3) never unattended for irreversible/external hard stops, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
 - Agent recommends: the strictest option that still permits safe low-risk work.
 - Escape: `None of these - describe autonomy policy yourself`, or `continue later`.
+
+### Screen 11 - Project Doctrine and full-autonomy mission
+
+- Purpose: capture the deep end-state model that lets `/pathfinder auto` keep improving the repo when the roadmap runs out.
+- Mirror evidence: charter north-star, roadmap future state, README/product copy, tests, recent changelog themes, and recurring quality gates.
+- Options: 1) optimize toward the inferred end goal and quality bars, 2) prioritize reliability/reviewability improvements, 3) prioritize product/user-facing improvements, 4) prioritize architecture/DX simplification, 5) creator-supplied doctrine.
+- Agent recommends: the option with the strongest repo evidence plus creator alignment.
+- Escape: `None of these - describe the Project Doctrine yourself`, or `continue later`.
 
 ### Ambiguity loop screen (repeats until no blocking unknowns)
 
@@ -132,7 +141,7 @@ After the normal screens, run the ambiguity-resolution loop. Maintain an **ambig
 ```text
 Deep Intent Gate - Clarity check
 Open blocking unknowns (must clear before autonomy):
-1. <unknown> - affects <charter/roadmap field or item> - basis: <evidence>
+1. <unknown> - affects <charter/roadmap/doctrine field or item> - basis: <evidence>
 2. <unknown> - affects <...> - basis: <...>
 
 For each, pick the answer that removes the doubt:
@@ -146,7 +155,7 @@ clarity resolves for the rest).
 
 Clarity resolves (`clarity: resolved`) only when every blocking unknown is resolved or converted.
 
-Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, and evolving desired work in `.pathfinder/roadmap.md`. Also record the ambiguity ledger, each loop pass, the final `clarity` value on both files, and any blocking-unknown conversions to roadmap Open Questions.
+Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, evolving desired work in `.pathfinder/roadmap.md`, and the Project Doctrine in `.pathfinder/doctrine.md`. Also record the ambiguity ledger, each loop pass, the final `clarity` value on all three files, and any blocking-unknown conversions to roadmap Open Questions.
 
 ## Mode selection (ask once)
 

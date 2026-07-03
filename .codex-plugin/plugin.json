@@ -1,7 +1,7 @@
 {
   "name": "pathfinder",
-  "version": "2.21.11",
-  "description": "Map an unfamiliar repository, choose the highest-value next move, and generate a bounded Claude Code /goal or fallback implementation goal.",
+  "version": "2.22.0",
+  "description": "Map an unfamiliar repository, choose the highest-value next move, generate a bounded goal, or run doctrine-gated autonomous mission work.",
   "author": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Pathfinder",
     "shortDescription": "Map a repo, pick the next move, write the goal",
-    "longDescription": "Pathfinder opens a chooser for exploring a repo, prompt-to-goal drafting, explicit safety-gated autonomous runs, creator model refresh, and status/help. It reads code first, ranks grounded moves, asks focused questions, then saves a bounded Claude Code /goal or fallback implementation goal.",
+    "longDescription": "Pathfinder opens a chooser for exploring a repo, prompt-to-goal drafting, doctrine-gated autonomous mission runs in an isolated worktree, creator model refresh, and status/help. It reads code first, ranks grounded moves, asks focused Doctrine Interview questions, then saves a bounded Claude Code /goal or fallback implementation goal, or runs /pathfinder auto when the Project Doctrine and clarity gate authorize it.",
     "developerName": "Chris Duvillard",
     "category": "Productivity",
     "capabilities": ["Instructions"],
@@ -28,7 +28,7 @@
       "Use the pathfinder skill on this repository. Start the full Pathfinder process.",
       "Map this codebase and propose the highest-value next move.",
       "Generate a bounded /goal for the work we just scoped.",
-      "Run Pathfinder autonomously on this repository.",
+      "Run Pathfinder autonomously on this repository with /pathfinder auto.",
       "Refresh the Pathfinder creator model with /pathfinder charter.",
       "Turn this prompt into a runnable /goal: <describe the work you want done>.",
       "Show Pathfinder status."

@@ -140,6 +140,8 @@ required_display_fragments=(
   "chooser"
   "prompt-to-goal"
   "autonomous"
+  "doctrine"
+  "worktree"
   "creator model"
   "status/help"
 )

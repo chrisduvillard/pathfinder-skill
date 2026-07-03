@@ -1,7 +1,7 @@
 {
   "name": "pathfinder",
-  "version": "2.21.11",
-  "description": "Map an unfamiliar repository, choose the highest-value next move, and generate a bounded Claude Code /goal or fallback implementation goal.",
+  "version": "2.22.0",
+  "description": "Map an unfamiliar repository, choose the highest-value next move, generate a bounded goal, or run doctrine-gated autonomous mission work.",
   "author": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"

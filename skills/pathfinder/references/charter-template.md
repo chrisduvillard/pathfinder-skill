@@ -1,8 +1,8 @@
 # Pathfinder Charter Template
 
-`.pathfinder/charter.md` is Pathfinder's durable, **local-only** model of stable creator intent. It lives at the repo root, beside `.pathfinder/roadmap.md`, is gitignored through `.git/info/exclude`, and is never committed.
+`.pathfinder/charter.md` is Pathfinder's durable, **local-only** model of stable creator intent. It lives at the repo root, beside `.pathfinder/roadmap.md` and `.pathfinder/doctrine.md`, is gitignored through `.git/info/exclude`, and is never committed.
 
-It holds the creator model that should stay true across many runs: purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy. Changing work belongs in `.pathfinder/roadmap.md`, not in the charter.
+It holds the creator model that should stay true across many runs: purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy. Changing work belongs in `.pathfinder/roadmap.md`; the deeper Project Doctrine belongs in `.pathfinder/doctrine.md`, not in the charter.
 
 ## Format
 
@@ -54,4 +54,4 @@ clarity: resolved | unresolved
 - Never unattended: <glyph> <work Pathfinder must never run unattended> - basis: <one line> (<...>)
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Use `clarity: unresolved` whenever `completion` is incomplete on either file, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear. The proof gate is a per-item, entry-time check (see SKILL.md "Clarity gate"), so an interactive first run sets `clarity` from the first two conditions and each item's proof gate is checked before that item auto-runs.
+Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Use `clarity: unresolved` whenever `completion` is incomplete on `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md`, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear. The proof gate is a per-item, entry-time check (see SKILL.md "Clarity gate"), so an interactive first run sets `clarity` from file completion and unknown resolution, then each item's proof gate is checked before that item auto-runs.
