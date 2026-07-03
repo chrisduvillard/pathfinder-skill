@@ -52,6 +52,7 @@ run_case() {  # <case-file>
   CASE_ID="$id"
   CASE_FAIL=0
   ARTIFACT_DIR="$workspace/artifacts"
+  EVAL_TMP="$tmp"
   out="$tmp/$id.out"
 
   {

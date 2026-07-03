@@ -144,11 +144,69 @@ assert_downgrade_reflected() {
   done
 }
 
+assert_protected_surface_boundary() {
+  local combined surfaces surface
+  combined="$EVAL_TMP/$CASE_ID.combined.md"
+
+  if ! find "$ARTIFACT_DIR" -type f -name '*.md' -exec cat {} + > "$combined"; then
+    case_error "could not read artifact markdown files"
+    return
+  fi
+
+  surfaces="$(awk -F':[[:space:]]*' '
+    tolower($1) == "protected-surface" { print tolower($2) }
+  ' "$combined")"
+
+  if [ -z "$surfaces" ]; then
+    case_error "no protected-surface lines found"
+    return
+  fi
+
+  if awk '
+    {
+      line = tolower($0)
+      if (line ~ /^(manual-review-boundary|doctrine-proof-boundary|safety-boundary):[[:space:]]*yes$/) found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$combined"; then
+    echo "ok: $CASE_ID: protected surface boundary present"
+    return
+  fi
+
+  for surface in $surfaces; do
+    case_error "missing manual/proof/safety boundary for $surface surface"
+  done
+}
+
+assert_track_b_phase4b_not_applicable() {
+  local verification
+  verification="$(artifact_path "03b-verification.md")"
+
+  assert_artifact_exists "03b-verification.md"
+  [ -f "$verification" ] || return
+
+  if ! awk '
+    {
+      line = tolower($0)
+      if (index(line, "not applicable: track b")) found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$verification"; then
+    case_error "03b-verification.md missing Track B not-applicable marker"
+  fi
+}
+
 run_assertion() {  # <assertion-name>
   local assertion="$1"
   case "$assertion" in
     goal_contract)
       assert_goal_contract
+      ;;
+    protected_surface_boundary)
+      assert_protected_surface_boundary
+      ;;
+    track_b_phase4b_not_applicable)
+      assert_track_b_phase4b_not_applicable
       ;;
     rejected_not_selectable)
       assert_rejected_not_selectable
