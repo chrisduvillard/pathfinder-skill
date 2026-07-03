@@ -16,7 +16,7 @@ unfamiliar repositories.
 
 ## Before opening a pull request
 
-Run the local preflight — it runs the same logic CI does, so green locally means green in CI:
+Run the local preflight — it runs the CI checks plus the local artifact eval suite, so green locally means the CI checks passed and the eval suite passed:
 
 ```bash
 bash scripts/check-all.sh
@@ -44,8 +44,9 @@ These run cleanly on Linux, macOS, and Windows Git-Bash/MSYS with no extra envir
 (`check-manifests.sh` scopes `MSYS_NO_PATHCONV=1` around its own jq call so the `/pathfinder charter`
 prompt check does not path-mangle on MSYS).
 
-These are the same checks `.github/workflows/manifests.yml` runs, so they
-catch common mistakes — such as bumping `VERSION.md` without mirroring both
+These match the checks `.github/workflows/manifests.yml` runs, with the local
+artifact eval suite added only for contributor preflight in v1. They catch
+common mistakes — such as bumping `VERSION.md` without mirroring both
 `plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
 before you push, not after.
 
