@@ -52,6 +52,9 @@ jobs:
       - name: Check validation/release portability
         run: bash scripts/check-portability.sh
 
+      - name: Run deterministic artifact evals
+        run: bash scripts/check-evals.sh
+
       - name: Meta-test the validator parsers
         run: bash scripts/test-validators.sh
 

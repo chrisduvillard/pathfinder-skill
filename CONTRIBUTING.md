@@ -16,7 +16,7 @@ unfamiliar repositories.
 
 ## Before opening a pull request
 
-Run the local preflight — it runs the CI checks plus the local artifact eval suite, so green locally means the CI checks passed and the eval suite passed:
+Run the local preflight — it runs the same logic CI does, so green locally means green in CI:
 
 ```bash
 bash scripts/check-all.sh
@@ -34,8 +34,8 @@ bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-escape invariants
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
+bash scripts/check-evals.sh               # deterministic artifact-contract eval fixtures
 bash scripts/test-validators.sh           # meta-tests for the drift-guard parsers themselves
-bash scripts/check-evals.sh              # seeded artifact evals for Pathfinder run-trail contracts
 git diff --check                          # trailing whitespace / conflict markers
 git diff --cached --check                 # staged whitespace / conflict markers
 ```
@@ -44,9 +44,8 @@ These run cleanly on Linux, macOS, and Windows Git-Bash/MSYS with no extra envir
 (`check-manifests.sh` scopes `MSYS_NO_PATHCONV=1` around its own jq call so the `/pathfinder charter`
 prompt check does not path-mangle on MSYS).
 
-These match the checks `.github/workflows/manifests.yml` runs, with the local
-artifact eval suite added only for contributor preflight in v1. They catch
-common mistakes — such as bumping `VERSION.md` without mirroring both
+These are the same checks `.github/workflows/manifests.yml` runs, so they
+catch common mistakes — such as bumping `VERSION.md` without mirroring both
 `plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
 before you push, not after.
 
@@ -71,9 +70,12 @@ before you push, not after.
   `scripts/check-skill-behavior.sh` too: a new controlled action needs a qualifier-set row so a
   loosened gate with the token intact fails CI, and a new decision screen needs its `None of these`
   escape or an entry on the exempt allowlist. Prove it with a fixture in `scripts/test-validators.sh`.
-- When you add or change a Pathfinder run artifact contract, add or update an artifact eval under
-  `evals/cases/` and `evals/fixtures/`. Expected-fail cases are harness self-tests: they should pass
-  the suite only when the seeded bad artifact fails for the intended reason.
+- When you change structured run artifacts, Goal Binding, Runtime Boundary, Binding Status,
+  capability profiles, adapter behavior, or local intent migration, add or update deterministic
+  fixture cases under `evals/cases/` and `evals/fixtures/`, then run `bash scripts/check-evals.sh`.
+  Required CI must stay local and no-live-model by default. `bash scripts/check-replay-evals.sh`
+  runs optional recorded replay cases when `evals/replays/cases/` exists. `bash scripts/check-live-evals.sh`
+  is disabled unless `PATHFINDER_LIVE_EVALS=1` and a local live runner are provided.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the

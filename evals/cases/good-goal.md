@@ -1,9 +1,7 @@
 # Good Goal
 
-eval-id: good-goal
+case-id: good-goal
+expected: pass
 eval-fixture: evals/fixtures/good-goal
-eval-expect: pass
-eval-assertions: goal_contract
-eval-failure-pattern:
-
-Validates that a goal artifact contains a measurable end state, proof surface, constraints, and a stop condition.
+assertion: goal-contract
+assertion: structured-sidecars

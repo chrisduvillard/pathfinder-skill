@@ -24,6 +24,8 @@ In the full-exploration track, the interview that pinpoints the work comes in tw
 
 Both modes always suggest repo-grounded answers, always name the agent's recommendation, and always leave lateral moves to browse the full map or describe something else.
 
+Operationally, Pathfinder is a stable **operating kernel** plus **adaptive strategies**, mediated by a **capability model**. The operating kernel holds the deterministic safety and artifact contracts; adaptive strategies choose search breadth, question depth, verifier depth, ranking, reviewer selection, and goal-adapter behavior as model capabilities improve. Markdown remains the human view of a run, and each work-producing path also writes the required structured sidecar files for eval, replay, and search when the corresponding artifact exists.
+
 ## Supported invocation
 
 If the user invokes bare `/pathfinder` with no path, prompt, or modifier, show the entry chooser before Phase 0 or any run-artifact setup. The chooser may do only minimal read-only context detection needed to make the options honest, such as repository root, current branch, intent-file status, and the latest visible Pathfinder run. It must not create run artifacts, write `.pathfinder/` intent files, run the Deep Intent Gate, or run repo-defined commands.
@@ -77,6 +79,9 @@ To establish, refresh, or deepen the local creator model on demand, the user can
 This skill includes optional supporting files. Load them when useful, especially before creating the matching artifact:
 
 - `references/artifact-structure.md` for the required artifact layout.
+- `references/operating-kernel.md` for non-negotiable safety, authorization, and artifact contracts.
+- `references/adaptive-strategies.md` for default but replaceable search, question, verification, and review policies.
+- `references/capability-model.md` for model/provider/tool capability profiles and goal/review adapter defaults.
 - `references/scout-brief-template.md` for scout reports.
 - `references/question-funnel-template.md` for the interview ladder.
 - `references/goal-best-practices.md` before generating `06-goal-command.md`.
@@ -90,6 +95,7 @@ This skill includes optional supporting files. Load them when useful, especially
 - Do not rely on README files or documentation during the first discovery pass.
 - Build understanding from actual code, tests, configs, routes, manifests, schemas, and runtime entry points.
 - Save the entire process in a dedicated folder inside the repository.
+- Keep Markdown as the human-readable artifact and write the structured sidecar files as the machine-readable contract for evals, replay, and future learning.
 - Ask questions from big picture to detail.
 - Convert the user’s answers into a precise `/goal` condition.
 - Save the final `/goal` command to Markdown.
@@ -143,6 +149,7 @@ When generating a Claude Code `/goal`, follow these rules:
 - The condition must include important constraints, such as no schema change, no new dependency, no unrelated refactor, or no public API change.
 - The evaluator does not run tools or read files independently. It judges only what the implementation agent surfaces in the transcript. Therefore, the goal must require the agent to print or summarize the proof of completion.
 - Keep the condition under 3900 characters to remain below Claude Code’s 4000-character limit.
+- Treat the 3900-character `/goal` budget as a Claude capability profile default, not a universal product law; use the active capability profile to choose `/goal`, Codex-native goal support when available, or the Implementation Goal fallback.
 - Include an explicit bound, such as `or stop after 12 turns and report the blocker`, for large work.
 - The condition should be specific enough that a separate evaluator can answer yes or no.
 - Do not use `/goal` for vague intentions such as “improve the codebase” or “make the UI better” without concrete acceptance criteria.
@@ -214,6 +221,11 @@ Required files:
 07-run-log.md
 07b-cross-model-review.md
 08-final-summary.md
+03-candidates.json
+03b-verification.json
+06-goal-binding.json
+07-run-log.json
+08-final-summary.json
 ```
 
 If the platform cannot create folders immediately, first describe the intended folder and create it as soon as file writing is available.
@@ -235,6 +247,7 @@ Record in `00-session.md`:
 - Git branch and `git status --short`.
 - Tool/runtime environment, limited to sanitized tool names and versions.
 - Whether subagents are available.
+- Capability profile for the primary runtime when knowable: provider name, native goal support, max goal chars, context size, tool execution, subagents, browser, structured-output support, review launcher, and cost/latency hint.
 - Runtime Boundary for the current session when knowable: `primary_runtime`, `mission_worktree` when autonomous mode runs, `tool_allowlist_enforced`, `sandbox_scope`, `network_access`, `credential_exposure`, `repo_code_execution`, and `pre_execution_consent`. Use `unknown` for fields the environment does not expose; this is authority disclosure, not a claim that Pathfinder enforces runtime sandboxing itself.
 - Claude Code version if available, and whether it is v2.1.139+ so `/goal` is available.
 - Any user-supplied objective.
@@ -283,7 +296,7 @@ Write this to `01-blind-discovery.md` (the same slot the full-exploration track 
 
 ### Gap-driven clarification
 
-The `/goal` best-practices checklist (`references/goal-best-practices.md`) is the rubric for "do I have enough yet?" Research fills every item it can; then ask the user only about the items still **missing or ambiguous** — typically a subset of: measurable end state, concrete scope, proof/checks, constraints, non-goals, protected areas, and the stop bound.
+The `/goal` best-practices checklist (`references/goal-best-practices.md`) is the rubric for "do I have enough yet?" Research fills every item it can; then ask the user only about the items still **missing or ambiguous** — typically a subset of: measurable end state, concrete scope, proof/checks, constraints, non-goals, protected areas, and the stop bound. Apply value-of-information: do not ask a clarifying question unless its answer can change the goal choice, scope, proof, safety classification, authorization, or stop conditions.
 
 - Ask these as gap-driven questions using the universal funnel rules (Phase 5): 3 to 6 numbered, repo-grounded options, an explicit `Agent recommends:` line pointing to one option, and a `None of these, let me describe it` escape. Ground every option in what the research found.
 - Ask nothing the research already settled. If the prompt is already well-formed and no checklist item is missing, skip the questions and go straight to the Phase 6 recognition-first contract.
@@ -485,6 +498,7 @@ Create `03-synthesis.md` with:
 
 ### Derivation and ranking rules
 
+- The five scout domains and Top 5 list are defaults under adaptive strategies, not a permanent ceiling. A stronger model may search fewer, more, or different domains and may present fewer or more candidate goals when the run artifacts still preserve stable candidate ids, structured evidence, rejected-candidate handling, proof availability, risk/protected-area status, and a clear stop reason for search.
 - Merge duplicate findings that different scouts reported for the same location into one candidate; keep the highest severity and union the evidence.
 - Rank candidates by impact over effort, with confirmed findings outranking inferred, and inferred outranking suspected. Do not rank a suspected finding above a confirmed one of similar impact. Phase 4b verification may downgrade grades and re-rank on the post-verification grades before Phase 5 reads them.
 - Alignment tiebreak (applies only when a charter is loaded; off otherwise). The charter is established or loaded in Phase 4c — after Phase 4 and Phase 4b — so this tiebreak runs as a re-sort once Phase 4c completes and before Phase 5 reads the ranking; it is specified here because it extends these ranking rules. After the existing order is fixed, break **near-ties** — same evidence band AND within one effort-bucket on impact ÷ effort (Phase 4b's grade re-rank reuses this same deterministic bucketing, so two runs reorder identically) — toward the candidate more aligned with the charter **north-star**, reusing `✓` (aligned) > `~` (partial) > omitted (neutral) > "counter to north-star" (rare). This never folds into the impact score and never promotes across an evidence band — an aligned suspected candidate never outranks a confirmed one. Only charter fields ratified in an interview (basis `(your charter)`) drive the tiebreak; `(inferred, unconfirmed)` or hand-edited fields are neutral. In autonomous mode this tiebreak does not run (see "Autonomous mode").
@@ -503,6 +517,8 @@ Use practical language. Do not produce a generic audit. Separate facts found in 
 After Phase 4 writes the Top 5 into `03-synthesis.md`, verify those candidates before the Phase 5 funnel shows them. Phase 4b is the one sanctioned re-read of repository code after discovery: it inherits Phase 2's code-reading authority and the scout trust rules, not Phase 4's "do not re-discover" rule. It only checks, downgrades, re-ranks, or quarantines the existing candidates; it never invents new ones, and every verdict traces back to the scout finding ids the candidate already cites.
 
 Gate: run Phase 4b only if `03-synthesis.md` is complete (not a placeholder) with a populated Top 5. If `03-synthesis.md` is still a placeholder, leave `03b-verification.md` a placeholder and resume at Phase 4 first. Write all verification work to `03b-verification.md`.
+
+Use adaptive verifier depth. The three-lens panel below is the default for full exploration, autonomy-bound work, protected areas, high-risk changes, contested findings, and low-confidence candidates; low-risk interactive work may use cheaper checks only when the structured verification artifact still records the depth chosen, the reason, any skipped lenses, proof gaps, and why the shortcut does not weaken the operating kernel.
 
 ### The verifier panel
 
@@ -638,6 +654,8 @@ The doctrine stores the Project Doctrine:
 
 The first-run interview should usually include 8 to 12 compact screens. Each screen is recognition-first: show the inferred answer first, give evidence and confidence, offer 3 to 6 concrete options where possible, include `Agent recommends:`, include a free-text escape, and ask about goals that repository evidence cannot reveal.
 
+Ask by value-of-information. The 8 to 12 compact screens are a maximum/default depth, not a quota: skip or merge any screen whose answer cannot change goal choice, scope, proof, safety classification, authorization, stop conditions, or creator-model clarity. Record skipped high-level questions and the reason they were low value in `04-question-funnel.md`.
+
 The normal screen sequence is:
 
 1. Purpose and promise.
@@ -686,6 +704,7 @@ In autonomous mode this interview does not run: Pathfinder does not show the int
 
 Universal rules that apply to both modes:
 
+- Ask by value-of-information: each question must be capable of changing goal choice, scope, proof, safety classification, authorization, stop conditions, or creator-model clarity. When a stronger model can take an adaptive short path, record why skipped questions were low value and still satisfy the artifact contracts.
 - Every question must offer suggested answers. Use 3 to 6 numbered, repo-grounded options. Never ask an open question without options. The one exception is the Full surface map browse screen (below): it is an index of every discovered surface, not a 3-to-6 option menu, but it still carries an `Agent recommends:` line and the escapes.
 - Every question must include an explicit `Agent recommends:` line that names which of the listed options is the agent's current best pick, and why, so choosing it is informed rather than blind. `Agent recommends:` is a pointer to one of the existing options, never an extra numbered option in the list.
 - Every option-bearing work-selection question (L0 intent through L4 boundaries, Pick a move's candidate screen, and the selected-moves grouping review) must include a `None of these, let me describe it` free-text escape. Every drill-down question after the first (L1 onward) must also include a `Go back` option. The one-time mode-selection question and the terminal post-save execution choice use fixed menus and are exempt from both escapes.
@@ -1071,6 +1090,8 @@ Success criteria (reservoir F):
 
 Create `06-goal-command.md`. The file may contain either one goal or a numbered goal pack.
 
+Before choosing the exact goal surface, record the capability profile used for this run. Claude Code with `/goal` support uses `/goal` and the 3900-character budget; Codex uses native goal support when the capability profile exposes it, otherwise the Implementation Goal fallback; unknown runtimes get the fallback plus a manual execution note. This is an adapter decision, not a change to the goal contract.
+
 Use the selected-move shape:
 
 - One selected move keeps the current single-goal flow.
@@ -1079,13 +1100,13 @@ Use the selected-move shape:
 
 For a single goal or for each item in a goal pack, always save both forms:
 
-1. A ready-to-copy Claude Code `/goal` command if Claude Code v2.1.139+ is available:
+1. A ready-to-copy Claude Code `/goal` command if the active capability profile is Claude Code v2.1.139+ with `/goal` available:
 
 ```text
 /goal <condition>
 ```
 
-2. An equivalent fallback for Codex, older Claude Code, or environments where the assistant cannot execute slash commands directly:
+2. An equivalent fallback for Codex, older Claude Code, or environments where the capability profile lacks native goal execution or the assistant cannot execute slash commands directly:
 
 ```markdown
 # Implementation Goal
@@ -1132,6 +1153,7 @@ Goal Binding
 - selected_candidate_ids: <ids, or none for prompt-to-goal>
 - charter_roadmap_refs: <ids used, or none>
 - doctrine_refs: <doctrine sections used, or none>
+- capability_profile: <provider/tool profile used to choose /goal, native Codex goal, or fallback>
 - scope_fingerprint: <short prose summary of intended files/surfaces; not a cryptographic hash>
 - proof_requirements: <exact checks/evidence the final report must surface>
 - protected_areas: <off-limits areas or none>
@@ -1139,7 +1161,7 @@ Goal Binding
 - model_depth_summary: <autonomous model-depth proof summary, or not applicable>
 ```
 
-For prompt-to-goal, set `selected_candidate_ids: none`. For autonomous goals, `doctrine_refs` must cite the Project Doctrine sections used and `model_depth_summary` must summarize the model-depth proof gate. For goal packs, repeat the full Goal Binding for each numbered goal.
+For prompt-to-goal, set `selected_candidate_ids: none`. For autonomous goals, `doctrine_refs` must cite the Project Doctrine sections used and `model_depth_summary` must summarize the model-depth proof gate. For goal packs, repeat the full Goal Binding for each numbered goal. When structured output is available, mirror this binding into `06-goal-binding.json`.
 
 ### Required `/goal` shape
 
@@ -1159,6 +1181,7 @@ The goal condition must include:
 - The selected user direction.
 - The relevant direction from all three intent files when loaded and aligned, with roadmap item ids, milestone ids, and doctrine section ids in the surrounding Markdown.
 - For a goal pack item, the selected candidate ids and grouping rationale in the surrounding Markdown.
+- The capability profile used to choose `/goal`, native Codex goal support, or Implementation Goal fallback, recorded in the surrounding Markdown and sidecar.
 - The concrete scope.
 - The repository context needed for execution.
 - Non-goals.
@@ -1213,7 +1236,7 @@ Because the `/goal` evaluator judges only the transcript, the goal must require 
 - `next_input_needed_if_blocked`.
 - Final yes/no statement that the measurable end state is satisfied.
 
-Phase 7, Cross-Model Review, and Phase 8 compare that surfaced proof against the saved Goal Binding and record **Binding Status** as one of `matched`, `missing`, `stale-objective`, `mismatched`, or `not-run`.
+Phase 7, Cross-Model Review, and Phase 8 compare that surfaced proof against the saved Goal Binding and record **Binding Status** as one of `matched`, `missing`, `stale-objective`, `mismatched`, or `not-run`. They also update the structured sidecar files so replay and artifact evals can query the run without scraping prose.
 
 ### Character budget
 
@@ -1419,7 +1442,7 @@ If approved:
 
 Cross-Model Review is an optional post-execution stage for normal Phase 7 runs and autonomous Phase 7-A runs. It lets a second subscription-based local model review the work produced by the primary model before Pathfinder reports the run as clean or lets autonomous mode publish it.
 
-Enable it only when the user explicitly asks for cross-model review in the current run or a local Pathfinder setting enables it. Do not infer it from ordinary approval to run a goal. The default reviewer is the opposite model when known: Codex or ChatGPT primary -> prefer Claude Code reviewer; Claude primary -> prefer Codex or ChatGPT reviewer. A local reviewer setting can override the default reviewer and command.
+Enable it only when the user explicitly asks for cross-model review in the current run or a local Pathfinder setting enables it. Do not infer it from ordinary approval to run a goal. The default reviewer is selected from available capability profiles by review suitability, launch safety, structured-output support, and independence from the primary runtime. If capability data is absent, the compatibility fallback is the opposite model when known: Codex or ChatGPT primary -> prefer Claude Code reviewer; Claude primary -> prefer Codex or ChatGPT reviewer. A local reviewer setting can override the default reviewer and command.
 
 Cross-Model Review triggers only after:
 
@@ -1463,7 +1486,7 @@ The reviewer may make only goal-bounded fixes and related polish. It must not br
 Use a protocol-first local launcher:
 
 1. Use a configured reviewer command when present.
-2. Otherwise infer the opposite-model command: try `claude` for a Claude Code reviewer, or `codex` for a Codex reviewer.
+2. Otherwise choose the safest reviewer command from capability profiles, falling back to the opposite-model command: try `claude` for a Claude Code reviewer, or `codex` for a Codex reviewer.
 3. If no safe command exists or launch fails, leave `07b-cross-model-review.md` as a manual-handoff packet and report the exact prompt to run.
 
 No API, OpenRouter, browser automation, or hidden credentials are used in v1. Launch failure is not a failed Pathfinder run: record `manual-handoff` or `failed-to-launch`, preserve the packet, and let the user run the reviewer manually.
