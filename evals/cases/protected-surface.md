@@ -1,9 +1,7 @@
-# Protected Surface
+# Protected Surface Missing Boundary
 
-eval-id: protected-surface
+case-id: protected-surface
+expected: fail
+expected-failure: protected surface
 eval-fixture: evals/fixtures/protected-surface
-eval-expect: fail
-eval-assertions: protected_surface_boundary
-eval-failure-pattern: missing manual/proof/safety boundary for auth surface
-
-Proves protected work cannot appear without a manual, proof, or safety boundary.
+assertion: protected-surface-boundary

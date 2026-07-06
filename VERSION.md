@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-07-02
+Generated: 2026-07-06
 
-Version: 2.22.0
+Version: 2.23.0
 
 ## Versioning & distribution
 
@@ -15,6 +15,13 @@ mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The Codex marketplace pins `source.ref: main`
 deliberately — a rolling release in which each commit on `main` is the new
 version.
+
+Changes in v2.23.0:
+- Implemented the Bitter Lesson upgrade shell for Pathfinder: the canonical skill now separates the deterministic operating kernel from adaptive strategies and uses a capability model so future stronger models can vary search breadth, question depth, verifier depth, reviewer selection, and goal-output adapters without weakening safety contracts.
+- Added new reference modules: `operating-kernel.md`, `adaptive-strategies.md`, and `capability-model.md`, with drift guards in `scripts/check-skill-consistency.sh` so those concepts stay mirrored in `SKILL.md`.
+- Added structured sidecar contracts beside the human Markdown artifacts: `03-candidates.json`, `03b-verification.json`, `06-goal-binding.json`, `07-run-log.json`, and `08-final-summary.json`. Goal Binding now records the selected capability profile and the chosen `/goal`, native Codex goal, or Implementation Goal fallback.
+- Added deterministic artifact eval infrastructure under `evals/` plus `scripts/check-evals.sh`, covering good goals, missing proof, rejected-candidate laundering, verification downgrade drift, protected surfaces, Track B placeholders, stale intent schema migration, stronger-model short paths, adapter fixtures, reviewer manual handoff, and publication safety. Wired the evals into `scripts/check-all.sh`, CI, CONTRIBUTING, and the pull request template.
+- Modernized interview and verification policy around value-of-information and adaptive verifier depth while preserving the hard safety kernel: untrusted repo content, secret boundaries, execution authorization, credential separation, publication gates, branch-protection self-merge, and irreversible/external hard stops remain deterministic.
 
 Changes in v2.22.0:
 - Upgraded `/pathfinder auto` into doctrine-gated Full Autonomous Mission Mode. Autonomous runs now require the local-only `.pathfinder/doctrine.md` file with marker `pathfinder:doctrine v1`, complete charter/roadmap/doctrine state, a resolved clarity gate, and a per-goal model-depth proof before edits.

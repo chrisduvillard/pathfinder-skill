@@ -1,9 +1,7 @@
 # Missing Proof
 
-eval-id: missing-proof
+case-id: missing-proof
+expected: fail
+expected-failure: missing proof surface
 eval-fixture: evals/fixtures/missing-proof
-eval-expect: fail
-eval-assertions: goal_contract
-eval-failure-pattern: missing proof surface
-
-Proves the goal contract assertion fails when a goal omits its proof surface.
+assertion: goal-contract

@@ -1,99 +1,103 @@
 #!/usr/bin/env bash
 #
-# Deterministic artifact evals for Pathfinder.
-# Reads seeded fixtures as data only. Does not execute fixture repo code.
+# Run deterministic artifact evals for Pathfinder run-trail contracts.
+# Seeded fixtures are copied to a temporary workspace and read as data only.
 
 set -uo pipefail
 
 root="${1:-.}"
-fail=0
-case_count=0
-tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
-
+cases_dir="${2:-$root/evals/cases}"
 lib="$root/evals/harness/eval-lib.sh"
-if [ ! -f "$lib" ]; then
-  echo "::error::missing eval harness: $lib"
-  exit 1
-fi
+fail=0
 
+err() { echo "::error::$*"; fail=1; }
+ok() { echo "ok: $*"; }
+
+[ -f "$lib" ] || { echo "::error::missing eval harness: $lib"; exit 1; }
 # shellcheck source=/dev/null
 . "$lib"
 
-bad_suite() {
-  echo "::error::$*"
-  fail=1
-}
+[ -d "$cases_dir" ] || { echo "::error::missing eval cases directory: $cases_dir"; exit 1; }
 
-run_case() {  # <case-file>
-  local case_file="$1" id fixture expect assertions pattern fixture_path workspace out
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
 
-  id="$(case_value "$case_file" "eval-id")"
-  fixture="$(case_value "$case_file" "eval-fixture")"
-  expect="$(case_value "$case_file" "eval-expect")"
-  assertions="$(case_value "$case_file" "eval-assertions")"
-  pattern="$(case_value "$case_file" "eval-failure-pattern")"
+run_case_file() {
+  local case_file="$1"
+  local expected fixture expected_failure assertions workspace result_output
 
-  if [ -z "$id" ] || [ -z "$fixture" ] || [ -z "$expect" ] || [ -z "$assertions" ]; then
-    bad_suite "case metadata incomplete: $case_file"
-    return
-  fi
+  CASE_ID=""
+  expected=""
+  fixture=""
+  expected_failure=""
+  assertions=""
 
-  fixture_path="$root/$fixture"
-  if [ ! -d "$fixture_path" ]; then
-    bad_suite "case $id fixture missing: $fixture"
-    return
-  fi
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      case-id:*) CASE_ID="${line#case-id: }" ;;
+      eval-id:*) CASE_ID="${line#eval-id: }" ;;
+      expected:*) expected="${line#expected: }" ;;
+      eval-expect:*) expected="${line#eval-expect: }" ;;
+      eval-fixture:*) fixture="${line#eval-fixture: }" ;;
+      expected-failure:*) expected_failure="${line#expected-failure: }" ;;
+      eval-failure-pattern:*) expected_failure="${line#eval-failure-pattern: }" ;;
+      assertion:*) assertions="${assertions}${line#assertion: }"$'\n' ;;
+      eval-assertions:*)
+        for assertion in ${line#eval-assertions: }; do
+          assertions="${assertions}${assertion}"$'\n'
+        done
+        ;;
+    esac
+  done < "$case_file"
 
-  workspace="$tmp/$id"
+  [ -n "$CASE_ID" ] || { err "$(basename "$case_file") missing case-id"; return; }
+  [ "$expected" = "pass" ] || [ "$expected" = "fail" ] || { err "$CASE_ID has invalid expected value: ${expected:-<missing>}"; return; }
+  [ -n "$fixture" ] || { err "$CASE_ID missing eval-fixture"; return; }
+  [ -d "$root/$fixture" ] || { err "$CASE_ID fixture missing: $fixture"; return; }
+  [ -n "$assertions" ] || { err "$CASE_ID has no assertions"; return; }
+
+  workspace="$tmp/$CASE_ID"
   mkdir -p "$workspace"
-  cp -R "$fixture_path/." "$workspace/"
+  cp -R "$root/$fixture/." "$workspace/"
 
-  CASE_ID="$id"
-  CASE_FAIL=0
   ARTIFACT_DIR="$workspace/artifacts"
-  EVAL_TMP="$tmp"
-  out="$tmp/$id.out"
+  REPO_DIR="$workspace/repo"
+  case_errors=""
 
-  {
-    for assertion in $assertions; do
-      run_assertion "$assertion"
-    done
-  } > "$out" 2>&1
+  while IFS= read -r assertion; do
+    [ -n "$assertion" ] || continue
+    run_assertion "$assertion"
+  done < <(printf '%s' "$assertions")
 
-  case "$expect" in
-    pass)
-      if [ "$CASE_FAIL" -eq 0 ]; then
-        echo "ok: eval case passed: $id"
-      else
-        bad_suite "case $id expected pass but failed"
-        cat "$out"
-      fi
-      ;;
-    fail)
-      if [ "$CASE_FAIL" -eq 0 ]; then
-        bad_suite "case $id expected failure but passed"
-      elif [ -n "$pattern" ] && ! grep -Eq "$pattern" "$out"; then
-        bad_suite "case $id failed for the wrong reason; expected /$pattern/"
-        cat "$out"
-      else
-        echo "ok: eval case caught expected failure: $id"
-      fi
-      ;;
-    *)
-      bad_suite "case $id has invalid eval-expect: $expect"
-      ;;
-  esac
+  result_output="$case_errors"
+  if [ "$expected" = "pass" ]; then
+    if [ -z "$result_output" ]; then
+      ok "eval case $CASE_ID passed"
+    else
+      err "case $CASE_ID expected pass but failed"
+      printf '%s' "$result_output"
+    fi
+  else
+    if [ -z "$result_output" ]; then
+      err "case $CASE_ID expected failure but passed cleanly"
+    elif [ -n "$expected_failure" ] && ! printf '%s' "$result_output" | grep -Eq -- "$expected_failure"; then
+      err "case $CASE_ID failed for the wrong reason; expected /$expected_failure/"
+      printf '%s' "$result_output"
+    else
+      ok "eval case $CASE_ID failed for expected reason"
+    fi
+  fi
 }
 
-for case_file in "$root"/evals/cases/*.md; do
+found=0
+for case_file in "$cases_dir"/*.md; do
   [ -f "$case_file" ] || continue
-  case_count=$((case_count + 1))
-  run_case "$case_file"
+  found=1
+  run_case_file "$case_file"
 done
 
-if [ "$case_count" -eq 0 ]; then
-  bad_suite "no eval cases found under $root/evals/cases"
+if [ "$found" -eq 0 ]; then
+  err "no eval cases found in $cases_dir"
 fi
 
 if [ "$fail" -eq 0 ]; then

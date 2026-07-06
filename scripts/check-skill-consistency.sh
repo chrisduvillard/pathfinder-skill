@@ -27,12 +27,15 @@ charter="$root/skills/pathfinder/references/charter-template.md"
 roadmap="$root/skills/pathfinder/references/roadmap-template.md"
 doctrine="$root/skills/pathfinder/references/doctrine-template.md"
 scout="$root/skills/pathfinder/references/scout-brief-template.md"
+kernel="$root/skills/pathfinder/references/operating-kernel.md"
+strategies="$root/skills/pathfinder/references/adaptive-strategies.md"
+capability="$root/skills/pathfinder/references/capability-model.md"
 contributing="$root/CONTRIBUTING.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$doctrine" "$scout" "$contributing"; do
+for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$doctrine" "$scout" "$kernel" "$strategies" "$capability" "$contributing"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -44,9 +47,12 @@ if [ "$fail" -ne 0 ]; then exit "$fail"; fi
 cited_refs="$(grep -oE 'references/[a-z0-9-]+\.md' "$skill" | sort -u)"
 expected_refs="$(printf '%s\n' \
   'references/artifact-structure.md' \
+  'references/adaptive-strategies.md' \
+  'references/capability-model.md' \
   'references/charter-template.md' \
   'references/doctrine-template.md' \
   'references/goal-best-practices.md' \
+  'references/operating-kernel.md' \
   'references/question-funnel-template.md' \
   'references/roadmap-template.md' \
   'references/scout-brief-template.md' \
@@ -257,6 +263,13 @@ for lvl in "#### L1. Domain" "#### L2. Surface" "#### L3. Target" "#### L4. Boun
 done
 
 check_pair "Aligns:   ✓ north-star" "$funnel" "north-star alignment axis"
+check_pair "operating kernel" "$kernel" "operating-kernel reference"
+check_pair "adaptive strategies" "$strategies" "adaptive-strategies reference"
+check_pair "capability model" "$capability" "capability-model reference"
+check_pair "structured sidecar" "$arts" "structured sidecar artifact contract"
+check_pair "value-of-information" "$funnel" "value-of-information interview policy"
+check_pair "capability profile" "$goal" "capability-profile goal adapter contract"
+check_pair "adaptive verifier depth" "$strategies" "adaptive verifier-depth strategy"
 check_pair "in service of <north-star>" "$goal" "charter goal-direction framing"
 check_pair "omit the Direction line when no charter is loaded" "$goal" "conditional charter Direction row"
 check_pair "relevant direction from all three" "$goal" "creator-model goal framing"

@@ -140,8 +140,15 @@ Every run leaves a clean, resumable trail inside the repo:
 ├─ 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
 ├─ 07-run-log.md              progress if the goal is run
 ├─ 07b-cross-model-review.md  optional second-model review packet
-└─ 08-final-summary.md        what was explored, found, and decided
+├─ 08-final-summary.md        what was explored, found, and decided
+├─ 03-candidates.json         machine-readable candidate/search record
+├─ 03b-verification.json      machine-readable verifier decisions
+├─ 06-goal-binding.json       machine-readable goal/adaptor binding
+├─ 07-run-log.json            machine-readable execution ledger
+└─ 08-final-summary.json      machine-readable final ledger
 ```
+
+Markdown is the human view; JSON sidecars are the eval/replay/search view. That keeps the skill readable while giving stronger future models stable contracts to optimize against.
 
 Three private files persist across runs — **`.pathfinder/charter.md`** (stable intent), **`.pathfinder/roadmap.md`** (evolving work), and **`.pathfinder/doctrine.md`** (Project Doctrine: end goal, quality bars, autonomy policy, and hard stops). All are gitignored via `.git/info/exclude`, never committed, and sanitized on every read.
 
@@ -171,11 +178,11 @@ Autonomous mode is the one path that commits and merges without a per-step promp
 
 <br>
 
-- **Reads the source, not the docs.** Five domain scouts (architecture, frontend/product, backend/data, testing/reliability, DX/security) produce located, evidence-graded findings, synthesized into a ranked **Top 5** by impact ÷ effort (`confirmed > inferred > suspected`).
-- **Adversarial verification.** A blind **three-verifier panel** re-checks every Top-5 candidate, downgrades or rejects the weak ones, and surfaces a `Verified:` grade — so you act on confirmed work, not a hunch.
+- **Reads the source, not the docs.** The current default uses five domain scouts (architecture, frontend/product, backend/data, testing/reliability, DX/security) and a ranked **Top 5**, but those are adaptive strategies: future stronger models can search shorter or deeper routes while satisfying the same evidence and sidecar contracts.
+- **Adversarial verification.** The default blind **three-verifier panel** re-checks top candidates, downgrades or rejects the weak ones, and surfaces a `Verified:` grade. Low-risk work can take cheaper paths; protected, autonomous, or contested work uses deeper verification.
 - **Pick the work your way.** Choose from ranked candidate cards, drill down *intent → domain → surface → target → boundaries*, or select several moves as a numbered **goal pack**.
-- **Proof bound to the goal.** Each goal records a Goal Binding; run logs and summaries record the Runtime Boundary and Binding Status, so "done" is checked against the original objective instead of drifting into looks-done prose.
-- **Optional cross-model review.** After a run, Pathfinder can hand the goal, diff, and checks to the opposite local tool (Claude ⇄ Codex) for goal-bounded fixes — recorded in `07b-cross-model-review.md`, or a manual handoff packet if no launcher is available.
+- **Proof bound to the goal.** Each goal records a Goal Binding plus capability profile; run logs and summaries record the Runtime Boundary and Binding Status, so "done" is checked against the original objective instead of drifting into looks-done prose.
+- **Optional cross-model review.** After a run, Pathfinder can hand the goal, diff, and checks to the best available reviewer capability profile for goal-bounded fixes — recorded in `07b-cross-model-review.md`, or a manual handoff packet if no safe launcher is available.
 
 </details>
 
@@ -184,7 +191,7 @@ Autonomous mode is the one path that commits and merges without a per-step promp
 
 <br>
 
-On first use, Pathfinder runs the Doctrine Interview: 8–12 compact questions about purpose, users, success, constraints, non-goals, finished state, future capabilities, product philosophy, quality bars, improvement heuristics, autonomy policy, and hard stops. It keeps asking until no blocking doubt remains (the **clarity gate**). It saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and the deep end-state model to `.pathfinder/doctrine.md`. Later runs reuse all three, show their influence, reconcile them against the current code, and let you refresh or override with `/pathfinder charter`.
+On first use, Pathfinder runs the Doctrine Interview: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, finished state, future capabilities, product philosophy, quality bars, improvement heuristics, autonomy policy, and hard stops. It keeps asking until no blocking doubt remains (the **clarity gate**) and skips questions whose answers would not change the goal, proof, safety, or autonomy decision. It saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and the deep end-state model to `.pathfinder/doctrine.md`. Later runs reuse all three, show their influence, reconcile them against the current code, and let you refresh or override with `/pathfinder charter`.
 
 </details>
 
@@ -203,7 +210,7 @@ Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look a
 
 Contributions are welcome when they keep Pathfinder **safe, bounded, and easy to run** on unfamiliar repos. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md); get usage help in [`SUPPORT.md`](SUPPORT.md); report vulnerabilities privately via [`SECURITY.md`](SECURITY.md), not public issues. Version and changelog live in [`VERSION.md`](VERSION.md).
 
-<sub>CI guards manifest/version consistency, CodeQL scanning, OpenSSF Scorecard, and dependency review.</sub>
+<sub>CI guards manifest/version consistency, artifact evals, CodeQL scanning, OpenSSF Scorecard, and dependency review.</sub>
 
 <br>
 

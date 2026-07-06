@@ -18,7 +18,22 @@
   07-run-log.md
   07b-cross-model-review.md
   08-final-summary.md
+  03-candidates.json
+  03b-verification.json
+  06-goal-binding.json
+  07-run-log.json
+  08-final-summary.json
 ```
+
+Markdown is the human-readable run view. Each JSON file is a structured sidecar used for deterministic evals, replay, search, and future learning. Write a sidecar when the corresponding Markdown artifact exists or is updated; if structured output is unavailable, derive the sidecar from the Markdown artifact before reporting completion.
+
+Structured sidecar purposes:
+
+- `03-candidates.json`: stable candidate ids, source finding ids, evidence grade, expected value, risk/protected areas, proof availability, uncertainty, ranking basis, rejected/refill status, and search stop reason.
+- `03b-verification.json`: verifier depth, lenses run or skipped, verdicts, downgrades, rejects, adjudication, proof gaps, and final candidate status.
+- `06-goal-binding.json`: Goal Binding fields, selected capability profile, chosen goal surface (`/goal`, native Codex goal, or Implementation Goal fallback), character budget, proof requirements, and protected-area obligations.
+- `07-run-log.json`: Runtime Boundary, commands/results, structured completion claim, Binding Status, verifier/reviewer disposition, and publication gates.
+- `08-final-summary.json`: final shipped/blocked/excluded ledger, residual risks, next input needed, and replay pointers to the artifacts above.
 
 If a phase has not been reached yet, create a short placeholder rather than implying completion. `03b-verification.md` follows the same rule (placeholder text: "verification not run yet"). `07b-cross-model-review.md` also follows the placeholder rule (placeholder text: "cross-model review not run").
 
@@ -26,7 +41,7 @@ If a phase has not been reached yet, create a short placeholder rather than impl
 
 `05-user-answers.md` records the user's selections, including any backtracking. For multi-select, it records selected moves, accepted grouping, splits, merges, drops, and execution choice.
 
-`06-goal-command.md` contains either one ready-to-copy `/goal` plus Implementation Goal fallback or a numbered goal pack, where each grouped goal has its own command, fallback, character count, selected candidate ids, and grouping rationale. It also records a **Goal Binding** section for the single goal or for each numbered goal. Goal Binding is supporting metadata, not part of the `/goal` character budget, and uses stable field names: `binding_id`, `objective_source`, `selected_candidate_ids`, `charter_roadmap_refs`, `doctrine_refs`, `scope_fingerprint`, `proof_requirements`, `protected_areas`, `runtime_boundary_required`, and `model_depth_summary` when autonomous mode derived the goal.
+`06-goal-command.md` contains either one ready-to-copy `/goal` plus Implementation Goal fallback or a numbered goal pack, where each grouped goal has its own command, fallback, character count, selected candidate ids, and grouping rationale. It also records a **Goal Binding** section for the single goal or for each numbered goal. Goal Binding is supporting metadata, not part of the `/goal` character budget, and uses stable field names: `binding_id`, `objective_source`, `selected_candidate_ids`, `charter_roadmap_refs`, `doctrine_refs`, `capability_profile`, `scope_fingerprint`, `proof_requirements`, `protected_areas`, `runtime_boundary_required`, and `model_depth_summary` when autonomous mode derived the goal.
 
 `00-session.md` and `07-run-log.md` record a **Runtime Boundary** section before execution or manual handoff. Use the fields `primary_runtime`, `mission_worktree` when autonomous mode runs, `tool_allowlist_enforced`, `sandbox_scope`, `network_access`, `credential_exposure`, `repo_code_execution`, and `pre_execution_consent`. The section discloses authority and exposure; it does not claim Pathfinder can enforce sandboxing that the underlying runtime cannot enforce.
 
