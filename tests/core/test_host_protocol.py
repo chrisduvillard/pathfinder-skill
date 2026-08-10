@@ -115,6 +115,24 @@ class HostProtocolTests(unittest.TestCase):
         result = self.protocol.validate_receipt(receipt, request=self.request())
         self.assertIs(result.outcome, HostOutcome.MANUAL_HANDOFF)
 
+    def test_successful_worktree_receipt_requires_typed_identity(self):
+        request_document = copy.deepcopy(self.request_document)
+        request_document["action_kind"] = "prepare-worktree"
+        request = self.protocol.validate_request(
+            request_document, trusted_binding=trusted_binding(request_document)
+        )
+        receipt = fixture("host-action-receipt.valid.json")
+        receipt["action_kind"] = "prepare-worktree"
+        receipt["evidence"].update(
+            code="worktree-prepared", stable_id="worktree_12345678",
+            worktree_path="/tmp/pathfinder-worktree", branch_id="branch_12345678",
+            branch_name="pathfinder/auto/example",
+        )
+        self.protocol.validate_receipt(receipt, request=request)
+        receipt["evidence"]["worktree_path"] = None
+        with self.assertRaisesRegex(StateError, "schema validation"):
+            self.protocol.validate_receipt(receipt, request=request)
+
 
 if __name__ == "__main__":
     unittest.main()

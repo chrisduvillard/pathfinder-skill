@@ -18,17 +18,23 @@
     "evidence": {"$ref": "#/$defs/evidence"},
     "completed_at": {"type": "string", "format": "date-time"}
   },
+  "allOf": [
+    {"if": {"properties": {"action_kind": {"const": "prepare-worktree"}, "outcome": {"const": "succeeded"}}, "required": ["action_kind", "outcome"]}, "then": {"properties": {"evidence": {"properties": {"stable_id": {"type": "string"}, "worktree_path": {"type": "string", "minLength": 1}, "branch_id": {"type": "string"}, "branch_name": {"type": "string", "minLength": 1}}}}}}
+  ],
   "$defs": {
     "evidence": {
       "type": "object", "additionalProperties": false,
-      "required": ["code", "redacted_summary", "stable_id", "artifact_sha256", "exit_status", "changed_files"],
+      "required": ["code", "redacted_summary", "stable_id", "artifact_sha256", "exit_status", "changed_files", "worktree_path", "branch_id", "branch_name"],
       "properties": {
         "code": {"enum": ["worktree-prepared", "goal-active", "implementation-complete", "verification-passed", "verification-failed", "commit-created", "publication-complete", "manual-handoff", "action-failed", "not-found", "ambiguous"]},
         "redacted_summary": {"type": "string", "maxLength": 2000},
         "stable_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$"},
         "artifact_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
         "exit_status": {"type": ["integer", "null"]},
-        "changed_files": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 512}, "maxItems": 1000, "uniqueItems": true}
+        "changed_files": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 512}, "maxItems": 1000, "uniqueItems": true},
+        "worktree_path": {"type": ["string", "null"]},
+        "branch_id": {"type": ["string", "null"], "pattern": "^branch_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "branch_name": {"type": ["string", "null"]}
       }
     }
   }
