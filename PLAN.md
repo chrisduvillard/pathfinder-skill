@@ -212,8 +212,9 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Neutralize repository hooks for every controller-owned Git command that can trigger them, not just commit and push.
 - [x] Avoid `git pull` as an opaque step; fetch, resolve the exact remote base, verify fast-forward ancestry, then create/rebase deterministically.
 - [x] Run exactly one goal at a time in v1.
+- [ ] Add a real `mission start/next/record/resume` host bridge and at least one non-fake end-to-end mission; the current `MissionOrchestrator` is a library protocol used only by fixture callbacks, not a runnable autonomous entry point.
 - [ ] Checkpoint before and after every external command and state transition.
-- [x] On restart, inspect actual Git/PR state and make the next transition idempotently rather than replaying the last command.
+- [ ] On restart, inspect actual Git/Goal/PR state and make the next transition idempotently rather than replaying the last command. *(Lower-level worktree and PR reuse exists, but no production mission bridge invokes reconciliation after an ambiguous callback crash.)*
 - [x] Detect and reuse an existing branch/PR for the same attempt; never create duplicate PRs after a timeout.
 - [x] Preserve recoverable blocked work without carrying its diff into the next goal.
 - [x] Add safe worktree cleanup/status commands; never delete a dirty or unmerged worktree automatically.
@@ -290,7 +291,160 @@ The first autonomous release should be deliberately narrower than the current pr
 
 ### Implementation status note
 
-The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. Open master items are deliberately deferred rather than implied complete. In particular, command-level crash journaling, fixed cost/token caps, monorepo intent namespaces, exhaustive provenance-injection and GitHub-ruleset fixtures, actual host-generated replays, and real non-interactive host install tests remain future work.
+The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. Open master items are deliberately deferred rather than implied complete. In particular, a real host-to-controller mission bridge, command-level crash journaling, fixed cost/token caps, monorepo intent namespaces, exhaustive provenance-injection and GitHub-ruleset fixtures, a clean post-hardening host replay, and repeatable non-interactive host install tests remain future work.
+
+## Next execution batch — close the real mission-runtime gap
+
+### Investigation findings (2026-08-10)
+
+1. `pathfinder_core/__main__.py` exposes `doctor`, mission `status`/`abandon`, migrations, and prompt artifacts; it has no mission `start`, `next`, `record`, `run`, or `resume` entry point.
+2. `pathfinder_core/mission.py` accepts a `MissionCallbacks` protocol, but the only implementation is `FakeCallbacks` in `tests/integration/test_one_goal_mission.py`.
+3. Codex, Claude, worktree, execution, and GitHub components exist independently, but no production composition root connects them into one mission.
+4. `doctor.runner_available` currently means Python plus schema dependencies are importable; it does not mean an autonomous mission runner is callable.
+5. `unattended_execution_eligible` cannot become true through the current CLI because host enforcement evidence has no input/attestation path and all four enforcement capabilities are hard-coded `unknown`.
+6. Resume tests crash only after state transitions. They do not cover a crash after a callback performs a side effect but before the following checkpoint.
+7. The transition event schema reserves `command-started` and `command-finished`, but `MissionStore` writes only transition events and couples event sequence to state revision, so those event types are not currently usable.
+8. Worktree creation and exact PR lookup have local idempotency primitives; native Goal activation, arbitrary implementation commands, commit, push, PR creation, and CI polling lack one shared durable operation protocol.
+9. The threat model correctly discloses command-boundary journaling as absent, while README and compatibility prose still describe autonomous execution as supported when capabilities are present. The executable path needed to make that condition true does not yet exist.
+10. Official OpenAI Goal guidance documents an interactive host lifecycle (`/goal`, inspect/control, pause/resume/clear), not a Python API the plugin controller can assume. A host bridge must therefore request native Goal actions from the active host and record their results rather than pretending the Python process owns that API.
+
+**Size:** large. This crosses capability reporting, mission/operation schemas, durable storage, CLI protocol, host adapters, integration tests, and public guarantees. A test-only patch would preserve the underlying non-runnable design.
+
+**Goal restated:** from a clean Git fixture and an explicit authorization snapshot, a host can start and resume one controller-owned Goal mission through a documented CLI protocol, with every side-effecting action durably identified and ambiguous crashes stopping for reconciliation instead of being replayed.
+
+**Blast radius:** mission-local ignored state, a dedicated worktree/branch, optional local commits, native Goal state, and eventually one awaiting-review PR. No auth/payment/user database is in scope. Local work is recoverable; commit, push, PR creation, and host Goal mutation are external side effects and require exact reconciliation identities. No live credentials or network calls belong in required tests.
+
+**Assumptions and decisions:**
+
+- Use a stepwise host bridge, not a Python subprocess that launches Codex or Claude. Recommendation: the controller returns one typed action; the active host executes only that action and returns a typed receipt.
+- A missing completion receipt after an action starts is `reconcile-required`, never implicit permission to retry. Retry is allowed only when a concrete adapter proves the prior side effect did not occur.
+- Keep transition revision/events unchanged in the first slice. Add a separate append-only operation receipt contract keyed by stable operation id; do not overload the currently revision-coupled transition sequence.
+- Make a verified local branch the first runnable milestone. Keep credentialed GitHub publication behind the existing separate boundary until local start/resume/crash behavior is green.
+- Keep native Goal creation host-mediated. The controller validates the requested objective and receipt identity but never claims a programmatic host API it cannot access.
+- Preserve `runner_available` for compatibility only if its meaning is made explicit. Add a distinct `mission_runner_available`/host-bridge capability and fail closed until the bridge is actually callable.
+
+**Missing pieces this batch must supply:** a host-attested runtime-boundary input, mission initialization request, typed next-action/result schemas, durable operation intent/result receipts, pending-operation inspection, exact reconciliation outcomes, CLI start/next/record/resume commands, a non-fake local mission integration, and honest capability/docs output.
+
+### Phase A — make availability claims honest
+
+**Goal:** separate “controller library importable” from “autonomous mission bridge runnable” before adding more behavior, so unsupported hosts fail closed for the correct reason.
+
+**Preconditions:** clean worktree; current 83-test baseline and hosted checks green.
+
+#### Sub-prompt R1 — capability truthfulness
+
+- [ ] `[writes code]` Change only `pathfinder_core/capabilities.py`, `tests/core/test_capabilities.py`, `README.md`, `docs/compatibility.md`, and `docs/operator-guide.md`; stop before touching mission execution.
+- [ ] First present a short plan. Imitate the existing capability rows and concise compatibility-table language.
+- [ ] Distinguish controller/schema availability from a callable mission host bridge. Existing `runner_available` consumers must either retain a precisely documented compatibility meaning or receive an additive migration; do not silently redefine it.
+- [ ] Required tests must pass unmodified in meaning. Add a negative assertion proving importable Python/schema dependencies alone cannot report mission execution available.
+- [ ] Before deleting or renaming any field, show `rg -n 'runner_available|unattended_execution_eligible'` evidence for every caller and stop if compatibility cannot be preserved additively.
+- [ ] Expected diff: 60–120 lines. Stop and split documentation from code if it exceeds 150 lines.
+- [ ] Verify with `.venv/bin/python -m unittest tests.core.test_capabilities`, `bash scripts/check-manifests.sh .`, and `bash scripts/check-all.sh .`; the doctor JSON must distinguish controller availability from mission-runner availability.
+- [ ] Append one line to `PROGRESS.md` recording the corrected claim, verification, and any contradiction.
+- [ ] Stop condition: if a callable production mission entry point already exists outside `pathfinder_core/__main__.py`, record its exact path in `PROGRESS.md` and revise this batch instead of adding a second entry point.
+
+**Rollback:** revert the additive capability/docs commit; no mission state is written.
+
+### Phase B — define and persist a crash-safe operation contract
+
+**Goal:** give every side-effecting host/controller action a stable, append-only intent and terminal receipt before wiring the runtime.
+
+**Preconditions:** Phase A passes; no public surface claims the mission runner is available.
+
+#### Sub-prompt R2 — operation schema
+
+- [ ] `[writes code]` Add only `schemas/mission/operation-intent.schema.json`, `schemas/mission/operation-result.schema.json`, focused fixtures, and `tests/contracts/test_mission_schemas.py`; stop before production storage code.
+- [ ] First present a schema plan. Imitate `schemas/mission/event.schema.json` IDs/timestamps and `schemas/artifacts/run-log.schema.json` command evidence.
+- [ ] Cover stable operation id, mission/attempt id, stage, action kind, request hash, authority/runtime snapshot hashes, start time, terminal outcome (`succeeded`, `failed`, `not-observed`, `reconcile-required`), redacted result evidence, and completion time. Unknown fields/enums and duplicate keys must fail.
+- [ ] Do not place secrets, raw environment values, full command output, or forge credentials in receipts.
+- [ ] Existing tests must pass unmodified. No deletion is expected; show zero-caller evidence before replacing the dormant command event types.
+- [ ] Expected diff: 100–150 lines; split intent and result fixtures if larger.
+- [ ] Verify with `.venv/bin/python -m unittest tests.contracts.test_mission_schemas` and JSON parsing over every new fixture.
+- [ ] Append the required result line to `PROGRESS.md`.
+- [ ] Stop condition: if one receipt cannot represent both host-native Goal actions and controller-owned Git/command actions without weakening validation, record the mismatch and split the schemas by authority owner.
+
+#### Sub-prompt R3 — operation journal storage
+
+- [ ] `[writes code]` Add only `pathfinder_core/operations.py` and `tests/core/test_operations.py`; touch `pathfinder_core/storage.py` only if a reusable atomic-read/write primitive is strictly required.
+- [ ] First present a plan. Imitate `MissionStore` atomic writes, duplicate-key rejection, and idempotent equality checks.
+- [ ] Persist immutable `<operation-id>.intent.json` and one terminal `<operation-id>.result.json`; identical retries are no-ops, different retries fail, result-before-intent fails, and started-without-result loads as pending/reconcile-required.
+- [ ] Existing tests must pass unmodified. Show callers before changing any storage primitive.
+- [ ] Expected diff: 100–150 lines per production/test file; split before exceeding the bound.
+- [ ] Verify with `.venv/bin/python -m unittest tests.core.test_operations tests.core.test_state`, including crashes before intent write, after intent write, after result write, and during atomic replacement.
+- [ ] Append the required result line to `PROGRESS.md`.
+- [ ] Stop condition: if the journal needs to mutate or renumber existing transition events, stop and write a migration plan before changing `MissionStore`.
+
+**Rollback:** remove the new operation files/code while preserving any created mission folder for inspection; never auto-delete user worktrees.
+
+### Phase C — expose a host-driven local mission protocol
+
+**Goal:** make one no-publication mission actually startable and resumable without embedding a model subprocess or fake callback implementation.
+
+**Preconditions:** operation contract/storage green; runtime remains unavailable in `doctor` until the final integration test passes.
+
+#### Sub-prompt R4 — typed host action protocol
+
+- [ ] `[writes code]` Add only `pathfinder_core/host_protocol.py`, its schemas under `schemas/mission/`, and `tests/core/test_host_protocol.py`.
+- [ ] First present a plan. Imitate adapter result enums and the mission authorization/runtime schemas.
+- [ ] Define one-action-at-a-time requests for `prepare-worktree`, `activate-goal`, `implement`, `verify`, `commit`, and `publish`, plus typed receipts and the `reconcile-required` response. Repository text may populate evidence fields but never action kind, authority, policy, or credentials.
+- [ ] Existing tests must pass unmodified. No public adapter deletion or rename is allowed.
+- [ ] Expected diff: 100–150 lines per protocol/schema slice.
+- [ ] Verify with `.venv/bin/python -m unittest tests.core.test_host_protocol tests.adapters` and negative forged-operation/authority/runtime fixtures.
+- [ ] Append the required result line to `PROGRESS.md`.
+- [ ] Stop condition: if the active host cannot return a stable native Goal identity, define a manual/non-persistent blocked handoff; do not fabricate an id.
+
+#### Sub-prompt R5 — mission start/next/record/resume CLI
+
+- [ ] `[writes code]` Change only `pathfinder_core/mission.py`, `pathfinder_core/__main__.py`, one new composition module if necessary, `scripts/pathfinder-controller.sh`, and `tests/integration/test_one_goal_mission.py`.
+- [ ] First present a plan and CLI transcript. Imitate existing JSON error output and `MissionStore` transitions.
+- [ ] Add validated `mission start`, `mission next`, `mission record`, and `mission resume/status` behavior for a local, no-publication mission. Each side effect must have an operation intent before the host acts and a validated result before state advances.
+- [ ] A pending operation returns `reconcile-required`; it never calls the action again automatically. Terminal missions remain idempotent. Keep GitHub credentials and live publication out of this slice.
+- [ ] Existing tests must pass unmodified in meaning. Show all `MissionOrchestrator` callers before changing its protocol; retain a compatibility wrapper or migrate every caller explicitly.
+- [ ] Expected diff: 100–150 lines per command/protocol slice; split initialization, next-action, and receipt handling into separate commits.
+- [ ] Verify with `.venv/bin/python -m unittest tests.integration.test_one_goal_mission`, a fixture CLI transcript from start through verified local branch, and `bash scripts/check-all.sh .`.
+- [ ] Append one `PROGRESS.md` line per slice.
+- [ ] Stop condition: if the CLI would need to shell-launch Codex/Claude, access host credentials, or accept raw repository command text, stop and keep mission-runner availability false.
+
+**Rollback:** disable the additive mission commands/capability first, then revert protocol commits. Preserve mission state and worktrees for manual recovery.
+
+### Phase D — prove crash reconciliation before publication
+
+**Goal:** seed every ambiguous boundary and prove at-most-once transition records plus fail-closed external side-effect handling.
+
+**Preconditions:** a real fixture host bridge completes a no-publication mission; no live network or credential dependency.
+
+#### Sub-prompt R6 — crash matrix
+
+- [ ] `[writes code]` Add only focused fixtures and tests under `tests/integration/`, `tests/core/`, and `tests/adapters/`; production changes are forbidden in this sub-prompt.
+- [ ] First present a matrix for crashes before intent, after intent/before action, after side effect/before result, after result/before transition, and after transition for worktree, Goal activation, implementation command, verification, commit, push, PR creation, and CI polling.
+- [ ] Imitate `test_resume_after_every_checkpoint_does_not_duplicate_side_effects`, but use persistent fake backends that retain real-world state across orchestrator instances.
+- [ ] Assert: at most one branch/commit/PR record; no blind replay after ambiguous Goal/command/push state; exact existing PR reuse; bounded check polling; and explicit `reconcile-required` or blocked state when proof is unavailable.
+- [ ] Existing tests must pass unmodified. A failing new fixture is reported against the responsible lower-level phase; do not weaken the expected outcome or patch production here.
+- [ ] No deletion is expected. Expected diff: under 150 lines per side-effect family.
+- [ ] Verify with `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` and `bash scripts/check-all.sh .` on Ubuntu, macOS, and Windows.
+- [ ] Append one result line per side-effect family to `PROGRESS.md`.
+- [ ] Stop condition: when a backend cannot distinguish “did not happen” from “happened but response was lost,” require reconciliation/user inspection; never classify it retry-safe by assumption.
+
+#### Sub-prompt R7 — enable and document the verified bridge
+
+- [ ] `[writes code]` Change only `pathfinder_core/capabilities.py`, `skills/pathfinder/references/routes/autonomous.md`, `README.md`, `docs/compatibility.md`, `docs/operator-guide.md`, `docs/threat-model.md`, and matching focused tests/guards.
+- [ ] First present a guarantee-delta plan. Imitate the current fail-closed capability and guarantee-boundary language.
+- [ ] Report mission-runner availability only when the host bridge exists and the runtime attestation validates. Document the exact start/next/record/resume flow and retain the explicit Goal-only fallback.
+- [ ] Existing tests must pass unmodified in meaning. Show all old “autonomous supported” claims before replacing them.
+- [ ] Expected diff: 80–150 lines; split capability enablement from prose if larger.
+- [ ] Verify with `bash scripts/check-all.sh .`, exact-archive package smoke, one offline synthetic host-bridge replay, and bounded Codex/Claude dogfood that creates no commit, push, PR, or publication.
+- [ ] Append the required result line to `PROGRESS.md`.
+- [ ] Stop condition: if either host cannot reliably load the bridge protocol or return typed receipts, keep that host degraded to Goal-only and document the precise limitation.
+
+**Rollback:** set mission-runner capability unavailable and restore Goal-only routing before reverting implementation. Do not delete saved mission evidence.
+
+### Risks, confidence, and exclusions
+
+**What could go wrong:** (1) a model-generated receipt could be mistaken for controller evidence, so operation authority and hashes must be controller-derived; (2) a host Goal side effect may be impossible to reconcile after a lost response, which must block rather than retry; (3) adding a second journal could drift from mission state unless stable IDs and cross-validation are mandatory.
+
+**Least confidence:** the exact typed-action surface Codex and Claude can both honor from a plugin skill without a dedicated native plugin API. Validate the smallest offline transcript first, then perform bounded host dogfood before changing support claims.
+
+**Do not do:** do not launch agent CLIs as subprocesses, add self-merge, enable live publication, redesign goal packs, renumber existing transition events, migrate intent namespaces, or expand forge support in this batch. Those are separate projects.
 
 ## Risk-ordered implementation phases
 
