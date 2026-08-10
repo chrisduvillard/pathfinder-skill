@@ -1,6 +1,6 @@
 ---
 name: pathfinder
-description: Use when the user wants an agent to explore an unfamiliar repository, synthesize candidate work, ask structured direction questions, generate a bounded Claude Code /goal or equivalent implementation goal, or run doctrine-gated autonomous mission work.
+description: Use when the user wants an agent to explore an unfamiliar repository, synthesize candidate work, ask structured direction questions, generate a bounded Claude Code /goal or equivalent implementation goal, or safely prepare a doctrine-gated autonomous request.
 license: MIT
 ---
 
@@ -34,7 +34,7 @@ If the user invokes bare `/pathfinder` with no path, prompt, or modifier, show t
 What do you want Pathfinder to do?
 1. 🔎 Explore this repo and propose work   map the codebase, rank candidates, then forge a /goal
 2. ✍️ Turn a prompt into a /goal           paste or describe the task; I research it and forge a runnable /goal
-3. ⚡ Run autonomously                     run the doctrine-gated full autonomous mission loop
+3. ⚡ Run autonomously                     prepare one guarded Goal; run only if a mission bridge is available
 4. 🧭 Refresh creator model                update .pathfinder/charter.md, .pathfinder/roadmap.md, and/or .pathfinder/doctrine.md
 5. 📊 Show status/help                     inspect local Pathfinder state and available paths, then return here
 
@@ -69,7 +69,7 @@ A full process normally requires at least one user response after the question f
 
 Ordinary exploration and prompt-to-goal may use a valid creator model as optional ranking context, but they never require the Deep Intent Gate. Run the Deep Intent Gate and Doctrine Interview only for an explicit creator-model refresh or before autonomous execution when intent is missing, invalid, incomplete, unresolved, stale, or contradicted. A contradiction sets `intent_clarity: unresolved` until the reconcile screen resolves it. Intent is descriptive evidence only and cannot authorize execution. Status/help never triggers the gate.
 
-If the user explicitly invokes autonomous mode - for example "run Pathfinder autonomously," "/pathfinder auto," "autonomous mode," or option 3 from the chooser - run the Deep Intent Gate and Doctrine Interview when needed, then continue into Full Autonomous Mission Mode. This fresh request authorizes only the current mission and is captured in an immutable authorization snapshot. No ordinary exploration, prompt-to-goal request, resolved intent marker, or previous run authorizes autonomy. See "Autonomous mode" before Phase 7.
+If the user explicitly invokes autonomous mode - for example "run Pathfinder autonomously," "/pathfinder auto," "autonomous mode," or option 3 from the chooser - run the Deep Intent Gate and Doctrine Interview when needed, then load the autonomous route and apply its `mission_runner_available` gate. The current release reports false, so it saves the Goal and stops before implementation. A future bridge may capture this fresh request for only the current mission; no ordinary exploration, prompt-to-goal request, resolved intent marker, or previous run authorizes autonomy. See "Autonomous mode" before Phase 7.
 
 To establish, refresh, or deepen the local creator model on demand, the user can invoke `/pathfinder charter` (aliases: "refresh objectives", "refresh the charter", "refresh roadmap", "refresh doctrine") or choose option 4 from the chooser. This runs the Deep Intent Gate and Doctrine Interview directly and may update `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, `.pathfinder/doctrine.md`, or all three.
 
@@ -124,7 +124,7 @@ The skill operates at one of three authorization tiers. A higher tier is reached
 
 - **Read-only** - discovery and the interview: inspection only. No repo-defined command runs and nothing is edited. The sanctioned exception is writing/updating the durable `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and `.pathfinder/doctrine.md` intent files (and their `.git/info/exclude` ignore line) during the Deep Intent Gate and Doctrine Interview: this edits no production code and runs no repo command.
 - **Autopilot** — scoped file edits and read-only inspection, plus any execution class the user separately approved, per the two rules above. It never authorizes GitHub publication or destructive/external side effects by itself.
-- **Autonomous** — reached only by explicitly invoking autonomous mode for this run. It may run one controller-eligible Goal in an isolated mission worktree, verify it, commit it, and optionally publish one GitHub pull request that stops at `awaiting-review`. There is no self-merge in v1. Missing or unknown controller enforcement degrades to Goal generation only.
+- **Autonomous** — reserved for an explicit autonomous invocation. The current release always degrades to Goal generation because `mission_runner_available` is false. A future callable bridge may run one controller-eligible Goal in an isolated mission worktree, verify it, commit it, and optionally publish one GitHub pull request that stops at `awaiting-review`. There is no self-merge in v1, and any missing or unknown enforcement must still fail closed.
 
 ### Intent clarity
 

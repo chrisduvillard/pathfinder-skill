@@ -1,5 +1,7 @@
 # Autonomous controller threat model
 
+This is the required threat model for the target mission bridge. The current release does not expose a production mission entry point, so `mission_runner_available` is false and autonomous requests stop at a saved Goal.
+
 ## Protected assets
 
 Pathfinder protects user intent and authorization, repository integrity, local credentials/secrets, the selected base/Goal scope, controller state and evidence, remote branches/PRs, and the user's ability to review or recover work.
@@ -30,7 +32,7 @@ Pathfinder protects user intent and authorization, repository integrity, local c
 
 ## Security invariants
 
-One mission runs one existing Goal sequentially. Unknown policy values fail closed. No persistent clarity marker authorizes work. Autonomous work never edits charter/doctrine policy. Publication stops at `awaiting-review`; absent branch protection does not weaken that state. Worktree cleanup is recoverable and refuses dirty, unmerged, or referenced work.
+A future production bridge may run only one existing Goal sequentially. Unknown policy values fail closed. No persistent clarity marker authorizes work. Autonomous work never edits charter/doctrine policy. Publication stops at `awaiting-review`; absent branch protection does not weaken that state. Worktree cleanup is recoverable and refuses dirty, unmerged, or referenced work.
 
 ## Out of scope for v1
 

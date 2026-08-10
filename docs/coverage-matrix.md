@@ -7,7 +7,7 @@
 | Explicit authority only | authorization schema/mission tests; `authorization-denied` replay |
 | Unknown enforcement blocks work | execution-policy tests; `sandbox-blocked` replay |
 | Repository injection cannot authorize | trust-route policy; `injection-blocked` replay |
-| Crash-safe resume | state recovery/lease tests; every-checkpoint integration crash; `crash-resume` replay |
+| Transition-state resume | state recovery/lease tests; every-transition integration crash; `crash-resume` replay. External-side-effect command journaling remains open. |
 | At most one commit/PR record | mission/GitHub idempotency tests; replay schema maxima |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |

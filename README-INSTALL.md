@@ -76,7 +76,7 @@ The generated `/goal` condition is bounded, measurable, under the character budg
 
 ## Autonomous controller requirements
 
-Goal generation does not require the controller. Autonomous v1 requires Python 3.11+ and the pinned validator packages:
+Goal generation does not require the controller. Python 3.11+ and the pinned validator packages enable controller validation and inspection:
 
 ```bash
 python3 -m venv .venv
@@ -84,7 +84,7 @@ python3 -m venv .venv
 .venv/bin/python -m pathfinder_core doctor --json
 ```
 
-On Windows use `.venv/Scripts/python.exe`. An autonomous run also needs a clean Git repository and host-proven filesystem/process/network/credential isolation. GitHub publication additionally needs `gh` and a publication-only credential. Unknown enforcement degrades to saved-Goal-only behavior.
+On Windows use `.venv/Scripts/python.exe`. `runner_available` is the compatibility name for those controller dependencies; it does not mean a mission can run. Check `mission_runner_available` separately. The current release reports it as false because the production host start/next/record/resume bridge is not implemented, so `/pathfinder auto` degrades to saved-Goal-only behavior. A future autonomous run will also require a clean Git repository and host-proven filesystem/process/network/credential isolation.
 
 Full plugin installs include `scripts/pathfinder-controller.sh`, which resolves the plugin root even while Pathfinder operates on another repository. A manual copy of only `skills/pathfinder/` is Goal-generation-only unless the controller is separately installed.
 

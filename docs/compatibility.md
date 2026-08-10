@@ -1,27 +1,27 @@
 # Pathfinder compatibility and guarantees
 
-Pathfinder can **create a bounded Goal in any readable folder**. Autonomous implementation is deliberately narrower: v1 needs Python 3.11+, a clean Git repository, an enforceable host runtime boundary, and a native/manual Goal handoff. GitHub is optional; without it, a successful mission stops at a verified local branch.
+Pathfinder can **create a bounded Goal in any readable folder**. The current release includes controller schemas, state machinery, adapters, and policy checks, but it does not expose a production host bridge that starts and drives a mission. Consequently every autonomous request currently degrades to a saved Goal. The execution outcomes below remain the fail-closed target contract for that future bridge.
 
 ## Compatibility matrix
 
 | Surface | Goal creation | Autonomous v1 | Notes |
 |---|---|---|---|
-| Codex with native Goals enabled | Supported | Supported when the host supplies enforceable runtime evidence and the Goal backend | Enable `[features] goals = true` or `codex features enable goals`. A missing programmatic backend becomes a manual Goal handoff. |
-| Claude Code 2.1.139+ | Supported | Supported when the controller boundary and safe launcher are available | Uses `/goal`; otherwise returns the exact manual command. |
+| Codex with native Goals enabled | Supported | Goal-only; mission bridge pending | A saved Goal may be activated manually; native Goal availability is not a programmatic Pathfinder mission backend. |
+| Claude Code 2.1.139+ | Supported | Goal-only; mission bridge pending | Returns the exact `/goal` command; the controller does not drive its lifecycle yet. |
 | Older/other agent host | Markdown fallback | Not persistent by default | Receives an `Implementation Goal`; the generic adapter never pretends it is a native Goal. |
-| Linux | Supported | CI configured | The required workflow runs all deterministic checks; the first hosted v3 run is pending publication. |
-| macOS | Supported | Locally tested + CI configured | Local BSD-tool and package checks pass; the required hosted job is pending publication. |
-| Windows Git-Bash/MSYS | Supported | CI configured | The required workflow uses Bash and the Windows Python environment; the first hosted v3 run is pending publication. |
+| Linux | Supported | Controller checks pass in CI | Mission execution remains unavailable. |
+| macOS | Supported | Controller checks pass locally and in CI | Mission execution remains unavailable. |
+| Windows Git-Bash/MSYS | Supported | Controller checks pass in CI | Mission execution remains unavailable. |
 | Non-Git folder | Supported | Goal-only | Discovery and Goal generation work; no branch/commit/PR mission. |
-| Clean Git, no remote | Supported | Verified local branch | Publication is unavailable. |
-| Git with a non-GitHub remote | Supported | Verified local branch | Other forge adapters are deferred. |
-| GitHub remote | Supported | Awaiting-review PR when `gh`, publication-only credentials, and policy are available | Exactly one PR record; no merge method exists in v1. |
+| Clean Git, no remote | Supported | Goal-only | Verified-local-branch execution is a future bridge outcome. |
+| Git with a non-GitHub remote | Supported | Goal-only | Other forge adapters are deferred. |
+| GitHub remote | Supported | Goal-only | Awaiting-review publication is a future bridge outcome; no merge method exists. |
 | Monorepo | Supported | One explicit scope | Bind the scoped root and exact repository commit; cache keys include both. Separate per-package intent namespaces are deferred. |
 | Unknown sandbox/network/credential controls | Supported | Blocked | Pathfinder saves the Goal and reports the missing enforcement. |
 
 ## Guarantee boundary
 
-Pathfinder core mechanically enforces schema validation, duplicate-key rejection, immutable authorization/base bindings, closed state transitions, atomic state/event writes, one active lease, structured command execution, working-directory containment, credential/path deny rules, hook-neutralized controller Git, conservative worktree cleanup, a one-Goal authorization shape, idempotent PR lookup, and no self-merge operation.
+Pathfinder core components mechanically enforce schema validation, duplicate-key rejection, immutable authorization/base bindings, closed state transitions, atomic state/event writes, one active lease, structured command execution, working-directory containment, credential/path deny rules, hook-neutralized controller Git, conservative worktree cleanup, a one-Goal authorization shape, idempotent PR lookup, and no self-merge operation. Those components are not yet composed behind a callable production mission entry point.
 
 Transition-level resume is tested. A process crash after an external side effect but before its next state checkpoint still depends on the callback reconciling real Git/forge state; command-boundary journaling is a documented remaining hardening item.
 

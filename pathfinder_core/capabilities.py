@@ -43,6 +43,11 @@ def probe_capabilities() -> dict:
     python_ok = sys.version_info >= (3, 11)
     schema_ok = importlib.util.find_spec("jsonschema") is not None
     date_format_ok = importlib.util.find_spec("rfc3339_validator") is not None
+    controller_available = python_ok and schema_ok and date_format_ok
+    mission_runner = Capability(
+        Availability.UNAVAILABLE,
+        "production host mission start/next/record/resume bridge is not implemented",
+    )
     capabilities = {
         "controller": Capability(Availability.AVAILABLE, "pathfinder_core importable"),
         "python": Capability(
@@ -60,6 +65,7 @@ def probe_capabilities() -> dict:
         "native_goal": Capability(
             Availability.UNKNOWN, "requires host adapter negotiation"
         ),
+        "mission_runner": mission_runner,
         "filesystem_sandbox": Capability(
             Availability.UNKNOWN, "requires host-provided enforcement evidence"
         ),
@@ -82,6 +88,7 @@ def probe_capabilities() -> dict:
             "controller",
             "python",
             "schema_validation",
+            "mission_runner",
             "git",
             "filesystem_sandbox",
             "process_isolation",
@@ -91,7 +98,14 @@ def probe_capabilities() -> dict:
     )
     return {
         "schema_version": 1,
-        "runner_available": python_ok and schema_ok and date_format_ok,
+        "controller_available": controller_available,
+        # Compatibility alias retained for existing consumers. This reports only
+        # that the local controller dependencies can load, not that a host can run
+        # a mission.
+        "runner_available": controller_available,
+        "mission_runner_available": (
+            mission_runner.status is Availability.AVAILABLE
+        ),
         "unattended_execution_eligible": unattended,
         "capabilities": {name: asdict(value) for name, value in capabilities.items()},
     }

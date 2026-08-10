@@ -27,6 +27,7 @@ fi
 skill="$root/skills/pathfinder/SKILL.md"
 route_dir="$root/skills/pathfinder/references/routes"
 route_prompt="$route_dir/prompt-to-goal.md"
+route_autonomous="$route_dir/autonomous.md"
 route_files=(
   "$route_prompt"
   "$route_dir/discovery.md"
@@ -377,6 +378,17 @@ check_skill_section "## Cross-Model Review" "## Phase 8:" "No API, OpenRouter, b
 check_skill_section "### Phase 7-A:" "### Reporting" "Cross-Model Review" "autonomous cross-model review gate"
 check_skill_section "### Phase 7-A:" "### Reporting" 'clean` or `fixed-clean' "autonomous clean review disposition gate"
 check_skill_section "### Phase 7-A:" "### Reporting" "before commit or publication" "autonomous review before publication"
+
+# Capability truthfulness must live in both the always-loaded router and the
+# autonomous route so a host cannot mistake controller imports for a callable
+# production mission bridge.
+for capability_surface in "$skill" "$route_autonomous"; do
+  if grep -qF -- "mission_runner_available" "$capability_surface"; then
+    verbose_ok "mission-runner availability gate present in ${capability_surface#"$root/"}"
+  else
+    err "mission-runner gate drift: ${capability_surface#"$root/"} must fail closed on mission_runner_available"
+  fi
+done
 
 # (2b) Single-file presence: the Track B "How should I help?" entry-menu screen is
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not

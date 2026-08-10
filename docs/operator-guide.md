@@ -8,17 +8,17 @@ This guide covers local controller state. Commands do not create external side e
 bash scripts/pathfinder-controller.sh doctor --json
 ```
 
-`runner_available` means the controller and schema validator can run. `unattended_execution_eligible` remains false until the host supplies enforceable filesystem, process, network, and credential evidence; the read-only doctor does not probe by running repository code.
+`controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` separately reports whether a production host start/next/record/resume bridge is callable; it is false in the current release. Therefore `unattended_execution_eligible` is also false, independently of the host enforcement capabilities. The read-only doctor does not probe by running repository code.
 
 For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs through `artifacts goal-saved`. The command consumes only a validated `.prompt-goal-request.json` inside an already ignored Pathfinder run directory, verifies the bound Git base and safe path, validates `06-goal-command.md`, emits schema-valid `06-goal-binding.json` and `08-final-summary.json`, renders `08-final-summary.md` with the stable IDs, seals all four final artifacts read-only, and is idempotent for the same request.
 
-## Inspect and resume a mission
+## Inspect persisted mission state
 
 ```bash
 bash scripts/pathfinder-controller.sh mission status --state-dir <mission-state-dir> --json
 ```
 
-To pause, stop the host after its current controller checkpoint. There is no unsafe mid-command pause. Resume with the same mission id, state directory, Goal Binding, authorization snapshot, base commit, worktree, and branch; never start a second mission over the same worktree. The controller reconciles an event written immediately before a crash and returns terminal missions unchanged.
+This command inspects state created by tests, development tooling, or a future host bridge. The current CLI cannot start, advance, or resume a production mission. Do not infer execution availability from a valid state file or manually edit state to advance it. Transition recovery returns terminal states unchanged, but crash reconciliation around external side effects remains future work.
 
 If the lease exists, first confirm no Pathfinder process is using the mission. A stale lease may be reclaimed only through the controller's explicit stale-lease path; never delete a live lease by guesswork.
 
@@ -45,7 +45,7 @@ V1 intent migration changes legacy `clarity:` metadata to `intent_clarity: unres
 
 | Outcome | Action |
 |---|---|
-| `goal-saved` / manual handoff | Activate the printed native Goal or Implementation Goal, then start a fresh explicitly authorized mission if autonomy is wanted. |
+| `goal-saved` / manual handoff | Activate the printed native Goal or Implementation Goal manually. A production autonomous mission cannot be started by this release. |
 | `blocked` before commands | Read the Runtime Boundary/authorization error; supply only the named capability or user decision. Do not edit state JSON. |
 | `blocked` after verification | Inspect the diff, run log, Binding Status, and verifier evidence. Continue in a new explicitly scoped mission. |
 | `awaiting-review` | Review the PR or local branch. Humans own merge. |

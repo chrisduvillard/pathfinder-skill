@@ -2,15 +2,15 @@
 
 ## GitHub repository
 
-`/pathfinder auto` with fresh authorization, a clean exact base, complete intent, enforceable isolation, a native Goal backend, `gh`, and publication-only credentials can reach one idempotent `awaiting-review` PR. It cannot merge.
+`/pathfinder auto` currently saves one bounded Goal and reports that the production mission bridge is unavailable. The controller already contains an idempotent GitHub publisher with no merge operation, but no production entry point composes it into an autonomous run yet.
 
 ## Git repository without a remote
 
-Goal creation works normally. An eligible autonomous mission can prepare, implement, verify, and commit in its mission worktree, then stops at a verified local branch because publication is unavailable.
+Goal creation works normally. The target bridge contract would stop a successful mission at a verified local branch when publication is unavailable; the current release stops at the saved Goal before implementation.
 
 ## Git with a non-GitHub remote
 
-Pathfinder detects Git and the remote type. V1 does not improvise a forge API: it preserves the verified local branch and reports the unsupported publication capability.
+Pathfinder detects Git and the remote type. The future bridge must not improvise a forge API; the current release saves the Goal and reports the unavailable mission runner.
 
 ## Non-Git folder
 
@@ -26,4 +26,4 @@ Auth, payments, permissions, CI/CD, schema/migration, public API, and network wo
 
 ## Runtime enforcement unavailable
 
-If filesystem, process, network, or credential enforcement is unknown, `doctor` reports it and autonomous eligibility is false. Pathfinder saves the bounded Goal and names the missing capability; it does not imitate autonomy in the current checkout.
+`doctor` reports the mission runner as unavailable, so autonomous eligibility is false before host enforcement is considered. Pathfinder saves the bounded Goal and names the missing capability; it does not imitate autonomy in the current checkout.

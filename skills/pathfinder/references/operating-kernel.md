@@ -3,6 +3,8 @@
 The operating kernel is the small stable core that future model improvements must not weaken.
 It is the opposite of a human-authored strategy recipe: it defines authorization, evidence,
 and artifact contracts that every strategy must satisfy.
+The production mission bridge is not implemented in the current release; autonomous contracts
+below constrain that future bridge and do not authorize a host to simulate it.
 
 ## Non-negotiable contracts
 

@@ -1,6 +1,6 @@
 {
   "name": "pathfinder",
-  "description": "Repository pathfinding skill for source-first exploration, fast Goal drafting, and explicitly authorized controller-backed missions.",
+  "description": "Repository pathfinding skill for source-first exploration, fast Goal drafting, and guarded autonomous-request preparation.",
   "owner": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"
@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "pathfinder",
-      "description": "Map the codebase, forge a bounded Goal, or run one controller-backed mission to review.",
+      "description": "Map the codebase, forge a bounded Goal, or prepare one guarded autonomous request.",
       "source": {
         "source": "github",
         "repo": "chrisduvillard/pathfinder-skill",

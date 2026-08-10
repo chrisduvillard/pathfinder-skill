@@ -1,6 +1,6 @@
 ## Autonomous mode (doctrine-gated full mission)
 
-Autonomous mode is **Full Autonomous Mission Mode**. In v1 it runs exactly one explicitly selected Goal through the controller, sequentially. It is reached only by explicit invocation every run and never by persistent intent, normal exploration, or prompt-to-goal. Never auto-escalate into it. If the controller or an enforceable runtime boundary is unavailable, save the Goal and stop before implementation.
+Autonomous mode is the guarded entry to **Full Autonomous Mission Mode**. The current release does not expose the production host bridge needed to start or drive a mission: `mission_runner_available` is false, so it saves exactly one explicitly selected Goal and stops before implementation. It is reached only by explicit invocation every run and never by persistent intent, normal exploration, or prompt-to-goal. Never auto-escalate into it or imitate the target loop in free-form prose.
 
 The Project Doctrine lives in `.pathfinder/doctrine.md` with marker `pathfinder:doctrine v1`. A missing, stale, tracked, or schema-invalid doctrine cannot authorize autonomous work.
 
@@ -22,7 +22,7 @@ Run autonomous mode only when the user explicitly invokes it ("run Pathfinder au
 
 Before execution, require complete, schema-valid, fresh intent with `intent_clarity: resolved`, then compute item-level `execution_eligibility` against the selected base commit and runtime boundary. Neither result replaces the explicit authorization snapshot.
 
-Before any edits, create a mission worktree before edits. Default mission worktree path: `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto`. Fall back only to an ignored local Pathfinder work folder when sibling worktree creation is unavailable, and record the fallback reason in `00-session.md` and `07-run-log.md`. The mission worktree is the only place production files may be edited during Full Autonomous Mission Mode.
+When a future production bridge passes the capability gate, it must create a mission worktree before edits. Default mission worktree path: `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto`. Fall back only to an ignored local Pathfinder work folder when sibling worktree creation is unavailable, and record the fallback reason in `00-session.md` and `07-run-log.md`. The mission worktree is the only place production files may be edited during Full Autonomous Mission Mode.
 
 ### Goal selection from the creator model
 
@@ -58,11 +58,11 @@ Then apply two pre-execution filters **to every candidate regardless of disposit
 
 ### Phase 7-A: Autonomous execution loop (one Goal, sequential v1)
 
-Execute exactly one eligible Goal through `pathfinder_core`; do not imitate the old mission loop in free-form prose. The controller checkpoints every mission-state transition, and the execution layer records the result of each approved command. Callbacks that create Git or forge side effects must reconcile existing state and be idempotent on resume. A mission may update the selected roadmap item's status and evidence, but it never edits .pathfinder/charter.md or .pathfinder/doctrine.md; those require an explicit creator refresh.
+Do not execute this phase unless `doctor --json` reports `mission_runner_available: true`. The current release reports false; save the Goal and stop. The remainder of this section is the inactive target contract for the production bridge, not permission to compose callbacks manually or imitate the mission loop in free-form prose. Once implemented, the bridge must execute exactly one eligible Goal through `pathfinder_core`, checkpoint every mission-state transition, and record every approved command result. Callbacks that create Git or forge side effects must reconcile existing state and be idempotent on resume. A mission may update the selected roadmap item's status and evidence, but it never edits .pathfinder/charter.md or .pathfinder/doctrine.md; those require an explicit creator refresh.
 
 ### Controller handoff
 
-1. Resolve the installed plugin root and run `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh doctor --json`. Claude Code supplies that absolute root as `${CLAUDE_PLUGIN_ROOT}`; other hosts must use the plugin root surfaced with the loaded skill. Never resolve the controller relative to the target repository or assume it contains `pathfinder_core`. If the launcher is absent (for example, a manual skill-only copy), `runner_available` is false, or filesystem, process, network, or credential enforcement is `unknown`/`unavailable`, save the Goal and stop. Never substitute best-effort unattended execution.
+1. Resolve the installed plugin root and run `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh doctor --json`. Claude Code supplies that absolute root as `${CLAUDE_PLUGIN_ROOT}`; other hosts must use the plugin root surfaced with the loaded skill. Never resolve the controller relative to the target repository or assume it contains `pathfinder_core`. Require `mission_runner_available: true`; `runner_available` only means the controller dependencies can load. If the launcher is absent, the mission runner is unavailable, or filesystem, process, network, or credential enforcement is `unknown`/`unavailable`, save the Goal and stop. Never substitute best-effort unattended execution.
 2. Materialize and schema-validate the Goal Binding, immutable authorization snapshot, Runtime Boundary, and initial mission state. The authorization must say `explicit_request: true`, match the mission id, binding id, and exact base commit, cap `max_goals` at one, and cap total PRs at one. Keep creator authorization outside the repository trust boundary.
 3. Acquire the mission lease, create a `MissionStore`, and call `MissionOrchestrator` with the repository/worktree manager, selected native Goal adapter, allowlisted execution adapter, and optional GitHub publisher. Do not advance mission state by editing JSON manually.
 4. Use `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh mission status --state-dir <path> --json` for user-visible status and resume inspection. On resume, reuse the same mission id and let the controller reconcile its append-only events, branch, commit, and PR identity.
@@ -72,7 +72,7 @@ Execute exactly one eligible Goal through `pathfinder_core`; do not imitate the 
 
 Parallel execution, additional queued Goals, and opportunity-derived Goals are unsupported in v1. Save additional work for a later explicit mission.
 
-The controller-owned callbacks perform these operations for the one eligible Goal:
+When the production bridge exists, its controller-owned callbacks perform these operations for the one eligible Goal:
 
 1. **Prepare.** The controller fetches and resolves the exact base commit, creates `pathfinder/auto/<goal-slug>` in the mission worktree, and uses one hook-neutralized Git wrapper. Do not use an opaque `git pull`.
 2. **Runtime Boundary.** Record the controller-verified filesystem, process, network, credential-isolation, tool, and repo-code-execution controls. Unknown enforcement cannot permit unattended execution; disclosure alone is not eligibility.

@@ -1,7 +1,7 @@
 {
   "name": "pathfinder",
   "version": "3.0.0",
-  "description": "Map an unfamiliar repository, create a bounded Goal, or run one explicitly authorized controller-backed mission to review.",
+  "description": "Map an unfamiliar repository, create a bounded Goal, or safely prepare a guarded autonomous request.",
   "author": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"

@@ -1,7 +1,7 @@
 {
   "name": "pathfinder",
   "version": "3.0.0",
-  "description": "Map an unfamiliar repository, create a bounded Goal, or run one explicitly authorized controller-backed mission to review.",
+  "description": "Map an unfamiliar repository, create a bounded Goal, or safely prepare a guarded autonomous request.",
   "author": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Pathfinder",
     "shortDescription": "Map a repo, pick the next move, write the goal",
-    "longDescription": "Pathfinder opens a chooser for source-first repo exploration, a fast prompt-to-goal route, explicitly authorized controller-backed autonomous work in an isolated worktree, creator model refresh, and status/help. It saves a bounded native Goal or fallback implementation goal. /pathfinder auto requires fresh per-run authorization, complete doctrine context, and an enforceable runtime boundary, and stops publication at awaiting-review.",
+    "longDescription": "Pathfinder opens a chooser for source-first repo exploration, a fast prompt-to-goal route, guarded autonomous-request preparation, creator model refresh, and status/help. It saves a bounded native Goal or fallback implementation goal. The current release reports that its production mission bridge is unavailable, so /pathfinder auto saves the Goal and stops before implementation. Future execution remains gated by complete doctrine and an isolated mission worktree.",
     "developerName": "Chris Duvillard",
     "category": "Productivity",
     "capabilities": ["Instructions"],

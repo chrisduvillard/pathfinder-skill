@@ -333,7 +333,7 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 
 #### Sub-prompt R1 — capability truthfulness
 
-- [ ] `[writes code]` Change only `pathfinder_core/capabilities.py`, `tests/core/test_capabilities.py`, `README.md`, `docs/compatibility.md`, and `docs/operator-guide.md`; stop before touching mission execution.
+- [ ] `[writes code]` Change only `pathfinder_core/capabilities.py`, `tests/core/test_capabilities.py`, public capability/autonomy documentation, the autonomous skill route, and its consistency guard; stop before touching mission execution. The caller scan expanded the original file boundary because leaving the route and install/example docs unchanged would preserve a contradictory execution claim.
 - [ ] First present a short plan. Imitate the existing capability rows and concise compatibility-table language.
 - [ ] Distinguish controller/schema availability from a callable mission host bridge. Existing `runner_available` consumers must either retain a precisely documented compatibility meaning or receive an additive migration; do not silently redefine it.
 - [ ] Required tests must pass unmodified in meaning. Add a negative assertion proving importable Python/schema dependencies alone cannot report mission execution available.

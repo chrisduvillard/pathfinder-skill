@@ -31,6 +31,22 @@ class CapabilityTests(unittest.TestCase):
         report = json.loads(capabilities.capabilities_json())
         self.assertEqual(report["schema_version"], 1)
         self.assertIn("runner_available", report)
+        self.assertEqual(report["runner_available"], report["controller_available"])
+        self.assertIn("mission_runner_available", report)
+
+    def test_importable_controller_does_not_imply_mission_runner(self):
+        with mock.patch.object(capabilities.sys, "version_info", (3, 11)), mock.patch(
+            "pathfinder_core.capabilities.importlib.util.find_spec",
+            return_value=object(),
+        ):
+            report = capabilities.probe_capabilities()
+        self.assertTrue(report["controller_available"])
+        self.assertTrue(report["runner_available"])
+        self.assertFalse(report["mission_runner_available"])
+        self.assertEqual(
+            report["capabilities"]["mission_runner"]["status"], "unavailable"
+        )
+        self.assertFalse(report["unattended_execution_eligible"])
 
     def test_missing_datetime_validator_disables_runner(self):
         real_find_spec = capabilities.importlib.util.find_spec
@@ -45,6 +61,7 @@ class CapabilityTests(unittest.TestCase):
             side_effect=without_datetime_validator,
         ):
             report = capabilities.probe_capabilities()
+        self.assertFalse(report["controller_available"])
         self.assertFalse(report["runner_available"])
         self.assertEqual(report["capabilities"]["schema_validation"]["status"], "unavailable")
 
