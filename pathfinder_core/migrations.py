@@ -32,12 +32,12 @@ def _migrate_intent_text(kind: str, text: str) -> str:
         raise StateError(f"{kind} intent marker missing")
     if marker.group(1) != "1":
         raise StateError(f"unsupported {kind} intent version: {marker.group(1)}")
-    if re.search(r"^intent_clarity: (resolved|unresolved)$", text, re.MULTILINE):
+    if re.search(r"^intent_clarity: (resolved|unresolved)(?=\r?$)", text, re.MULTILINE):
         return text
-    legacy = re.search(r"^clarity: (resolved|unresolved)$", text, re.MULTILINE)
+    legacy = re.search(r"^clarity: (resolved|unresolved)(?=\r?$)", text, re.MULTILINE)
     if legacy:
         return text[: legacy.start()] + "intent_clarity: unresolved" + text[legacy.end() :]
-    completion = re.search(r"^completion: (complete|incomplete)$", text, re.MULTILINE)
+    completion = re.search(r"^completion: (complete|incomplete)(?=\r?$)", text, re.MULTILINE)
     if not completion:
         raise StateError(f"{kind} completion metadata missing")
     return text[: completion.end()] + "\nintent_clarity: unresolved" + text[completion.end() :]

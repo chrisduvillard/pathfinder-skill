@@ -35,6 +35,16 @@ class MigrationTests(unittest.TestCase):
             result = migrate_intent(directory, Path(directory) / "backup")
             self.assertEqual(result["changed"], [])
 
+    def test_crlf_intent_migrates_without_losing_line_endings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for kind in ("charter", "roadmap", "doctrine"):
+                path = self.write_intent(directory, kind)
+                path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+            migrate_intent(directory, Path(directory) / "backup")
+            for kind in ("charter", "roadmap", "doctrine"):
+                content = (Path(directory) / ".pathfinder" / f"{kind}.md").read_bytes()
+                self.assertIn(b"intent_clarity: unresolved\r\n", content)
+
     def test_unknown_intent_version_stops_before_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             for kind in ("charter", "roadmap", "doctrine"):

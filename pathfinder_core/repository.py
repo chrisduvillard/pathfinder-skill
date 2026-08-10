@@ -45,6 +45,25 @@ class GitRunner:
         if not binary:
             raise CapabilityError("git is unavailable")
         self.binary = binary
+        config_environment = {
+            key: os.environ[key]
+            for key in ("PATH", "HOME", "USERPROFILE", "SYSTEMROOT")
+            if key in os.environ
+        }
+        config_environment.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"})
+        try:
+            configured = subprocess.run(
+                [self.binary, "-C", str(self.root), "config", "--get", "core.autocrlf"],
+                capture_output=True,
+                text=True,
+                env=config_environment,
+                timeout=3,
+                check=False,
+            )
+            value = configured.stdout.strip().lower() if configured.returncode == 0 else "false"
+        except (OSError, subprocess.SubprocessError):
+            value = "false"
+        self.autocrlf = value if value in {"true", "false", "input"} else "false"
 
     def run(self, args, *, check: bool = True, cwd: Path | None = None) -> GitResult:
         if not args or any(not isinstance(item, str) or "\0" in item for item in args):
@@ -60,6 +79,8 @@ class GitRunner:
             "credential.helper=",
             "-c",
             "core.fsmonitor=false",
+            "-c",
+            f"core.autocrlf={self.autocrlf}",
             *args,
         ]
         environment = {

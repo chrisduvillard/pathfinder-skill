@@ -36,6 +36,18 @@ class RepositoryTests(unittest.TestCase):
             self.assertEqual(result.kind, "git")
             self.assertEqual(result.base_commit, git(root, "rev-parse", "HEAD").stdout.strip())
 
+    def test_clean_crlf_checkout_respects_effective_autocrlf(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            git(Path(directory), "init", str(root))
+            git(root, "config", "user.name", "Pathfinder Test")
+            git(root, "config", "user.email", "pathfinder@example.invalid")
+            git(root, "config", "core.autocrlf", "true")
+            (root / "tracked.txt").write_bytes(b"initial\r\n")
+            git(root, "add", "tracked.txt")
+            git(root, "commit", "-m", "initial")
+            self.assertEqual(probe_repository(root).kind, "git")
+
     def test_dirty_tree_blocks_by_default(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "repo"
