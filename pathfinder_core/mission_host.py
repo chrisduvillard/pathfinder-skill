@@ -2,12 +2,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+import stat
 from pathlib import Path
 
 from .errors import StateError
+from .host_protocol import HostProtocol
+from .operations import OperationJournal
 from .policy import ExecutionPolicy
 from .state import utc_now
 from .storage import MissionLock, MissionStore, read_json, write_atomic
+
+
+ACTION_BY_STATE = {
+    "authorized": ("prepare", "prepare-worktree"),
+    "prepared": ("goal-activation", "activate-goal"),
+    "running": ("implementation", "implement"),
+    "verifying": ("verification", "verify"),
+    "verified": ("commit", "commit"),
+}
+TERMINAL_STATES = {"awaiting-review", "merged", "blocked", "abandoned"}
 
 
 def document_sha256(document: dict) -> str:
@@ -21,6 +34,8 @@ class HostMissionController:
         self.contracts_path = self.root / "contracts"
         self.start_lock_path = self.root / "mission-start.lock"
         self.store = MissionStore(self.root)
+        self.journal = OperationJournal(self.root)
+        self.protocol = HostProtocol()
         self.clock = clock
 
     def _validate_contracts(
@@ -48,11 +63,15 @@ class HostMissionController:
 
     def _write_contract(self, name: str, document: dict) -> None:
         path = self.contracts_path / f"{name}.json"
+        if path.is_symlink():
+            raise StateError(f"mission contract cannot be a symlink: {name}")
         if path.exists():
             if read_json(path) != document:
                 raise StateError(f"different persisted mission contract: {name}")
+            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
             return
         write_atomic(path, document)
+        path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
 
     def _attempt_id(self, binding: dict) -> str:
         seed = f"{binding['mission_id']}:{binding['scope']['base_commit']}"
@@ -121,3 +140,97 @@ class HostMissionController:
             elif state["authorization_id"] != authorization["authorization_id"]:
                 raise StateError("persisted mission authorization identity drift")
             return state
+
+    def _load_contracts(self) -> tuple[dict, dict, dict]:
+        binding = read_json(self.contracts_path / "goal-binding.json")
+        authorization = read_json(self.contracts_path / "authorization.json")
+        boundary = read_json(self.contracts_path / "runtime-boundary.json")
+        self._validate_contracts(binding, authorization, boundary)
+        return binding, authorization, boundary
+
+    def _operation_id(self, state: dict, action_kind: str) -> str:
+        seed = ":".join(
+            (state["mission_id"], state["attempt_id"], str(state["revision"]), action_kind)
+        )
+        return f"operation_{hashlib.sha256(seed.encode()).hexdigest()[:24]}"
+
+    def _documents_for_action(
+        self, state: dict, binding: dict, authorization: dict, boundary: dict,
+        *, started_at: str,
+    ) -> tuple[dict, dict]:
+        stage, action_kind = ACTION_BY_STATE[state["state"]]
+        operation_id = self._operation_id(state, action_kind)
+        action_id = f"action_{hashlib.sha256(operation_id.encode()).hexdigest()[:24]}"
+        context = {
+            "binding_id": state["binding_id"],
+            "goal_id": state["goal_id"],
+            "worktree_id": state["worktree_id"],
+            "input_sha256": document_sha256(
+                {"binding": document_sha256(binding), "revision": state["revision"],
+                 "action_kind": action_kind}
+            ),
+        }
+        trusted = {
+            "operation_id": operation_id,
+            "mission_id": state["mission_id"],
+            "attempt_id": state["attempt_id"],
+            "action_kind": action_kind,
+            "authorization_snapshot_sha256": document_sha256(authorization),
+            "runtime_boundary_sha256": document_sha256(boundary),
+            "context": context,
+        }
+        trusted["request_sha256"] = document_sha256(
+            {**trusted, "action_id": action_id, "requested_at": started_at}
+        )
+        request = {
+            "schema_version": 1, "action_id": action_id, **trusted,
+            "requested_at": started_at,
+        }
+        intent = {
+            "schema_version": 1,
+            **{field: trusted[field] for field in (
+                "operation_id", "mission_id", "attempt_id", "action_kind",
+                "request_sha256", "authorization_snapshot_sha256",
+                "runtime_boundary_sha256",
+            )},
+            "stage": stage,
+            "started_at": started_at,
+        }
+        self.protocol.validate_request(request, trusted_binding=trusted)
+        return request, intent
+
+    def next(self) -> dict:
+        state = self.store.load()
+        if state["state"] == "committed":
+            state = self.store.move("awaiting-review", attempt_id=state["attempt_id"])
+            return {"status": "terminal", "state": state}
+        if state["state"] in TERMINAL_STATES:
+            return {"status": "terminal", "state": state}
+        if state["state"] not in ACTION_BY_STATE:
+            raise StateError(f"mission state has no host action: {state['state']}")
+        binding, authorization, boundary = self._load_contracts()
+        self._validate_state_identity(state, binding, self._attempt_id(binding))
+        operation_id = self._operation_id(
+            state, ACTION_BY_STATE[state["state"]][1]
+        )
+        intent_path = self.journal.operations_path / f"{operation_id}.intent.json"
+        if intent_path.exists():
+            loaded = self.journal.load(operation_id)
+            if loaded["state"] == "pending":
+                return {
+                    "status": "reconcile-required",
+                    "mission_id": state["mission_id"],
+                    "attempt_id": state["attempt_id"],
+                    "operation_id": operation_id,
+                    "action_kind": ACTION_BY_STATE[state["state"]][1],
+                }
+            return {
+                "status": "result-pending-transition",
+                "operation_id": operation_id,
+                "outcome": loaded["disposition"],
+            }
+        request, intent = self._documents_for_action(
+            state, binding, authorization, boundary, started_at=self.clock()
+        )
+        self.journal.record_intent(intent)
+        return {"status": "action-required", "action": request}

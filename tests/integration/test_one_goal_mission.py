@@ -10,7 +10,7 @@ from pathfinder_core.adapters.github import PublicationResult, PublicationState,
 from pathfinder_core.adapters.types import AdapterResult, GoalRecord, GoalStatus
 from pathfinder_core.errors import StateError
 from pathfinder_core.mission import MissionOrchestrator
-from pathfinder_core.mission_host import HostMissionController
+from pathfinder_core.mission_host import HostMissionController, document_sha256
 from pathfinder_core.storage import MissionStore
 from pathfinder_core.__main__ import main
 
@@ -254,6 +254,51 @@ class OneGoalMissionTests(unittest.TestCase):
                 ])
             self.assertEqual(exit_code, 0)
             self.assertEqual(json.loads(output.getvalue())["state"], "authorized")
+
+    def test_next_journals_action_before_return_and_never_blindly_replays(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            controller.start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            first = controller.next()
+            self.assertEqual(first["status"], "action-required")
+            action = first["action"]
+            self.assertEqual(action["action_kind"], "prepare-worktree")
+            self.assertEqual(
+                action["authorization_snapshot_sha256"],
+                document_sha256(local_authorization()),
+            )
+            self.assertEqual(
+                action["runtime_boundary_sha256"], document_sha256(BOUNDARY)
+            )
+            intent_path = root / "operations" / f"{action['operation_id']}.intent.json"
+            self.assertTrue(intent_path.exists())
+            second = HostMissionController(root, clock=lambda: NOW).next()
+            self.assertEqual(second["status"], "reconcile-required")
+            self.assertNotIn("action", second)
+
+    def test_cli_next_returns_one_action_then_requires_reconciliation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            HostMissionController(root, clock=lambda: NOW).start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            output = StringIO()
+            with redirect_stdout(output), redirect_stderr(StringIO()):
+                self.assertEqual(main([
+                    "mission", "next", "--state-dir", str(root), "--json"
+                ]), 0)
+            self.assertEqual(json.loads(output.getvalue())["status"], "action-required")
+            output = StringIO()
+            with redirect_stdout(output), redirect_stderr(StringIO()):
+                self.assertEqual(main([
+                    "mission", "next", "--state-dir", str(root), "--json"
+                ]), 0)
+            self.assertEqual(json.loads(output.getvalue())["status"], "reconcile-required")
 
 
 if __name__ == "__main__":
