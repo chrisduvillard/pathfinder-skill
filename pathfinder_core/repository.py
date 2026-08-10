@@ -50,7 +50,9 @@ class GitRunner:
             for key in ("PATH", "HOME", "USERPROFILE", "SYSTEMROOT")
             if key in os.environ
         }
-        config_environment.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"})
+        # Read only the effective line-ending enum before entering the neutralized
+        # environment. Git for Windows commonly defines it in system config.
+        config_environment["GIT_TERMINAL_PROMPT"] = "0"
         try:
             configured = subprocess.run(
                 [self.binary, "-C", str(self.root), "config", "--get", "core.autocrlf"],

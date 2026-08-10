@@ -14,7 +14,8 @@ class MigrationTests(unittest.TestCase):
     def write_intent(self, root, kind, clarity="clarity: resolved", version=1):
         path = Path(root) / ".pathfinder" / f"{kind}.md"
         path.parent.mkdir(exist_ok=True)
-        path.write_text(f"# {kind}\n<!-- pathfinder:{kind} v{version} -->\ncompletion: complete\n{clarity}\n")
+        content = f"# {kind}\n<!-- pathfinder:{kind} v{version} -->\ncompletion: complete\n{clarity}\n"
+        path.write_bytes(content.encode("utf-8"))
         return path
 
     def test_v1_legacy_intent_migrates_without_granting_clarity(self):
