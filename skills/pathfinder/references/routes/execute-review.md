@@ -34,7 +34,7 @@ Cross-Model Review triggers only after:
 - a completed-claim from the primary model, before Phase 8 writes the final summary; or
 - an ordinary implementation blocker where a second model may find a goal-bounded path forward.
 
-Do not trigger Cross-Model Review after an irreversible/external hard stop, an excluded item, a converted-Open-Question `blocked` item, protected-path drift outside doctrine proof, absolute-danger hit, credential boundary, publication boundary, or user-input/creator-input blocker. `pre-action-approval-required` is also a stop before implementation. A declared `human-review-required` item may still receive normal Cross-Model Review before its awaiting-review PR.
+Do not trigger Cross-Model Review after an irreversible/external hard stop, an excluded item, a converted-Open-Question `blocked` item, protected-path drift outside doctrine proof, absolute-danger hit, credential boundary, publication boundary, or user-input/creator-input blocker. `pre-action-approval-required` is also a stop before implementation. A declared `human-review-required` item may still receive normal Cross-Model Review before its local awaiting-review handoff.
 
 Write `07b-cross-model-review.md` before launching or handing off to a reviewer. The artifact records:
 
@@ -88,6 +88,6 @@ The loop allows two review/fix passes maximum:
 
 For normal Phase 7 runs, Cross-Model Review affects only the final report and any goal-bounded fixes made before it. It does not authorize commits, pushes, PRs, merges, or any external side effect not already approved.
 
-For autonomous Phase 7-A runs, Cross-Model Review runs after the diff-grounded safety gates and verification agent, and before any commit or publication. Autonomous mode may commit, push, or open an awaiting-review PR only after the disposition is `clean` or `fixed-clean` and every controller gate still passes.
+For autonomous Phase 7-A runs, Cross-Model Review runs after the diff-grounded safety gates and verification agent, and before the local commit. Autonomous mode may create that commit only after the disposition is `clean` or `fixed-clean` and every controller gate still passes. The enabled bridge cannot push, publish, or open a PR.
 
 OpenRouter later should become another backend behind this same packet contract, prompt contract, dispositions, two-pass limit, and safety rules. Do not add a separate OpenRouter-specific review path in v1.

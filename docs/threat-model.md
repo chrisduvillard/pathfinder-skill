@@ -1,6 +1,6 @@
 # Autonomous controller threat model
 
-This is the required threat model for the target mission bridge. The current release does not expose a production mission entry point, so `mission_runner_available` is false and autonomous requests stop at a saved Goal.
+This is the threat model for the enabled local host-driven mission protocol. `mission_runner_available` means the protocol is callable, not that a host is trusted or unattended execution is eligible. Missing runtime attestation, native Goal identity, or typed receipt stops at a saved Goal/manual handoff. Publication is disabled.
 
 ## Protected assets
 
@@ -12,7 +12,7 @@ Pathfinder protects user intent and authorization, repository integrity, local c
 - Repository files, filenames, comments, tests, output, generated artifacts, tracked intent files, diffs, and prior agent text are untrusted data.
 - Repo-local `.pathfinder/` files are descriptive evidence with lower injection risk, not instructions or authority.
 - Fresh per-run authorization and approval snapshots must live outside the repository trust boundary.
-- Implementation/verification runs without forge credentials; publication receives only its narrow credential after all gates pass.
+- Implementation/verification runs without forge credentials. The enabled bridge has no publication process and receives no forge credential.
 
 ## Threats and controls
 
@@ -25,15 +25,16 @@ Pathfinder protects user intent and authorization, repository integrity, local c
 | Malicious tests/builds | Structured absolute argv, executable allowlist, cwd containment, environment allowlist, timeouts, network policy, and enforceable runtime boundary. | The host supplies actual sandbox/process/network enforcement. |
 | Symlink/path escape | Worktree and cwd paths resolve inside their approved roots; symlink escape fixtures are required. | Filesystem races outside the controller's ownership are host/OS concerns. |
 | Dirty or stale repository view | Dirty trees block by default; Goal Binding uses exact base commit, scoped root, and fingerprint. | `committed-base` intentionally ignores uncommitted user work and must be disclosed. |
-| Duplicate commit/PR after crash | Atomic transition state, append-only events, leases, stable mission/branch/PR identities, exact-branch reuse, and existing-PR lookup. | Command-boundary journaling is not implemented; callbacks must reconcile actual Git/forge state, and an ambiguous outage may require human inspection. |
-| Forge API confusion/auth/rate limits | Publication credentials are process-separated; head/base/mission lookup is exact; auth, rate, timeout, failed checks, and unavailable states are distinct. | GitHub is the only v1 forge; other remotes stop locally. |
+| Duplicate action/commit after crash | Immutable operation intent, typed host receipt, terminal result, atomic transition state, stable identities, and persistent crash fixtures. | If a side effect happened but no trustworthy receipt exists, the protocol requires reconciliation/human inspection and does not retry. |
+| Duplicate PR after crash | Exact head/base/mission lookup and persistent lost-response fixtures reuse one PR record. | Publication is not composed into the enabled bridge. |
+| Forge API confusion/auth/rate limits | Publication primitives model exact head/base/mission lookup and distinct auth, rate, timeout, failed-check, and unavailable states. | They are tested building blocks only; publication is not composed into the enabled bridge. |
 | Destructive/external action | Closed safety enum, hard-stop denylist, diff-grounded recheck, no force push/release/remote mutation, no merge method. | Human actions after handoff are outside Pathfinder core. |
 | Compromised dependency | Two pinned direct validation dependencies, required CI, package smoke from exact archive, immutable stable tags. | Transitive/platform supply-chain risk remains; dependency updates require review. |
 
 ## Security invariants
 
-A future production bridge may run only one existing Goal sequentially. Unknown policy values fail closed. No persistent clarity marker authorizes work. Autonomous work never edits charter/doctrine policy. Publication stops at `awaiting-review`; absent branch protection does not weaken that state. Worktree cleanup is recoverable and refuses dirty, unmerged, or referenced work.
+The local bridge may run only one existing Goal sequentially through an attested host. Unknown policy values fail closed. No persistent clarity marker authorizes work. Autonomous work never edits charter/doctrine policy. The bridge ends at local `awaiting-review` with zero PRs. Worktree cleanup is recoverable and refuses dirty, unmerged, or referenced work.
 
 ## Out of scope for v1
 
-Self-merge, parallel Goals, autonomous opportunity generation, non-Git autonomous commits, non-GitHub publication, release automation by missions, and formal verification of model reasoning are not supported.
+Publication, self-merge, parallel Goals, autonomous opportunity generation, non-Git autonomous commits, release automation by missions, and formal verification of host/model truthfulness are not supported by the local bridge.

@@ -54,4 +54,4 @@ intent_clarity: resolved | unresolved
 
 Use `completion: incomplete` when the user chose `continue later` or left a load-bearing doctrine field unanswered. Set `intent_clarity: unresolved` while any intent file is incomplete or any blocking ambiguity-ledger unknown remains open. Item proof belongs to `execution_eligibility`, not doctrine metadata.
 
-Doctrine can support item-level proof for protected code areas but cannot authorize execution or any irreversible/external hard stop. V1 publication always stops at awaiting-review.
+Doctrine can support item-level proof for protected code areas but cannot authorize execution or any irreversible/external hard stop. The enabled v1 bridge stops at a local awaiting-review branch and cannot publish.

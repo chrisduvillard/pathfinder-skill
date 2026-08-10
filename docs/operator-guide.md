@@ -1,6 +1,6 @@
 # Pathfinder operator guide
 
-This guide covers local controller state. Commands do not create external side effects unless a separately authorized mission reaches its publication adapter.
+This guide covers local controller state. The enabled mission bridge creates no remote side effects and has no publication action.
 
 ## Inspect capabilities
 
@@ -8,9 +8,22 @@ This guide covers local controller state. Commands do not create external side e
 bash scripts/pathfinder-controller.sh doctor --json
 ```
 
-`controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` separately reports whether a production host start/next/record/resume bridge is callable; it is false in the current release. Therefore `unattended_execution_eligible` is also false, independently of the host enforcement capabilities. The read-only doctor does not probe by running repository code.
+`controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` reports whether the local host-driven start/next/record/resume protocol is callable. `unattended_execution_eligible` remains false in the read-only doctor because it does not fabricate or probe host filesystem, process, network, or credential enforcement. A real host attestation is validated again by `mission start`.
 
 For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs through `artifacts goal-saved`. The command consumes only a validated `.prompt-goal-request.json` inside an already ignored Pathfinder run directory, verifies the bound Git base and safe path, validates `06-goal-command.md`, emits schema-valid `06-goal-binding.json` and `08-final-summary.json`, renders `08-final-summary.md` with the stable IDs, seals all four final artifacts read-only, and is idempotent for the same request.
+
+## Run the local host-driven protocol
+
+Keep the state directory and authorization outside repository trust. Publication targets and PR budgets must be zero. Then use:
+
+```bash
+bash scripts/pathfinder-controller.sh mission start --state-dir <path> --goal-binding <binding.json> --authorization <authorization.json> --runtime-boundary <boundary.json> --json
+bash scripts/pathfinder-controller.sh mission next --state-dir <path> --json
+bash scripts/pathfinder-controller.sh mission record --state-dir <path> --receipt-file <receipt.json> --json
+bash scripts/pathfinder-controller.sh mission resume --state-dir <path> --json
+```
+
+`next` journals one closed action before returning it. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, then local `awaiting-review`. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
 
 ## Inspect persisted mission state
 
@@ -18,7 +31,7 @@ For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs throug
 bash scripts/pathfinder-controller.sh mission status --state-dir <mission-state-dir> --json
 ```
 
-This command inspects state created by tests, development tooling, or a future host bridge. The current CLI cannot start, advance, or resume a production mission. Do not infer execution availability from a valid state file or manually edit state to advance it. Transition recovery returns terminal states unchanged, but crash reconciliation around external side effects remains future work.
+This command inspects state without advancing it. Do not infer unattended eligibility from a valid state file or manually edit state. Terminal missions are idempotent. Local receipt/result/transition crashes recover from persisted evidence; ambiguous side effects without receipts require host reconciliation.
 
 If the lease exists, first confirm no Pathfinder process is using the mission. A stale lease may be reclaimed only through the controller's explicit stale-lease path; never delete a live lease by guesswork.
 
@@ -45,11 +58,11 @@ V1 intent migration changes legacy `clarity:` metadata to `intent_clarity: unres
 
 | Outcome | Action |
 |---|---|
-| `goal-saved` / manual handoff | Activate the printed native Goal or Implementation Goal manually. A production autonomous mission cannot be started by this release. |
+| `goal-saved` / manual handoff | Activate the printed Goal manually, or start a new local mission only when the active host can satisfy every attestation/receipt gate. |
 | `blocked` before commands | Read the Runtime Boundary/authorization error; supply only the named capability or user decision. Do not edit state JSON. |
 | `blocked` after verification | Inspect the diff, run log, Binding Status, and verifier evidence. Continue in a new explicitly scoped mission. |
-| `awaiting-review` | Review the PR or local branch. Humans own merge. |
-| publication auth/rate/timeout failure | Preserve the branch and rerun the same publication identity after the external condition clears; the adapter reuses an existing PR. |
+| `awaiting-review` | Review the local branch. The enabled bridge has no PR or merge operation. |
+| external publication auth/rate/timeout failure | This is outside the enabled bridge. Preserve the local branch and use a separately reviewed publication process. |
 | corrupt or divergent event/state | Preserve the entire state directory and backup; do not hand-edit. Report the first controller error and stop. |
 
 ## Cleanup and retention

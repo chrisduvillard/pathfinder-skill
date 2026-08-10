@@ -2,15 +2,15 @@
 
 ## GitHub repository
 
-`/pathfinder auto` currently saves one bounded Goal and reports that the production mission bridge is unavailable. The controller already contains an idempotent GitHub publisher with no merge operation, but no production entry point composes it into an autonomous run yet.
+`/pathfinder auto` may use the local bridge only when the active host provides real runtime attestation, stable native Goal identity, and typed receipts. It stops at a committed local awaiting-review branch. GitHub publication and merge are disabled; otherwise it saves the Goal/manual handoff.
 
 ## Git repository without a remote
 
-Goal creation works normally. The target bridge contract would stop a successful mission at a verified local branch when publication is unavailable; the current release stops at the saved Goal before implementation.
+Goal creation works normally. An attested host-driven mission can stop at a verified local awaiting-review branch; unsupported hosts stop at the saved Goal.
 
 ## Git with a non-GitHub remote
 
-Pathfinder detects Git and the remote type. The future bridge must not improvise a forge API; the current release saves the Goal and reports the unavailable mission runner.
+Pathfinder detects Git and the remote type. The local bridge does not improvise a forge API: it stops at the local branch regardless of remote type.
 
 ## Non-Git folder
 
@@ -26,4 +26,4 @@ Auth, payments, permissions, CI/CD, schema/migration, public API, and network wo
 
 ## Runtime enforcement unavailable
 
-`doctor` reports the mission runner as unavailable, so autonomous eligibility is false before host enforcement is considered. Pathfinder saves the bounded Goal and names the missing capability; it does not imitate autonomy in the current checkout.
+`doctor` reports the local mission protocol as callable but host enforcement as unknown, so unattended eligibility remains false by default. Without separate trustworthy attestation, Pathfinder saves the bounded Goal and names the missing capability; it does not imitate autonomy in the current checkout.

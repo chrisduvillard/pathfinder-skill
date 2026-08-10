@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Pathfinder",
     "shortDescription": "Map a repo, pick the next move, write the goal",
-    "longDescription": "Pathfinder opens a chooser for source-first repo exploration, a fast prompt-to-goal route, guarded autonomous-request preparation, creator model refresh, and status/help. It saves a bounded native Goal or fallback implementation goal. The current release reports that its production mission bridge is unavailable, so /pathfinder auto saves the Goal and stops before implementation. Future execution remains gated by complete doctrine and an isolated mission worktree.",
+    "longDescription": "Pathfinder opens a chooser for source-first repo exploration, a fast prompt-to-goal route, guarded autonomous local missions, creator model refresh, and status/help. It saves a bounded native Goal or fallback implementation goal. With complete doctrine, the local bridge journals typed start/next/record/resume actions in a mission worktree only when the active host proves its runtime boundary and stable Goal lifecycle; otherwise it stops at a saved Goal. Publication is disabled.",
     "developerName": "Chris Duvillard",
     "category": "Productivity",
     "capabilities": ["Instructions"],

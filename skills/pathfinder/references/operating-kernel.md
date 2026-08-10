@@ -3,8 +3,9 @@
 The operating kernel is the small stable core that future model improvements must not weaken.
 It is the opposite of a human-authored strategy recipe: it defines authorization, evidence,
 and artifact contracts that every strategy must satisfy.
-The production mission bridge is not implemented in the current release; autonomous contracts
-below constrain that future bridge and do not authorize a host to simulate it.
+The local host-driven mission bridge is callable. Its capability flag does not authorize execution:
+the autonomous contracts below still require a trusted runtime attestation, stable native Goal,
+typed receipts, and explicit current-run authority, and publication remains disabled.
 
 ## Non-negotiable contracts
 
@@ -21,7 +22,7 @@ below constrain that future bridge and do not authorize a host to simulate it.
 - Autonomous work requires complete intent, item-level execution eligibility, injection-safe
   provenance, an enforceable runtime boundary, a mission worktree, credential separation,
   verification, and diff review.
-- V1 is sequential, runs one Goal, never self-merges, and ends publication at awaiting-review.
+- V1 is sequential, runs one Goal, creates at most one verified local commit, and ends at awaiting-review with no publication or self-merge.
 - Autonomous missions may update roadmap evidence but never charter or doctrine policy.
 - Every work-producing path must leave a human-readable artifact trail plus the structured sidecar
   files defined in `artifact-structure.md` whenever the corresponding artifact exists.

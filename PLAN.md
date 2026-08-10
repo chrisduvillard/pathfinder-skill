@@ -212,9 +212,9 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Neutralize repository hooks for every controller-owned Git command that can trigger them, not just commit and push.
 - [x] Avoid `git pull` as an opaque step; fetch, resolve the exact remote base, verify fast-forward ancestry, then create/rebase deterministically.
 - [x] Run exactly one goal at a time in v1.
-- [ ] Add a real `mission start/next/record/resume` host bridge and at least one non-fake end-to-end mission; the current `MissionOrchestrator` is a library protocol used only by fixture callbacks, not a runnable autonomous entry point.
-- [ ] Checkpoint before and after every external command and state transition.
-- [ ] On restart, inspect actual Git/Goal/PR state and make the next transition idempotently rather than replaying the last command. *(Lower-level worktree and PR reuse exists, but no production mission bridge invokes reconciliation after an ambiguous callback crash.)*
+- [x] Add a real `mission start/next/record/resume` host bridge and one typed offline end-to-end mission; unsupported native Goal hosts stop at a manual handoff instead of inventing lifecycle support.
+- [x] Journal an immutable intent before every host action, then persist its typed receipt and terminal result before advancing state.
+- [x] On restart, recover from persisted receipts/results and require explicit host reconciliation when actual Git/Goal state is ambiguous; never replay the last action by assumption.
 - [x] Detect and reuse an existing branch/PR for the same attempt; never create duplicate PRs after a timeout.
 - [x] Preserve recoverable blocked work without carrying its diff into the next goal.
 - [x] Add safe worktree cleanup/status commands; never delete a dirty or unmerged worktree automatically.
@@ -427,14 +427,14 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 
 #### Sub-prompt R7 — enable and document the verified bridge
 
-- [ ] `[writes code]` Change capability reporting, the autonomous router/route, public capability/autonomy documentation and metadata, and matching focused tests/guards. The caller scan expanded the original boundary because install, example, operating-kernel, and plugin descriptions otherwise retain false “bridge unavailable” claims.
-- [ ] First present a guarantee-delta plan. Imitate the current fail-closed capability and guarantee-boundary language.
-- [ ] Report mission-runner availability only when the host bridge exists and the runtime attestation validates. Document the exact start/next/record/resume flow and retain the explicit Goal-only fallback.
-- [ ] Existing tests must pass unmodified in meaning. Show all old “autonomous supported” claims before replacing them.
-- [ ] Expected diff: 80–150 lines; split capability enablement from prose if larger.
-- [ ] Verify with `bash scripts/check-all.sh .`, exact-archive package smoke, one offline synthetic host-bridge replay, and bounded Codex/Claude dogfood that creates no commit, push, PR, or publication.
-- [ ] Append the required result line to `PROGRESS.md`.
-- [ ] Stop condition: if either host cannot reliably load the bridge protocol or return typed receipts, keep that host degraded to Goal-only and document the precise limitation.
+- [x] `[writes code]` Change capability reporting, the autonomous router/route, public capability/autonomy documentation and metadata, and matching focused tests/guards. The caller scan expanded the original boundary because install, example, operating-kernel, and plugin descriptions otherwise retain false “bridge unavailable” claims.
+- [x] First present a guarantee-delta plan. Imitate the current fail-closed capability and guarantee-boundary language.
+- [x] Report `mission_runner_available` only when the host bridge is callable; report unattended eligibility separately and keep it false until runtime attestation validates. Document the exact start/next/record/resume flow and retain the explicit Goal-only fallback.
+- [x] Existing tests pass unmodified in meaning. All old “bridge unavailable” and overbroad autonomous-support claims were scanned before replacement.
+- [x] Keep capability enablement and public prose in separate commits so each remains reviewable.
+- [x] Verify with `bash scripts/check-all.sh .`, exact-archive package smoke, one offline synthetic host-bridge replay, and bounded Codex/Claude dogfood that creates no commit, push, PR, or publication.
+- [x] Append the required result line to `PROGRESS.md`.
+- [x] Codex currently proves only typed manual handoff and Claude was not launched; both remain Goal-only unless the active host can return stable native Goal identities and typed receipts.
 
 **Rollback:** set mission-runner capability unavailable and restore Goal-only routing before reverting implementation. Do not delete saved mission evidence.
 

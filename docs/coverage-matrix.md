@@ -7,8 +7,8 @@
 | Explicit authority only | authorization schema/mission tests; `authorization-denied` replay |
 | Unknown enforcement blocks work | execution-policy tests; `sandbox-blocked` replay |
 | Repository injection cannot authorize | trust-route policy; `injection-blocked` replay |
-| Transition-state resume | state recovery/lease tests; every-transition integration crash; `crash-resume` replay. External-side-effect command journaling remains open. |
-| At most one commit/PR record | mission/GitHub idempotency tests; replay schema maxima |
+| Local action crash recovery | intent/receipt/result/transition crash matrix for all five host actions; `host-bridge-local` replay; ambiguous missing receipts require reconciliation |
+| One local commit and zero PRs in the enabled bridge | mission idempotency tests; `host-bridge-local` replay maxima; separate GitHub primitive fixtures |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |
 | Safe Git/worktrees | dirty-tree, hook-neutralization, symlink escape, and cleanup-refusal tests |

@@ -27,7 +27,7 @@
 
 <br>
 
-Pathfinder is an **agent skill plus a deterministic controller** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks useful next moves, asks only the questions that affect the outcome, and forges a bounded, verifiable **Goal**. The controller currently validates artifacts, policy, and persisted mission state. The production host bridge that starts and drives an autonomous mission is not implemented yet, so autonomous requests currently stop at a saved Goal instead of claiming execution.
+Pathfinder is an **agent skill plus a deterministic controller** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks useful next moves, asks only the questions that affect the outcome, and forges a bounded, verifiable **Goal**. Its local host-driven bridge can journal one typed action at a time through a verified local branch. It runs only when the active host can prove its runtime boundary, expose a stable native Goal, and return truthful typed receipts; otherwise Pathfinder stops at the saved Goal/manual handoff.
 
 No micro-managing exploration. No guessing where to start.
 
@@ -73,7 +73,7 @@ Bare **`/pathfinder`** opens a chooser so you can see every path before anything
 |:--|:--|:--|
 | 🗺️ **Explore** | you're new to the repo and want the best next move | `Use the pathfinder skill on this repository.` |
 | 🎯 **Prompt&#8209;to&#8209;goal** | you already know the task | `Pathfinder, turn this into a /goal: <the work>` |
-| ⚡ **Autonomous**<br><sub>*(bridge pending)*</sub> | you want a bounded Goal prepared for the future guarded runner | `Run Pathfinder autonomously on this repository.` |
+| ⚡ **Autonomous**<br><sub>*(host-attested)*</sub> | you want one bounded Goal driven to a local review branch | `Run Pathfinder autonomously on this repository.` |
 
 <br>
 
@@ -102,7 +102,7 @@ flowchart LR
 Pathfinder, turn this into a /goal: stop the dashboard empty-state from crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** is the explicitly gated `/pathfinder auto` route. Its target contract is one sequential Goal: **worktree → implement → verify → commit → optional GitHub PR → awaiting review**. The current release reports `mission_runner_available: false`; it saves the Goal and stops before implementation. A future bridge must still bind authority to the current request and base commit, enforce isolation, and never activate from saved intent, derive an unbounded backlog, edit charter/doctrine policy, or self-merge. → [Compatibility](docs/compatibility.md) · [Safety](#-safety)
+**⚡ Autonomous** is the explicitly gated `/pathfinder auto` route. The enabled bridge is one sequential local Goal: **worktree → native Goal → implement → verify → commit → local awaiting review**. It binds authority to the current request and base commit and journals each intent/receipt/result before advancing. It never activates from saved intent, derives an unbounded backlog, edits charter/doctrine policy, publishes, or self-merges. Unknown enforcement, missing native Goal identity, or an ambiguous action response stops or requires reconciliation. → [Compatibility](docs/compatibility.md) · [Safety](#-safety)
 
 <br>
 
@@ -164,15 +164,15 @@ Three private files persist across runs — **`.pathfinder/charter.md`** (stable
 
 Every repo file is treated as **untrusted data**. Pathfinder won't run scripts, install packages, read secrets, or push changes without your say-so, and it redacts tokens and private paths from its artifacts.
 
-The future autonomous mission bridge is the only path designed to commit and open a PR without a per-step prompt. It is unavailable in the current release. When implemented, all of these rules still apply:
+The local autonomous bridge is the only path designed to commit without a per-step prompt. It cannot publish or open a PR. It is enabled only for an attested host, and all of these rules apply:
 
 - 🧭 **Fresh authority is required** — intent guides selection but every run needs an explicit `/pathfinder auto` request.
-- 🌿 **Autonomous work is isolated** — `/pathfinder auto` creates a mission worktree before edits, using `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto>` when possible.
+- 🌿 **Autonomous work is isolated** — the attested host creates a mission worktree before edits, using `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto>` when possible.
 - 🔐 **Irreversible/external hard stops stay blocked** — secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, and real-world external side effects.
 - 🧪 **Protected areas need proof** — auth, payments, CI/CD, schemas, migrations, public APIs, and network-related code require item-level eligibility, enforceable isolation, scoped proof, verification, and diff review.
 - 🧱 **The trust boundary holds** — repo content can't redirect the goal or widen authorization.
 - 🔑 **Credentials stay out** of the environment while repo code runs.
-- ✅ **No self-merge in v1** — any future published change must land as an awaiting-review PR.
+- ✅ **No publication or self-merge** — the enabled bridge stops at a local awaiting-review branch with no PR.
 - 🛑 **Unknown enforcement blocks autonomy** — Pathfinder falls back to a saved Goal instead of claiming best-effort isolation.
 
 <br>
@@ -197,7 +197,7 @@ The future autonomous mission bridge is the only path designed to commit and ope
 
 <br>
 
-Full exploration and autonomous-request preparation establish or reconcile creator intent when needed: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, future work, product philosophy, quality bars, autonomy policy, and hard stops. Prompt-to-goal deliberately skips this interview for ordinary Goal creation. Pathfinder saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and Project Doctrine to `.pathfinder/doctrine.md`. Intent improves selection but never authorizes execution; a future autonomous run will still need a fresh explicit request.
+Full exploration and autonomous-request preparation establish or reconcile creator intent when needed: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, future work, product philosophy, quality bars, autonomy policy, and hard stops. Prompt-to-goal deliberately skips this interview for ordinary Goal creation. Pathfinder saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and Project Doctrine to `.pathfinder/doctrine.md`. Intent improves selection but never authorizes execution; every local autonomous run still needs a fresh explicit request.
 
 </details>
 

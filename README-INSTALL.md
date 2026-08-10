@@ -84,7 +84,7 @@ python3 -m venv .venv
 .venv/bin/python -m pathfinder_core doctor --json
 ```
 
-On Windows use `.venv/Scripts/python.exe`. `runner_available` is the compatibility name for those controller dependencies; it does not mean a mission can run. Check `mission_runner_available` separately. The current release reports it as false because the production host start/next/record/resume bridge is not implemented, so `/pathfinder auto` degrades to saved-Goal-only behavior. A future autonomous run will also require a clean Git repository and host-proven filesystem/process/network/credential isolation.
+On Windows use `.venv/Scripts/python.exe`. `runner_available` is the compatibility name for those controller dependencies. `mission_runner_available` separately reports the callable local start/next/record/resume protocol. It does not grant unattended eligibility: an actual run still requires a clean Git repository, a trusted authorization snapshot, host-proven filesystem/process/network/credential isolation, a stable native Goal identity, and typed receipts. Missing evidence degrades to saved-Goal/manual-handoff behavior; publication is disabled.
 
 Full plugin installs include `scripts/pathfinder-controller.sh`, which resolves the plugin root even while Pathfinder operates on another repository. A manual copy of only `skills/pathfinder/` is Goal-generation-only unless the controller is separately installed.
 

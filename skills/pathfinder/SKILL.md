@@ -34,7 +34,7 @@ If the user invokes bare `/pathfinder` with no path, prompt, or modifier, show t
 What do you want Pathfinder to do?
 1. 🔎 Explore this repo and propose work   map the codebase, rank candidates, then forge a /goal
 2. ✍️ Turn a prompt into a /goal           paste or describe the task; I research it and forge a runnable /goal
-3. ⚡ Run autonomously                     prepare one guarded Goal; run only if a mission bridge is available
+3. ⚡ Run autonomously                     prepare one guarded Goal; run only with a callable bridge and attested host
 4. 🧭 Refresh creator model                update .pathfinder/charter.md, .pathfinder/roadmap.md, and/or .pathfinder/doctrine.md
 5. 📊 Show status/help                     inspect local Pathfinder state and available paths, then return here
 
@@ -328,10 +328,10 @@ Stop and ask before:
 - Reformatting large unrelated areas.
 - Refactoring across many modules.
 - Changing generated files by hand.
-- Committing, creating/changing remotes, creating GitHub repositories, pushing, publishing, releasing, changing repository visibility, force-pushing, deleting branches/tags, or changing default branches except for the commit/push/PR operations specifically authorized by autonomous mode.
+- Committing, creating/changing remotes, creating GitHub repositories, pushing, publishing, releasing, changing repository visibility, force-pushing, deleting branches/tags, or changing default branches, except for the single verified local commit specifically authorized by the enabled autonomous bridge.
 - Continuing after three failed implementation loops.
 
-In autonomous mode a fresh explicit invocation may authorize one controller-eligible Goal to be committed, pushed, and opened as an awaiting-review pull request. **Conditional self-merge is not authorized in v1**; absent branch protection produces awaiting-review. Protected code areas still require doctrine alignment, item-level execution eligibility, scoped verification, and diff safety gates. Nothing waives the irreversible/external hard stops: secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, deleting branches/tags, and real-world external side effects remain blocked. The trust boundary and irreversible/external hard-stop carve-out are never waived.
+In autonomous mode a fresh explicit invocation may authorize one controller-eligible Goal to reach one verified commit on a local awaiting-review branch. The enabled bridge cannot push, open a pull request, publish, release, or merge. **Conditional self-merge is not authorized in v1.** Protected code areas still require doctrine alignment, item-level execution eligibility, scoped verification, and diff safety gates. Nothing waives the irreversible/external hard stops: secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, deleting branches/tags, and real-world external side effects remain blocked. The trust boundary and irreversible/external hard-stop carve-out are never waived.
 
 ## Style
 

@@ -122,8 +122,8 @@ The normal screens are below. Keep them compact: each screen mirrors the best in
 ### Screen 10 - Autonomy policy and manual-approval boundaries
 
 - Purpose: define what may run unattended, what needs approval, and what must never run unattended.
-- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, branch-protection/self-merge rules, and irreversible/external hard stops.
-- Options: 1) autonomous for doctrine-proven roadmap and opportunity-scout items, 2) awaiting-review PR for work without branch-protection self-merge authority, 3) never unattended for irreversible/external hard stops, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
+- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, zero-publication rules, and irreversible/external hard stops.
+- Options: 1) autonomous for doctrine-proven roadmap items on a local review branch, 2) human review before any external publication, 3) never unattended for irreversible/external hard stops, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
 - Agent recommends: the strictest option that still permits safe low-risk work.
 - Escape: `None of these - describe autonomy policy yourself`, or `continue later`.
 
