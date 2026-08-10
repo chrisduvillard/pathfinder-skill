@@ -34,7 +34,7 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(report["runner_available"], report["controller_available"])
         self.assertIn("mission_runner_available", report)
 
-    def test_importable_controller_does_not_imply_mission_runner(self):
+    def test_callable_mission_runner_does_not_imply_unattended_execution(self):
         with mock.patch.object(capabilities.sys, "version_info", (3, 11)), mock.patch(
             "pathfinder_core.capabilities.importlib.util.find_spec",
             return_value=object(),
@@ -42,9 +42,9 @@ class CapabilityTests(unittest.TestCase):
             report = capabilities.probe_capabilities()
         self.assertTrue(report["controller_available"])
         self.assertTrue(report["runner_available"])
-        self.assertFalse(report["mission_runner_available"])
+        self.assertTrue(report["mission_runner_available"])
         self.assertEqual(
-            report["capabilities"]["mission_runner"]["status"], "unavailable"
+            report["capabilities"]["mission_runner"]["status"], "available"
         )
         self.assertFalse(report["unattended_execution_eligible"])
 
@@ -63,6 +63,7 @@ class CapabilityTests(unittest.TestCase):
             report = capabilities.probe_capabilities()
         self.assertFalse(report["controller_available"])
         self.assertFalse(report["runner_available"])
+        self.assertFalse(report["mission_runner_available"])
         self.assertEqual(report["capabilities"]["schema_validation"]["status"], "unavailable")
 
     def test_doctor_json_exits_zero(self):

@@ -45,8 +45,10 @@ def probe_capabilities() -> dict:
     date_format_ok = importlib.util.find_spec("rfc3339_validator") is not None
     controller_available = python_ok and schema_ok and date_format_ok
     mission_runner = Capability(
-        Availability.UNAVAILABLE,
-        "production host mission start/next/record/resume bridge is not implemented",
+        Availability.AVAILABLE if controller_available else Availability.UNAVAILABLE,
+        "local host-driven start/next/record/resume bridge is callable; host runtime attestation required"
+        if controller_available
+        else "controller dependencies are unavailable",
     )
     capabilities = {
         "controller": Capability(Availability.AVAILABLE, "pathfinder_core importable"),

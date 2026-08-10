@@ -7,7 +7,7 @@
   "properties": {
     "schema_version": {"const": 1},
     "replay_id": {"type": "string", "pattern": "^replay_[a-z0-9][a-z0-9_-]{7,63}$"},
-    "scenario": {"enum": ["prompt-fast-path", "authorization-denied", "sandbox-blocked", "injection-blocked", "crash-resume", "awaiting-review"]},
+    "scenario": {"enum": ["prompt-fast-path", "authorization-denied", "sandbox-blocked", "injection-blocked", "crash-resume", "awaiting-review", "host-bridge-local"]},
     "recorded_at": {"type": "string", "format": "date-time"},
     "explicit_authorization": {"type": "boolean"},
     "execution_eligible": {"type": "boolean"},
@@ -28,6 +28,7 @@
     {"if": {"properties": {"scenario": {"const": "authorization-denied"}}}, "then": {"properties": {"explicit_authorization": {"const": false}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
     {"if": {"properties": {"scenario": {"const": "sandbox-blocked"}}}, "then": {"properties": {"execution_eligible": {"const": false}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
     {"if": {"properties": {"scenario": {"const": "injection-blocked"}}}, "then": {"properties": {"injection_detected": {"const": true}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
-    {"if": {"properties": {"scenario": {"enum": ["crash-resume", "awaiting-review"]}}}, "then": {"properties": {"explicit_authorization": {"const": true}, "execution_eligible": {"const": true}, "commit_records": {"const": 1}, "pr_records": {"const": 1}, "final_state": {"const": "awaiting-review"}}}}
+    {"if": {"properties": {"scenario": {"enum": ["crash-resume", "awaiting-review"]}}}, "then": {"properties": {"explicit_authorization": {"const": true}, "execution_eligible": {"const": true}, "commit_records": {"const": 1}, "pr_records": {"const": 1}, "final_state": {"const": "awaiting-review"}}}},
+    {"if": {"properties": {"scenario": {"const": "host-bridge-local"}}}, "then": {"properties": {"explicit_authorization": {"const": true}, "execution_eligible": {"const": true}, "commit_records": {"const": 1}, "pr_records": {"const": 0}, "final_state": {"const": "awaiting-review"}}}}
   ]
 }

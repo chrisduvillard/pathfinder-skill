@@ -427,7 +427,7 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 
 #### Sub-prompt R7 — enable and document the verified bridge
 
-- [ ] `[writes code]` Change only `pathfinder_core/capabilities.py`, `skills/pathfinder/references/routes/autonomous.md`, `README.md`, `docs/compatibility.md`, `docs/operator-guide.md`, `docs/threat-model.md`, and matching focused tests/guards.
+- [ ] `[writes code]` Change capability reporting, the autonomous router/route, public capability/autonomy documentation and metadata, and matching focused tests/guards. The caller scan expanded the original boundary because install, example, operating-kernel, and plugin descriptions otherwise retain false “bridge unavailable” claims.
 - [ ] First present a guarantee-delta plan. Imitate the current fail-closed capability and guarantee-boundary language.
 - [ ] Report mission-runner availability only when the host bridge exists and the runtime attestation validates. Document the exact start/next/record/resume flow and retain the explicit Goal-only fallback.
 - [ ] Existing tests must pass unmodified in meaning. Show all old “autonomous supported” claims before replacing them.
