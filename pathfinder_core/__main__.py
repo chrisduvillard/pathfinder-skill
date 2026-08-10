@@ -3,12 +3,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from .artifacts import write_saved_prompt_goal
 from .capabilities import capabilities_json, probe_capabilities
 from .errors import PathfinderError, StateError
 from .migrations import migrate_intent, migrate_mission
-from .storage import MissionStore
+from .mission_host import HostMissionController
+from .storage import MissionStore, read_json
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -18,6 +20,12 @@ def _parser() -> argparse.ArgumentParser:
     doctor.add_argument("--json", action="store_true", dest="as_json")
     mission = commands.add_parser("mission", help="inspect controller mission state")
     mission_commands = mission.add_subparsers(dest="mission_command", required=True)
+    start = mission_commands.add_parser("start", help="initialize a local host-driven mission")
+    start.add_argument("--state-dir", required=True)
+    start.add_argument("--goal-binding", required=True)
+    start.add_argument("--authorization", required=True)
+    start.add_argument("--runtime-boundary", required=True)
+    start.add_argument("--json", action="store_true", dest="as_json")
     status = mission_commands.add_parser("status", help="show current mission state")
     status.add_argument("--state-dir", required=True)
     status.add_argument("--json", action="store_true", dest="as_json")
@@ -78,6 +86,20 @@ def main(argv=None) -> int:
                 print(f"goal: {state['goal_id']}")
                 print(f"branch: {state['branch_name'] or 'not prepared'}")
                 print(f"pull_request: {state['pr_url'] or 'none'}")
+            return 0
+        if args.command == "mission" and args.mission_command == "start":
+            state = HostMissionController(args.state_dir).start(
+                binding=read_json(Path(args.goal_binding)),
+                authorization=read_json(Path(args.authorization)),
+                runtime_boundary=read_json(Path(args.runtime_boundary)),
+            )
+            if args.as_json:
+                print(json.dumps(state, indent=2, sort_keys=True))
+            else:
+                print(f"mission: {state['mission_id']}")
+                print(f"state: {state['state']}")
+                print(f"attempt: {state['attempt_id']}")
+                print("publication: local-only")
             return 0
         if args.command == "mission" and args.mission_command == "abandon":
             store = MissionStore(args.state_dir)

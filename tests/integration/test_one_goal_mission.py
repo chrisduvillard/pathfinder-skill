@@ -1,13 +1,16 @@
 import tempfile
 import unittest
+import json
 from pathlib import Path
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+from unittest import mock
 
 from pathfinder_core.adapters.github import PublicationResult, PublicationState, PullRequest
 from pathfinder_core.adapters.types import AdapterResult, GoalRecord, GoalStatus
 from pathfinder_core.errors import StateError
 from pathfinder_core.mission import MissionOrchestrator
+from pathfinder_core.mission_host import HostMissionController
 from pathfinder_core.storage import MissionStore
 from pathfinder_core.__main__ import main
 
@@ -36,6 +39,39 @@ def authorization(explicit=True):
         "limits": {"max_goals": 1, "max_attempts": 2, "max_wall_seconds": 3600, "max_total_prs": 1},
         "publication_target": "github-awaiting-review", "snapshot_sha256": HASH,
     }
+
+
+def local_authorization():
+    result = authorization()
+    result["publication_target"] = "local-branch"
+    result["limits"]["max_total_prs"] = 0
+    return result
+
+
+def goal_binding():
+    return {
+        "schema_version": 1, "binding_id": "binding_12345678",
+        "mission_id": "mission_12345678", "goal_id": "goal_12345678",
+        "objective": "complete one bounded goal", "objective_source": "roadmap-item",
+        "selected_candidate_ids": [],
+        "intent_snapshot": {
+            "charter": {"version": 1, "sha256": HASH},
+            "roadmap": {"version": 1, "sha256": HASH},
+            "doctrine": {"version": 1, "sha256": HASH},
+        },
+        "capabilities": {"controller": "available"},
+        "scope": {"repository_id": "fixture", "scoped_root": ".", "base_commit": COMMIT,
+                  "dirty_policy": "block", "fingerprint": HASH},
+        "proof_requirements": ["fixture verification passes"], "protected_surfaces": [],
+        "runtime_boundary_required": True,
+        "budgets": {"max_goals": 1, "max_attempts_per_goal": 2,
+                    "max_wall_seconds": 3600, "max_open_prs": 0, "max_total_prs": 0},
+        "created_at": NOW,
+    }
+
+
+def write_document(path, document):
+    path.write_text(json.dumps(document))
 
 
 BOUNDARY = {
@@ -143,6 +179,81 @@ class OneGoalMissionTests(unittest.TestCase):
             self.assertEqual(MissionStore(state_dir).load()["state"], "abandoned")
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                 self.assertEqual(main(["mission", "abandon", "--state-dir", str(state_dir)]), 4)
+
+    def test_host_mission_start_is_crash_safe_and_idempotent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            arguments = {"binding": goal_binding(), "authorization": local_authorization(),
+                         "runtime_boundary": BOUNDARY}
+            with mock.patch.object(controller.store, "initialize", side_effect=RuntimeError("crash")):
+                with self.assertRaises(RuntimeError):
+                    controller.start(**arguments)
+            self.assertFalse(controller.store.state_path.exists())
+            self.assertEqual(len(list(controller.contracts_path.glob("*.json"))), 3)
+            first = HostMissionController(root, clock=lambda: NOW).start(**arguments)
+            second = HostMissionController(root, clock=lambda: NOW).start(**arguments)
+            self.assertEqual(first, second)
+            self.assertEqual(first["state"], "authorized")
+            self.assertEqual(len(list((root / "events").glob("*.json"))), 1)
+
+    def test_host_mission_start_rejects_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            controller = HostMissionController(Path(directory) / "mission")
+            with self.assertRaisesRegex(StateError, "local/no-publication"):
+                controller.start(
+                    binding=goal_binding(), authorization=authorization(),
+                    runtime_boundary=BOUNDARY,
+                )
+            self.assertFalse(controller.store.state_path.exists())
+
+    def test_host_mission_start_recovers_state_before_authorization(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            arguments = {"binding": goal_binding(), "authorization": local_authorization(),
+                         "runtime_boundary": BOUNDARY}
+            with mock.patch.object(controller.store, "move", side_effect=RuntimeError("crash")):
+                with self.assertRaises(RuntimeError):
+                    controller.start(**arguments)
+            self.assertEqual(MissionStore(root).load()["state"], "planned")
+            recovered = HostMissionController(root, clock=lambda: NOW).start(**arguments)
+            self.assertEqual(recovered["state"], "authorized")
+            self.assertEqual(len(list((root / "events").glob("*.json"))), 1)
+
+    def test_host_mission_start_rejects_contract_drift(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            arguments = {"binding": goal_binding(), "authorization": local_authorization(),
+                         "runtime_boundary": BOUNDARY}
+            controller.start(**arguments)
+            changed = goal_binding()
+            changed["objective"] = "different objective"
+            with self.assertRaisesRegex(StateError, "different persisted mission contract"):
+                controller.start(
+                    binding=changed, authorization=arguments["authorization"],
+                    runtime_boundary=arguments["runtime_boundary"],
+                )
+
+    def test_cli_starts_local_mission_from_validated_contracts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binding_path, authorization_path, boundary_path = (
+                root / "binding.json", root / "authorization.json", root / "boundary.json"
+            )
+            write_document(binding_path, goal_binding())
+            write_document(authorization_path, local_authorization())
+            write_document(boundary_path, BOUNDARY)
+            output = StringIO()
+            with redirect_stdout(output), redirect_stderr(StringIO()):
+                exit_code = main([
+                    "mission", "start", "--state-dir", str(root / "mission"),
+                    "--goal-binding", str(binding_path), "--authorization", str(authorization_path),
+                    "--runtime-boundary", str(boundary_path), "--json",
+                ])
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(json.loads(output.getvalue())["state"], "authorized")
 
 
 if __name__ == "__main__":
