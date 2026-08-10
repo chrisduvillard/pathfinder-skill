@@ -40,6 +40,7 @@ class HostProtocolTests(unittest.TestCase):
             fixture("host-action-receipt.valid.json"), request=request
         )
         self.assertIs(request.action_kind, HostAction.ACTIVATE_GOAL)
+        self.assertEqual(request.context["deadline_at"], "2026-08-10T13:00:00Z")
         self.assertIs(receipt.outcome, HostOutcome.SUCCEEDED)
         self.assertEqual(receipt.evidence["stable_id"], "goal_native_12345678")
 
@@ -73,6 +74,16 @@ class HostProtocolTests(unittest.TestCase):
         document["context"]["binding_id"] = "binding_forged12"
         with self.assertRaisesRegex(StateError, "context"):
             self.request(document)
+
+    def test_action_deadline_is_required_and_cannot_be_widened(self):
+        missing = copy.deepcopy(self.request_document)
+        missing["context"].pop("deadline_at")
+        with self.assertRaisesRegex(StateError, "deadline_at"):
+            self.request(missing)
+        widened = copy.deepcopy(self.request_document)
+        widened["context"]["deadline_at"] = "2026-08-10T14:00:00Z"
+        with self.assertRaisesRegex(StateError, "context"):
+            self.request(widened)
 
     def test_unknown_fields_and_raw_host_data_fail_schema(self):
         receipt = fixture("host-action-receipt.valid.json")

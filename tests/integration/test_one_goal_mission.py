@@ -253,6 +253,31 @@ class OneGoalMissionTests(unittest.TestCase):
                 )
             self.assertFalse(controller.store.state_path.exists())
 
+    def test_host_mission_start_rejects_authorization_that_widens_binding_budgets(self):
+        for field, value in (("max_attempts", 3), ("max_wall_seconds", 3601)):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                auth = local_authorization()
+                auth["limits"][field] = value
+                with self.assertRaisesRegex(StateError, f"{field}.*Goal Binding"):
+                    HostMissionController(Path(directory) / "mission").start(
+                        binding=goal_binding(), authorization=auth,
+                        runtime_boundary=BOUNDARY,
+                    )
+
+    def test_narrower_authorization_controls_the_action_deadline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            auth = local_authorization()
+            auth["limits"]["max_wall_seconds"] = 60
+            controller = HostMissionController(
+                Path(directory) / "mission", clock=lambda: NOW
+            )
+            controller.start(
+                binding=goal_binding(), authorization=auth,
+                runtime_boundary=BOUNDARY,
+            )
+            action = controller.next()["action"]
+            self.assertEqual(action["context"]["deadline_at"], "2026-08-10T12:01:00Z")
+
     def test_host_mission_start_recovers_state_before_authorization(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "mission"
@@ -320,6 +345,7 @@ class OneGoalMissionTests(unittest.TestCase):
             self.assertEqual(
                 action["runtime_boundary_sha256"], document_sha256(BOUNDARY)
             )
+            self.assertEqual(action["context"]["deadline_at"], "2026-08-10T13:00:00Z")
             intent_path = root / "operations" / f"{action['operation_id']}.intent.json"
             self.assertTrue(intent_path.exists())
             second = HostMissionController(root, clock=lambda: NOW).next()
@@ -329,7 +355,7 @@ class OneGoalMissionTests(unittest.TestCase):
     def test_cli_next_returns_one_action_then_requires_reconciliation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "mission"
-            HostMissionController(root, clock=lambda: NOW).start(
+            HostMissionController(root).start(
                 binding=goal_binding(), authorization=local_authorization(),
                 runtime_boundary=BOUNDARY,
             )
@@ -345,6 +371,41 @@ class OneGoalMissionTests(unittest.TestCase):
                     "mission", "next", "--state-dir", str(root), "--json"
                 ]), 0)
             self.assertEqual(json.loads(output.getvalue())["status"], "reconcile-required")
+
+    def test_wall_budget_survives_restart_and_blocks_before_a_new_action(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            HostMissionController(root, clock=lambda: NOW).start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            expired = HostMissionController(
+                root, clock=lambda: "2026-08-10T13:00:00Z"
+            ).next()
+            self.assertEqual(expired["status"], "terminal")
+            self.assertEqual(expired["state"]["state"], "blocked")
+            self.assertEqual(expired["state"]["terminal_reason"], "budget-limited")
+            repeated = HostMissionController(root).next()
+            self.assertEqual(repeated["state"], expired["state"])
+            self.assertFalse((root / "operations").exists())
+
+    def test_late_success_receipt_is_not_accepted_or_persisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            binding, auth = goal_binding(), local_authorization()
+            binding["budgets"]["max_wall_seconds"] = 1
+            auth["limits"]["max_wall_seconds"] = 1
+            controller = HostMissionController(root, clock=lambda: NOW)
+            controller.start(
+                binding=binding, authorization=auth, runtime_boundary=BOUNDARY
+            )
+            action = controller.next()["action"]
+            receipt = host_receipt(action)
+            receipt["completed_at"] = "2026-08-10T12:00:02Z"
+            with self.assertRaisesRegex(StateError, "after the mission deadline"):
+                controller.record(receipt)
+            self.assertFalse(controller._receipt_path(action["operation_id"]).exists())
+            self.assertEqual(controller.next()["status"], "reconcile-required")
 
     def test_receipt_and_result_crash_boundaries_resume_without_replay(self):
         for boundary in ("after-receipt", "after-result"):

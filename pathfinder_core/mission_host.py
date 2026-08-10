@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import stat
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .errors import StateError
@@ -42,6 +43,17 @@ def document_sha256(document: dict) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _parse_instant(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise StateError("mission time must include a timezone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _format_instant(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 class HostMissionController:
     def __init__(self, root: Path, *, clock=utc_now):
         self.root = Path(root)
@@ -74,7 +86,24 @@ class HostMissionController:
         budgets = binding["budgets"]
         if budgets["max_open_prs"] != 0 or budgets["max_total_prs"] != 0:
             raise StateError("Goal Binding must disable publication for a local mission")
+        for authorization_field, binding_field in (
+            ("max_goals", "max_goals"),
+            ("max_attempts", "max_attempts_per_goal"),
+            ("max_wall_seconds", "max_wall_seconds"),
+            ("max_total_prs", "max_total_prs"),
+        ):
+            if authorization["limits"][authorization_field] > budgets[binding_field]:
+                raise StateError(
+                    f"authorization {authorization_field} exceeds the Goal Binding budget"
+                )
         ExecutionPolicy(self.root, ()).validate_boundary(boundary)
+
+    def _deadline(self, state: dict, binding: dict, authorization: dict) -> datetime:
+        max_seconds = min(
+            binding["budgets"]["max_wall_seconds"],
+            authorization["limits"]["max_wall_seconds"],
+        )
+        return _parse_instant(state["created_at"]) + timedelta(seconds=max_seconds)
 
     def _write_contract(self, name: str, document: dict) -> None:
         path = self.contracts_path / f"{name}.json"
@@ -180,6 +209,9 @@ class HostMissionController:
             "binding_id": state["binding_id"],
             "goal_id": state["goal_id"],
             "worktree_id": state["worktree_id"],
+            "deadline_at": _format_instant(
+                self._deadline(state, binding, authorization)
+            ),
             "input_sha256": document_sha256(
                 {"binding": document_sha256(binding), "revision": state["revision"],
                  "action_kind": action_kind}
@@ -245,8 +277,17 @@ class HostMissionController:
                     "action_kind": ACTION_BY_STATE[state["state"]][1],
                 }
             raise StateError("operation result exists without its typed host receipt")
+        requested_at = self.clock()
+        if _parse_instant(requested_at) >= self._deadline(
+            state, binding, authorization
+        ):
+            state = self.store.move(
+                "blocked", attempt_id=state["attempt_id"],
+                changes={"terminal_reason": "budget-limited"},
+            )
+            return {"status": "terminal", "state": state}
         request, intent = self._documents_for_action(
-            state, binding, authorization, boundary, started_at=self.clock()
+            state, binding, authorization, boundary, started_at=requested_at
         )
         self.journal.record_intent(intent)
         return {"status": "action-required", "action": request}
@@ -352,6 +393,12 @@ class HostMissionController:
         if intent["runtime_boundary_sha256"] != document_sha256(boundary):
             raise StateError("operation runtime hash no longer matches mission contract")
         self.protocol.validate_receipt(receipt, request=self._request_from_intent(intent))
+        if (
+            receipt["outcome"] == HostOutcome.SUCCEEDED.value
+            and _parse_instant(receipt["completed_at"])
+            > self._deadline(state, binding, authorization)
+        ):
+            raise StateError("successful host action completed after the mission deadline")
         self._advance(state, receipt, apply=False)
 
     def _finish_receipt(self, state: dict, intent: dict, receipt: dict) -> dict:
