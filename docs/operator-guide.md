@@ -23,7 +23,9 @@ bash scripts/pathfinder-controller.sh mission record --state-dir <path> --receip
 bash scripts/pathfinder-controller.sh mission resume --state-dir <path> --json
 ```
 
-`next` journals one closed action before returning it. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, then local `awaiting-review`. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
+`start` rejects an authorization whose Goal, attempt, wall-time, or PR limit widens the immutable Goal Binding. `next` journals one closed action before returning it, including the fixed mission deadline in the trusted action context. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, then local `awaiting-review`. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
+
+The wall deadline is derived from the original persisted mission creation time and the narrower of the authorization and Goal Binding limits. Restarting cannot extend it. At or after the deadline the controller issues no new action and persists `terminal_reason: budget-limited`; a successful receipt completed after the deadline is rejected and remains reconciliation-required. Goal count is fixed at one, this bridge creates only one stable attempt, and both open/total PR limits are zero. Token/cost accounting is not exposed by the host protocol and is therefore not claimed as a controller guarantee.
 
 ## Inspect persisted mission state
 
@@ -61,6 +63,7 @@ V1 intent migration changes legacy `clarity:` metadata to `intent_clarity: unres
 | `goal-saved` / manual handoff | Activate the printed Goal manually, or start a new local mission only when the active host can satisfy every attestation/receipt gate. |
 | `blocked` before commands | Read the Runtime Boundary/authorization error; supply only the named capability or user decision. Do not edit state JSON. |
 | `blocked` after verification | Inspect the diff, run log, Binding Status, and verifier evidence. Continue in a new explicitly scoped mission. |
+| `blocked` with `terminal_reason: budget-limited` | Review the preserved branch/state. A larger budget requires a fresh explicit mission; restart does not extend the old deadline. |
 | `awaiting-review` | Review the local branch. The enabled bridge has no PR or merge operation. |
 | external publication auth/rate/timeout failure | This is outside the enabled bridge. Preserve the local branch and use a separately reviewed publication process. |
 | corrupt or divergent event/state | Preserve the entire state directory and backup; do not hand-edit. Report the first controller error and stop. |

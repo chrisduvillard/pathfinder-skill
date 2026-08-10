@@ -219,7 +219,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Preserve recoverable blocked work without carrying its diff into the next goal.
 - [x] Add safe worktree cleanup/status commands; never delete a dirty or unmerged worktree automatically.
 - [x] Disable the Opportunity Scout by default in v1; when enabled later, cap derived goals at the run’s initial immutable limit.
-- [ ] Enforce fixed maxima for goals, attempts per goal, wall time, tokens/cost when exposed, open PRs, and total PRs—not only open awaiting-review PRs.
+- [x] Enforce fixed maxima in the enabled bridge: one Goal and stable attempt, authorization limits no wider than the Goal Binding, restart-stable wall deadline, and zero open/total PRs. Token/cost accounting remains an explicit non-guarantee until a host exposes it.
 
 ### P1 — Enforce execution and publication safety
 

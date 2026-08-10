@@ -96,7 +96,7 @@ When Cross-Model Review is enabled for autonomous mode and an eligible goal hits
 
 **Recoverable blocks and isolation.** A block records the next input and preserves recoverable work in its mission worktree. The controller never deletes a dirty, unmerged, or mission-referenced worktree automatically.
 
-**Resume ledger and caps.** Keep fixed immutable limits for one Goal, attempts, wall time, and total/open PRs fixed at zero. On restart, a pending action without a trustworthy receipt remains `reconcile-required`; inspect real host/Git state rather than replaying it. The resume ledger names the mission, attempt, worktree, branch, commit, blocker, and exact next action.
+**Resume ledger and caps.** Keep fixed immutable limits for one Goal, attempts, wall time, and total/open PRs fixed at zero. Authorization may narrow but never widen the Goal Binding. Every returned action carries the persisted wall deadline; restart never extends it, expiration blocks before a new action, and late success requires reconciliation. Token/cost limits remain host-owned until the typed protocol exposes trustworthy accounting. On restart, a pending action without a trustworthy receipt remains `reconcile-required`; inspect real host/Git state rather than replaying it. The resume ledger names the mission, attempt, worktree, branch, commit, blocker, and exact next action.
 
 The mission stops after its one Goal reaches awaiting-review, blocked, or abandoned; when a hard stop is found; or when it becomes budget-limited by any fixed cap. It never selects another Goal implicitly.
 

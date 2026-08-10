@@ -8,6 +8,7 @@
 | Unknown enforcement blocks work | execution-policy tests; `sandbox-blocked` replay |
 | Repository injection cannot authorize | trust-route policy; `injection-blocked` replay |
 | Local action crash recovery | intent/receipt/result/transition crash matrix for all five host actions; `host-bridge-local` replay; ambiguous missing receipts require reconciliation |
+| Fixed local mission budgets | widening-limit rejection; narrower-limit deadline fixture; restart-expiry and late-success tests; one Goal/attempt and zero-PR construction |
 | One local commit and zero PRs in the enabled bridge | mission idempotency tests; `host-bridge-local` replay maxima; separate GitHub primitive fixtures |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |
