@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 
+from .artifacts import write_saved_prompt_goal
 from .capabilities import capabilities_json, probe_capabilities
 from .errors import PathfinderError, StateError
 from .migrations import migrate_intent, migrate_mission
@@ -33,6 +34,17 @@ def _parser() -> argparse.ArgumentParser:
     migrate_mission_parser.add_argument("--state-dir", required=True)
     migrate_mission_parser.add_argument("--backup-dir", required=True)
     migrate_mission_parser.add_argument("--json", action="store_true", dest="as_json")
+    artifacts = commands.add_parser("artifacts", help="write controller-owned artifacts")
+    artifact_commands = artifacts.add_subparsers(dest="artifact_command", required=True)
+    goal_saved = artifact_commands.add_parser(
+        "goal-saved", help="write canonical sidecars for a saved prompt Goal"
+    )
+    goal_saved.add_argument("--repo-root", required=True)
+    goal_saved.add_argument("--output-dir", required=True)
+    goal_saved.add_argument("--request-file", required=True)
+    goal_saved.add_argument("--goal-file", required=True)
+    goal_saved.add_argument("--consume-request", action="store_true")
+    goal_saved.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
@@ -90,6 +102,23 @@ def main(argv=None) -> int:
                 print(f"migration: {result['kind']} schema v{result['schema_version']}")
                 print(f"changed: {', '.join(result['changed']) or 'none'}")
                 print(f"backup: {result['backup_dir']}")
+            return 0
+        if args.command == "artifacts" and args.artifact_command == "goal-saved":
+            result = write_saved_prompt_goal(
+                args.repo_root,
+                args.output_dir,
+                args.request_file,
+                args.goal_file,
+                consume_request=args.consume_request,
+            )
+            if args.as_json:
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"mission: {result['mission_id']}")
+                print(f"goal: {result['goal_id']}")
+                print(f"binding: {result['binding_id']}")
+                for path in result["artifacts"]:
+                    print(f"artifact: {path}")
             return 0
         return 2
     except PathfinderError as error:

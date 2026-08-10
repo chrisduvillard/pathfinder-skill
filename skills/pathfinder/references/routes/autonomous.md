@@ -62,10 +62,10 @@ Execute exactly one eligible Goal through `pathfinder_core`; do not imitate the 
 
 ### Controller handoff
 
-1. Resolve the installed plugin root and run `bash <plugin-root>/scripts/pathfinder-controller.sh doctor --json`. Do not assume the target repository contains `pathfinder_core`. If the launcher is absent (for example, a manual skill-only copy), `runner_available` is false, or filesystem, process, network, or credential enforcement is `unknown`/`unavailable`, save the Goal and stop. Never substitute best-effort unattended execution.
+1. Resolve the installed plugin root and run `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh doctor --json`. Claude Code supplies that absolute root as `${CLAUDE_PLUGIN_ROOT}`; other hosts must use the plugin root surfaced with the loaded skill. Never resolve the controller relative to the target repository or assume it contains `pathfinder_core`. If the launcher is absent (for example, a manual skill-only copy), `runner_available` is false, or filesystem, process, network, or credential enforcement is `unknown`/`unavailable`, save the Goal and stop. Never substitute best-effort unattended execution.
 2. Materialize and schema-validate the Goal Binding, immutable authorization snapshot, Runtime Boundary, and initial mission state. The authorization must say `explicit_request: true`, match the mission id, binding id, and exact base commit, cap `max_goals` at one, and cap total PRs at one. Keep creator authorization outside the repository trust boundary.
 3. Acquire the mission lease, create a `MissionStore`, and call `MissionOrchestrator` with the repository/worktree manager, selected native Goal adapter, allowlisted execution adapter, and optional GitHub publisher. Do not advance mission state by editing JSON manually.
-4. Use `bash <plugin-root>/scripts/pathfinder-controller.sh mission status --state-dir <path> --json` for user-visible status and resume inspection. On resume, reuse the same mission id and let the controller reconcile its append-only events, branch, commit, and PR identity.
+4. Use `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh mission status --state-dir <path> --json` for user-visible status and resume inspection. On resume, reuse the same mission id and let the controller reconcile its append-only events, branch, commit, and PR identity.
 5. Treat a manual/non-persistent Goal adapter result as a blocked handoff. Give the user the exact Goal command; do not claim the autonomous mission is active.
 
 ### Sequential v1 invariant

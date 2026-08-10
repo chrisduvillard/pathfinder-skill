@@ -26,8 +26,9 @@ if [ "${2:-}" = "--verbose" ] || [ "${PATHFINDER_VERBOSE:-}" = "1" ]; then
 fi
 skill="$root/skills/pathfinder/SKILL.md"
 route_dir="$root/skills/pathfinder/references/routes"
+route_prompt="$route_dir/prompt-to-goal.md"
 route_files=(
-  "$route_dir/prompt-to-goal.md"
+  "$route_prompt"
   "$route_dir/discovery.md"
   "$route_dir/synthesis.md"
   "$route_dir/intent-refresh.md"
@@ -160,13 +161,19 @@ check_skill_section() {
 # stops a prose substring from opening/closing a window; this stops a heading rename from silently
 # re-scoping one (the window would otherwise extend past the renamed stop and a deleted safety phrase
 # could then read as present). Keep this list in sync with the start/stop args passed below.
-for heading in "## Autonomous mode" "## Phase 7:" "### Phase 7-A:" "### Reporting" "## Cross-Model Review" "## Phase 8:"; do
+for heading in "## Work folder" "### Intent files" "## Autonomous mode" "## Phase 7:" "### Phase 7-A:" "### Reporting" "## Cross-Model Review" "## Phase 8:"; do
   if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "${skill_files[@]}"; then
     verbose_ok "section-boundary heading present: \"$heading\""
   else
     err "section-boundary heading missing or renamed: \"$heading\" (check_skill_section keys on it; update both together)"
   fi
 done
+
+check_skill_section "## Work folder" "### Intent files" "never create the run directory or any repository-local artifact until" "repository-local artifacts require a proven ignore rule before writes"
+check_pair "Never create the run directory or any repository-local artifact until" "$arts" "pre-write artifact ignore gate"
+check_pair 'never hand-author `06-goal-binding.json` or `08-final-summary.json`' "$arts" "controller-owned prompt sidecar gate"
+check_pair '${CLAUDE_PLUGIN_ROOT}' "$route_prompt" "portable full-plugin root"
+check_pair "the prompt-to-goal route is static-inspection" "$route_prompt" "prompt route pre-approval execution boundary"
 
 # Phase 5 funnel invariants (SKILL.md <-> question-funnel-template.md)
 check_pair "Default to option 2" "$funnel" "execution-mode default"

@@ -10,6 +10,8 @@ bash scripts/pathfinder-controller.sh doctor --json
 
 `runner_available` means the controller and schema validator can run. `unattended_execution_eligible` remains false until the host supplies enforceable filesystem, process, network, and credential evidence; the read-only doctor does not probe by running repository code.
 
+For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs through `artifacts goal-saved`. The command consumes only a validated `.prompt-goal-request.json` inside an already ignored Pathfinder run directory, verifies the bound Git base and safe path, validates `06-goal-command.md`, emits schema-valid `06-goal-binding.json` and `08-final-summary.json`, renders `08-final-summary.md` with the stable IDs, seals all four final artifacts read-only, and is idempotent for the same request.
+
 ## Inspect and resume a mission
 
 ```bash

@@ -27,6 +27,10 @@
 
 Controller-owned JSON is the source of truth; Markdown is its human-readable run view. The existing structured sidecar filenames remain compatibility views of that state. Validate JSON before rendering Markdown. A Markdown artifact must never be parsed back into authoritative mission state.
 
+When a full plugin is installed, load the matching files under `schemas/artifacts/` before writing sidecars and validate each sidecar against its schema before reporting success. Never invent route-specific top-level JSON fields. A manual skill-only install without schemas must preserve the canonical field names documented here and disclose that validation was unavailable.
+
+For a full-plugin prompt Goal, never hand-author `06-goal-binding.json` or `08-final-summary.json`; do not hand-author `08-final-summary.md` either. The bundled controller's `artifacts goal-saved` command renders the Markdown with its stable IDs, writes and validates the sidecars, seals all three plus `06-goal-command.md`, and must be the final filesystem write before the route reports success.
+
 Structured sidecar purposes:
 
 - `03-candidates.json`: stable candidate ids, source finding ids, evidence grade, expected value, risk/protected areas, proof availability, uncertainty, ranking basis, rejected/refill status, and search stop reason.
@@ -35,7 +39,7 @@ Structured sidecar purposes:
 - `07-run-log.json`: Runtime Boundary, commands/results, structured completion claim, Binding Status, verifier/reviewer disposition, and publication gates.
 - `08-final-summary.json`: final shipped/blocked/excluded ledger, residual risks, next input needed, and replay pointers to the artifacts above.
 
-If a phase has not been reached yet, create a short placeholder rather than implying completion. `03b-verification.md` follows the same rule (placeholder text: "verification not run yet"). `07b-cross-model-review.md` also follows the placeholder rule (placeholder text: "cross-model review not run").
+Create the complete tree above progressively for full exploration and autonomous missions. If a phase expected on the selected route has not been reached yet, create a short placeholder rather than implying completion. `03b-verification.md` follows the same rule (placeholder text: "verification not run yet"). `07b-cross-model-review.md` also follows the placeholder rule (placeholder text: "cross-model review not run"). Never create a placeholder for a phase the selected route intentionally skips.
 
 `04-question-funnel.md` records the chosen interview mode (Pick a move or Explore from scratch) and, for Explore from scratch, the full narrowing path (L0 intent through L4 boundaries) with the options offered at each level. For Pick a move multi-select, it records the raw selection input and grouping review options shown.
 
@@ -47,7 +51,7 @@ If a phase has not been reached yet, create a short placeholder rather than impl
 
 `07-run-log.md`, `07b-cross-model-review.md`, and `08-final-summary.md` record **Binding Status** for each saved goal. Allowed statuses are `matched` when evidence matches the saved Goal Binding, `missing` when the binding or required proof evidence was not produced, `stale-objective` when execution followed a materially different objective, `mismatched` when changed files/checks/protected areas conflict with the binding, and `not-run` when the goal was saved but not executed.
 
-In the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), the same numbered files are reused with track-appropriate content: `00-session.md` also records the verbatim user prompt and the routing decision; `01-blind-discovery.md` holds the targeted prompt-anchored research instead of a blind sweep; the `02-scout-briefs/` folder, `03-synthesis.md`, and `03b-verification.md` are short placeholders because the scouts, Top-5 ranking, and Phase 4b verification do not run; and `04-question-funnel.md` / `05-user-answers.md` record the gap-driven clarifying questions and answers. `06-goal-command.md`, `07-run-log.md`, `07b-cross-model-review.md`, and `08-final-summary.md` are produced exactly as in the full-exploration track; `07b-cross-model-review.md` remains a placeholder unless review is enabled and execution reaches a completed-claim or ordinary blocker.
+In the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), a zero-clarification, no-execution run writes only `00-session.md`, `01-blind-discovery.md`, `06-goal-command.md`, `06-goal-binding.json`, `08-final-summary.md`, and `08-final-summary.json`. The first file records the verbatim prompt and routing decision; the second holds targeted prompt-anchored research. Omit `02-scout-briefs/`, `03-synthesis.md`, `03-candidates.json`, `03b-verification.md`, and `03b-verification.json` because their absence means not applicable on this route. Add `04-question-funnel.md` and `05-user-answers.md` only when clarification occurs. Add `07-run-log.md`, `07-run-log.json`, or `07b-cross-model-review.md` only after execution or a manual execution handoff.
 
 `07b-cross-model-review.md` records Cross-Model Review only when review is enabled for the run and execution reaches a completed-claim or ordinary blocker. Its packet includes the saved Goal Binding, Runtime Boundary, Binding Status, protected-area status, and any `complexity_notes` surfaced by the primary executor. Its launch mode is `launched`, `manual-handoff`, `skipped`, or `failed-to-launch`. Its final disposition is `clean`, `fixed-clean`, `needs-primary-followup`, `needs-user-review`, `blocked`, or `skipped`.
 
@@ -56,3 +60,5 @@ In autonomous mode, `00-session.md` records the immutable authorization snapshot
 The Deep Intent Gate and Doctrine Interview introduce no new numbered artifact: `04-question-funnel.md` / `05-user-answers.md` record the evidence draft, first-run interview, Project Doctrine screens, the ambiguity ledger and each loop pass, reconcile screens, refresh answers, and any `continue later` partial state. `00-session.md` records the charter, roadmap, and doctrine status (including the `completion` and `clarity` values for all three intent files) plus the ignore decision. `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, and `.pathfinder/doctrine.md` are separate stable, local-only, never-committed files outside the run folder and are **not** part of the 00-08 artifact set.
 
 Artifact folders should be ignored locally and should not be committed or pushed unless the user explicitly requests publication after review.
+
+Never create the run directory or any repository-local artifact until the concrete artifact path is confirmed ignored. If an ignore update is denied or fails, use a safe outside work folder or keep the proposed artifact in the conversation; never fall through to an untracked repository folder.

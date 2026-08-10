@@ -251,8 +251,8 @@ The first autonomous release should be deliberately narrower than the current pr
 - [ ] Add monorepo namespaces so charter/roadmap/doctrine can be scoped to a subproject without conflating unrelated products.
 - [x] Render a compact status summary from controller state instead of rereading every Markdown artifact.
 - [x] Add `--json`/structured status for automation and concise human status for interactive use.
-- [ ] Keep artifacts useful but stop creating placeholders for every unused phase; represent lifecycle explicitly in the state snapshot and render placeholders only when a human view needs them.
-- [ ] Limit default run artifacts to evidence required for resume, audit, and evaluation; make verbose scout prose optional.
+- [ ] Keep artifacts useful but stop creating placeholders for every unused phase; represent lifecycle explicitly in the state snapshot and render placeholders only when a human view needs them. *(The zero-clarification prompt route now omits never-run phases; broader lifecycle rendering remains open.)*
+- [ ] Limit default run artifacts to evidence required for resume, audit, and evaluation; make verbose scout prose optional. *(The zero-clarification prompt route is now fixed at six evidence artifacts; optional full-exploration scout prose remains open.)*
 - [ ] Add progress updates at meaningful checkpoints rather than per invariant or per file.
 
 ### P2 — Build evaluation that measures real behavior
@@ -268,10 +268,10 @@ The first autonomous release should be deliberately narrower than the current pr
 - [ ] Add prompt-injection fixtures covering source files, README/docs, tests, diffs, tool output, intent files, and prior artifacts.
 - [ ] Add GitHub API fixtures for branch protection, rulesets, auth failure, rate limit, pending checks, failed checks, merge conflict, and existing PR.
 - [x] Add Linux/macOS/Windows controller tests.
-- [ ] Add recorded replay cases produced by actual Pathfinder runs.
+- [x] Add recorded replay cases produced by actual Pathfinder runs. *(Sanitized local Claude Code dogfood now guards placeholder churn, ignored-path failure, and pre-approval repository execution; no credentials, private paths, or transcript text are retained.)*
 - [x] Add a small optional live-model suite for the highest-value behaviors: question choice, intent preservation, safe routing, native Goal activation, and honest blocking.
 - [x] Add a nightly dogfood run against tiny synthetic repositories; never point CI autonomy at arbitrary external repositories.
-- [ ] Add plugin install/load smoke tests for Claude Code and Codex when their non-interactive test surfaces are available.
+- [ ] Add plugin install/load smoke tests for Claude Code and Codex when their non-interactive test surfaces are available. *(Manual dogfood now covers an isolated Codex edge install and Claude load/status/prompt-controller runs; a repeatable credential-free Codex model invocation is still unavailable.)*
 - [x] Maintain a coverage matrix mapping every README autonomy promise to a deterministic test, a live/replay eval, or an explicitly documented non-guarantee.
 
 ### P3 — Harden distribution, operations, and documentation

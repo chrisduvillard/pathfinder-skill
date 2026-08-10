@@ -86,6 +86,13 @@ class MissionSchemaTests(unittest.TestCase):
         instance["blocking_reasons"] = ["filesystem enforcement unknown"]
         validate("artifacts/runtime-boundary.schema.json", instance)
 
+    def test_prompt_goal_binding_accepts_unloaded_intent(self):
+        instance = json.loads((ROOT / "evals/fixtures/good-goal/artifacts/06-goal-binding.json").read_text())
+        instance["objective_source"] = "user-prompt"
+        instance["selected_candidate_ids"] = []
+        instance["intent_snapshot"] = {"charter": None, "roadmap": None, "doctrine": None}
+        validate("artifacts/goal-binding.schema.json", instance)
+
     def test_malformed_timestamp_fails(self):
         instance = copy.deepcopy(EVENT)
         instance["recorded_at"] = "yesterday"

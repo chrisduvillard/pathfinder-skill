@@ -57,7 +57,7 @@ Chooser recommendation rules:
 - Never auto-escalate option 1 or option 2. Persistent intent can shorten questions and improve recommendations, but only a fresh explicit option 3 or `/pathfinder auto` request authorizes autonomous work.
 - If state is mixed or uncertain, prefer option 5 so the user can inspect state before starting a work-producing path.
 
-Option 5 and the explicit `/pathfinder status` alias are read-only status/help. Show: repository root if known; current branch if known; charter, roadmap, and doctrine presence, `completion` value, and last-refreshed/created date if safely readable; the latest visible `.agent-work/pathfinder/...` run folder if one is visible without crawling secrets; and the same available entry paths from the chooser. When installed as a full plugin, resolve its root and run `bash <plugin-root>/scripts/pathfinder-controller.sh doctor --json`; when a mission state directory is known, also run the launcher's `mission status --state-dir <path> --json`. A manual skill-only copy has no controller unless separately installed. Report unknown capabilities honestly. Status does not create run artifacts, run the Deep Intent Gate, update intent, or run repository code. After the status/help screen, Pathfinder returns to this chooser unless the user selects another path.
+Option 5 and the explicit `/pathfinder status` alias are read-only status/help. Show: repository root if known; current branch if known; charter, roadmap, and doctrine presence, `completion` value, and last-refreshed/created date if safely readable; the latest visible `.agent-work/pathfinder/...` run folder if one is visible without crawling secrets; and the same available entry paths from the chooser. When installed as a full plugin, resolve its root and run `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh doctor --json`; when a mission state directory is known, also run the launcher's `mission status --state-dir <path> --json`. Claude Code supplies the absolute full-plugin root as `${CLAUDE_PLUGIN_ROOT}`; on another host use the absolute plugin/skill root surfaced with the loaded skill. Never look for the controller in the target repository. A manual skill-only copy has no controller unless separately installed. Report unknown capabilities honestly. Status does not create run artifacts, run the Deep Intent Gate, update intent, or run repository code. After the status/help screen, Pathfinder returns to this chooser unless the user selects another path.
 
 If the user says "Show the Pathfinder options," "open the Pathfinder menu," or similar, treat it like bare `/pathfinder` and show the chooser.
 
@@ -176,8 +176,10 @@ Use a lowercase alphanumeric-and-hyphen task slug. Before writing, verify `.agen
 Avoid dirtying the repository with process artifacts:
 
 1. First check whether the work folder is already ignored (by a committed `.gitignore` or an existing `.git/info/exclude` rule) — test a concrete path under it (for example `.agent-work/pathfinder/.keep`), never the bare `.agent-work/`/`.agent-workspace/` directory, since `git check-ignore` on a not-yet-created directory can return a false-positive match on some git builds (notably Windows/MSYS git). If so, write there directly and add no new ignore rule.
-2. Otherwise prefer adding them to `.git/info/exclude` as a local-only ignore rule when allowed.
-3. If local ignore metadata cannot be updated and the folder would remain unignored, ask before editing tracked `.gitignore`; otherwise use an outside work folder and record why.
+2. Otherwise prefer adding them to `.git/info/exclude` as a local-only ignore rule when allowed, then verify the same concrete path with `git check-ignore`.
+3. If the metadata update is denied, fails, or still leaves the concrete path unignored, do not write under the repository. Ask before editing tracked `.gitignore`; otherwise use an outside work folder and record why. If neither location is writable, keep the proposed artifact content in the conversation and report the blocker.
+
+Never create the run directory or any repository-local artifact until the concrete artifact path is confirmed ignored. A failed or denied ignore update is a hard pre-write gate, not permission to continue with an untracked folder.
 
 Never commit or push `.agent-work/`, `.agent-workspace/`, scout reports, run logs, or generated goal artifacts unless the user explicitly requests publication after reviewing them.
 
@@ -200,7 +202,8 @@ Keep `.pathfinder/` local-only with the same ignore ladder as the work folder:
 
 Never commit or push `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md`; all three are excluded from publish-after-review by default.
 
-Required files:
+Create artifacts progressively for the selected route. Full exploration and autonomous
+missions use the complete evidence contract:
 
 ```text
 00-session.md
@@ -228,7 +231,47 @@ Required files:
 
 If the platform cannot create folders immediately, first describe the intended folder and create it as soon as file writing is available.
 
-If a phase has not yet been reached, create a short placeholder in the corresponding artifact, for example "not answered yet," "verification not run yet," "goal not generated yet," "goal not run," or "cross-model review not run." This makes interrupted runs resumable without implying completion.
+The zero-clarification prompt-to-goal fast path writes only `00-session.md`,
+`01-blind-discovery.md`, `06-goal-command.md`, `06-goal-binding.json`,
+`08-final-summary.md`, and `08-final-summary.json`. Add `04-question-funnel.md` and
+`05-user-answers.md` only when clarification occurs. Add run-log or cross-model-review
+artifacts only after execution or a manual execution handoff. Omit `02-scout-briefs/`,
+`03-synthesis.md`, `03-candidates.json`, `03b-verification.md`, and
+`03b-verification.json`: their absence means not applicable on this route.
+
+Before explicit Phase 7 execution approval, the prompt-to-goal route is static-inspection
+only. Do not import, compile, or execute repository code; run tests, builds, linters,
+package managers, or dependency probes; or invoke anything that can create caches or
+other non-Pathfinder files. Read tracked source, tests, manifests, and CI configuration to
+identify future proof commands, and label those commands `not run`. The plugin controller
+is allowed because it validates and writes only the already-ignored Pathfinder artifacts.
+
+**Full-plugin prompt controller gate (required even if a host under-loads route files):**
+never hand-author `06-goal-binding.json` or `08-final-summary.json`. Write the complete
+single-line `/goal` plus Implementation Goal fallback to `06-goal-command.md`; do not
+hand-author `08-final-summary.md`, because the controller must render it with the returned
+stable IDs. Create the
+`.prompt-goal-request.json` after loading
+`schemas/artifacts/prompt-goal-request.schema.json` from the plugin root, then run the
+following command in Claude Code (other hosts must substitute the absolute plugin root
+surfaced with this skill). `${CLAUDE_PLUGIN_ROOT}` is the plugin installation, not the
+target repository; never search the target repository for this controller.
+
+```text
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/pathfinder-controller.sh" artifacts goal-saved --repo-root <repo-root> --output-dir <run-dir> --request-file <run-dir>/.prompt-goal-request.json --goal-file <run-dir>/06-goal-command.md --consume-request --json
+```
+
+This controller call is the final filesystem write. The prompt route is incomplete unless
+it exits 0, returns stable IDs and the Goal/Binding/final-summary paths, consumes the
+request, and leaves all four controller-owned artifacts read-only. On failure, report the controller error and stop; do not
+substitute compact JSON or claim success.
+
+If a phase expected on the selected route has not yet been reached, create a short
+placeholder in that route's corresponding artifact, for example "not answered yet,"
+"verification not run yet," "goal not generated yet," "goal not run," or
+"cross-model review not run." Never pre-create placeholders for phases the selected
+route intentionally skips. This keeps interrupted runs honest without making the fast
+path pay for unused phases.
 
 ## Phase 0: Session setup
 

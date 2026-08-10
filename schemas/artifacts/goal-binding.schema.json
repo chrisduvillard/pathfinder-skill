@@ -26,9 +26,9 @@
       "type": "object", "additionalProperties": false,
       "required": ["charter", "roadmap", "doctrine"],
       "properties": {
-        "charter": {"$ref": "#/$defs/version_hash"},
-        "roadmap": {"$ref": "#/$defs/version_hash"},
-        "doctrine": {"$ref": "#/$defs/version_hash"}
+        "charter": {"oneOf": [{"$ref": "#/$defs/version_hash"}, {"type": "null"}]},
+        "roadmap": {"oneOf": [{"$ref": "#/$defs/version_hash"}, {"type": "null"}]},
+        "doctrine": {"oneOf": [{"$ref": "#/$defs/version_hash"}, {"type": "null"}]}
       }
     },
     "version_hash": {

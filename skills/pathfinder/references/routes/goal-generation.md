@@ -73,7 +73,7 @@ Goal Binding
 - model_depth_summary: <autonomous model-depth proof summary, or not applicable>
 ```
 
-For prompt-to-goal, set `selected_candidate_ids: none`. For autonomous goals, `doctrine_refs` must cite the Project Doctrine sections used and `model_depth_summary` must summarize the model-depth proof gate. For goal packs, repeat the full Goal Binding for each numbered goal. When structured output is available, mirror this binding into `06-goal-binding.json`.
+For prompt-to-goal, set `selected_candidate_ids: none` in Markdown and an empty array in JSON. For autonomous goals, `doctrine_refs` must cite the Project Doctrine sections used and `model_depth_summary` must summarize the model-depth proof gate. For goal packs, repeat the full Goal Binding for each numbered goal. Always mirror the binding into `06-goal-binding.json` using only fields allowed by `schemas/artifacts/goal-binding.schema.json`; validate it before reporting success when the shipped schema and validator are available.
 
 ### Required `/goal` shape
 

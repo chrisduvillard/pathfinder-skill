@@ -20,8 +20,9 @@ the exact archive and creates the tag; tags are never rewritten.
 
 Changes in v3.0.0:
 - Added a Python 3.11 controller with schema-validated intent/artifact/mission state, immutable authorization snapshots, atomic append-only recovery, leases, safe Git/worktree handling, structured command enforcement, host Goal adapters, and idempotent awaiting-review GitHub publication. V1 runs one Goal sequentially and has no self-merge.
-- Split the 1,547-line skill into a 297-line trust/router entry point plus required route modules. Concrete prompt-to-goal requests now skip the long creator interview, ask only unresolved Goal gaps, and keep Goal creation separate from autonomous authority.
-- Added real JSON Schema validation, actual Goal-payload assertions, supporting-note-laundering negatives, six deterministic controller replays, a bounded optional live-model interface, a conservative discovery cache, and three-platform controller CI.
+- Split the 1,547-line skill into a compact trust/router entry point plus required route modules. Concrete prompt-to-goal requests now skip the long creator interview, ask only unresolved Goal gaps, and keep Goal creation separate from autonomous authority.
+- Added real JSON Schema validation, actual Goal-payload assertions, supporting-note-laundering negatives, six deterministic controller scenarios plus three sanitized prompt fast-path regressions, a bounded optional live-model interface, a conservative discovery cache, and three-platform controller CI.
+- Added controller-owned prompt Goal outputs with ignored-path and exact-base gating, stable IDs, canonical schema validation, Goal-contract cross-checking, idempotent retries, controller-rendered final summaries, and read-only sealing after generation.
 - Added safe intent/mission migration commands with backups and rollback, stable/edge release policy, package smoke testing, capability/operator/threat-model documentation, and explicit guarantee boundaries.
 
 Changes in v2.23.0:
