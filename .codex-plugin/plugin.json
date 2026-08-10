@@ -1,7 +1,7 @@
 {
   "name": "pathfinder",
-  "version": "2.23.0",
-  "description": "Map an unfamiliar repository, choose the highest-value next move, generate a bounded goal, or run doctrine-gated autonomous mission work.",
+  "version": "3.0.0",
+  "description": "Map an unfamiliar repository, create a bounded Goal, or run one explicitly authorized controller-backed mission to review.",
   "author": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Pathfinder",
     "shortDescription": "Map a repo, pick the next move, write the goal",
-    "longDescription": "Pathfinder opens a chooser for exploring a repo, prompt-to-goal drafting, doctrine-gated autonomous mission runs in an isolated worktree, creator model refresh, and status/help. It reads code first, ranks grounded moves, asks focused Doctrine Interview questions, then saves a bounded Claude Code /goal or fallback implementation goal, or runs /pathfinder auto when the Project Doctrine and clarity gate authorize it.",
+    "longDescription": "Pathfinder opens a chooser for source-first repo exploration, a fast prompt-to-goal route, explicitly authorized controller-backed autonomous work in an isolated worktree, creator model refresh, and status/help. It saves a bounded native Goal or fallback implementation goal. /pathfinder auto requires fresh per-run authorization, complete doctrine context, and an enforceable runtime boundary, and stops publication at awaiting-review.",
     "developerName": "Chris Duvillard",
     "category": "Productivity",
     "capabilities": ["Instructions"],

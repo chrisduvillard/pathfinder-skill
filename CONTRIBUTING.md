@@ -27,6 +27,14 @@ bash scripts/check-all.sh
 it exits early with an error if `jq` is missing. The other checks need only `bash` and
 standard POSIX tools (`awk`, `sed`, `grep`).
 
+Controller tests require Python 3.11+ and the pinned packages in
+`requirements-controller.txt`. An ignored `.venv` is recommended:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-controller.txt
+```
+
 The wrapper runs these same checks individually:
 
 ```bash
@@ -35,16 +43,21 @@ bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-e
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
 bash scripts/check-evals.sh               # deterministic artifact-contract eval fixtures
+bash scripts/check-replay-evals.sh        # required recorded controller/route replays
 bash scripts/test-validators.sh           # meta-tests for the drift-guard parsers themselves
+bash scripts/check-controller.sh           # controller contracts + crash/resume integration tests
 git diff --check                          # trailing whitespace / conflict markers
 git diff --cached --check                 # staged whitespace / conflict markers
 ```
+
+Use `bash scripts/check-skill-consistency.sh . --verbose` when you need every successful invariant; the default output stays concise and always prints failures.
 
 These run cleanly on Linux, macOS, and Windows Git-Bash/MSYS with no extra environment
 (`check-manifests.sh` scopes `MSYS_NO_PATHCONV=1` around its own jq call so the `/pathfinder charter`
 prompt check does not path-mangle on MSYS).
 
-These are the same checks `.github/workflows/manifests.yml` runs, so they
+These are the same checks `.github/workflows/manifests.yml` requires on Ubuntu,
+macOS, and Windows, so they
 catch common mistakes — such as bumping `VERSION.md` without mirroring both
 `plugin.json` files, or adding GNU-only shell syntax to validation/release paths —
 before you push, not after.
@@ -60,10 +73,11 @@ before you push, not after.
   title-case (`Productivity`). Changing either to match the other breaks that
   platform's listing.
 - Keep `VERSION.md` as the version and changelog source of truth.
-- The `references/*.md` files intentionally mirror the Phase 5/6 screens and rules
-  from `SKILL.md` so each is useful when loaded on its own; the duplication is
-  deliberate and enforced by `scripts/check-skill-consistency.sh`. When you change a
-  mirrored instruction, update both `SKILL.md` and the relevant `references/*.md`
+- `SKILL.md` owns routing and the trust boundary; `references/routes/*.md` are required
+  modules loaded only for the selected path. Other `references/*.md` files intentionally
+  mirror shared screens/contracts so each is useful when loaded on its own; route presence
+  and duplication are enforced by `scripts/check-skill-consistency.sh`. When you change a
+  mirrored instruction, update the logical route and the relevant reference
   file, and add or update the matching `check_pair` or section guard in
   `scripts/check-skill-consistency.sh`, or CI will fail.
 - When you add or change an autonomous-mode safety rule or a decision screen, update
@@ -74,12 +88,15 @@ before you push, not after.
   capability profiles, adapter behavior, or local intent migration, add or update deterministic
   fixture cases under `evals/cases/` and `evals/fixtures/`, then run `bash scripts/check-evals.sh`.
   Required CI must stay local and no-live-model by default. `bash scripts/check-replay-evals.sh`
-  runs optional recorded replay cases when `evals/replays/cases/` exists. `bash scripts/check-live-evals.sh`
+  runs the required recorded replay corpus. `bash scripts/check-live-evals.sh`
   is disabled unless `PATHFINDER_LIVE_EVALS=1` and a local live runner are provided.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the
   dependency is necessary and safe.
+- Stable marketplace refs must equal the immutable `v<version>` tag. `main` is edge.
+  Run `bash scripts/package-smoke.sh .` before proposing a release; the release workflow
+  repeats it against the exact Git archive before creating a tag.
 
 ## Security-sensitive changes
 

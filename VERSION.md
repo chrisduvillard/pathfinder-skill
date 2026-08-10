@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-07-06
+Generated: 2026-08-10
 
-Version: 2.23.0
+Version: 3.0.0
 
 ## Versioning & distribution
 
@@ -12,9 +12,17 @@ that all three match. The two `marketplace.json` files intentionally carry **no*
 version: Claude Code resolves a plugin's version from `plugin.json` first, so
 declaring it in a marketplace entry as well would let a stale manifest silently
 mask it (per the official plugin-marketplaces docs). CI fails if either
-marketplace file adds a version. The Codex marketplace pins `source.ref: main`
-deliberately — a rolling release in which each commit on `main` is the new
-version.
+marketplace file adds a version. The default Codex marketplace is the stable
+channel and pins `source.ref` to the immutable `v<version>` tag. Repository
+`main` is the explicitly labeled edge channel for development/manual installs.
+The stable tag becomes installable only after the release workflow smoke-tests
+the exact archive and creates the tag; tags are never rewritten.
+
+Changes in v3.0.0:
+- Added a Python 3.11 controller with schema-validated intent/artifact/mission state, immutable authorization snapshots, atomic append-only recovery, leases, safe Git/worktree handling, structured command enforcement, host Goal adapters, and idempotent awaiting-review GitHub publication. V1 runs one Goal sequentially and has no self-merge.
+- Split the 1,547-line skill into a 297-line trust/router entry point plus required route modules. Concrete prompt-to-goal requests now skip the long creator interview, ask only unresolved Goal gaps, and keep Goal creation separate from autonomous authority.
+- Added real JSON Schema validation, actual Goal-payload assertions, supporting-note-laundering negatives, six deterministic controller replays, a bounded optional live-model interface, a conservative discovery cache, and three-platform controller CI.
+- Added safe intent/mission migration commands with backups and rollback, stable/edge release policy, package smoke testing, capability/operator/threat-model documentation, and explicit guarantee boundaries.
 
 Changes in v2.23.0:
 - Implemented the Bitter Lesson upgrade shell for Pathfinder: the canonical skill now separates the deterministic operating kernel from adaptive strategies and uses a capability model so future stronger models can vary search breadth, question depth, verifier depth, reviewer selection, and goal-output adapters without weakening safety contracts.

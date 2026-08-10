@@ -2,11 +2,11 @@
 
 `.pathfinder/doctrine.md` is Pathfinder's durable, **local-only** Project Doctrine. It lives beside `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, is gitignored through `.git/info/exclude`, and is never committed.
 
-It stores the deep end-state model that authorizes Full Autonomous Mission Mode: end goal, product philosophy, user intent, quality bars, improvement heuristics, autonomous mission policy, and irreversible/external hard stops. The charter holds stable intent, the roadmap holds changing work, and the doctrine explains how Pathfinder should keep improving the project when the roadmap runs out.
+It stores the deep end-state model that guides Goal selection: end goal, product philosophy, user intent, quality bars, improvement heuristics, autonomous mission policy, and irreversible/external hard stops. It never authorizes a run; every autonomous mission requires a fresh explicit request.
 
 ## Format
 
-Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:doctrine v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep the `clarity: resolved | unresolved` line, which is distinct from `completion` (see SKILL.md "Clarity gate").
+Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:doctrine v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep `intent_clarity: resolved | unresolved`, which is descriptive and never an authorization token.
 
 ```text
 # Pathfinder Doctrine
@@ -19,7 +19,7 @@ created: <YYYY-MM-DD HH:MM>
 last-refreshed: <YYYY-MM-DD HH:MM>
 source-basis: Doctrine Interview + repo evidence + later refreshes
 completion: complete | incomplete
-clarity: resolved | unresolved
+intent_clarity: resolved | unresolved
 
 ## End Goal
 - <the durable destination the project should move toward>
@@ -39,7 +39,8 @@ clarity: resolved | unresolved
 ## Autonomous Mission Policy
 - May derive and edit: <goal-aligned areas eligible for full autonomy>
 - Requires extra proof: <protected code areas are eligible with doctrine proof>
-- Must land as awaiting-review: <work that can be pushed but not self-merged without branch protection>
+- Human review required: <work that may be implemented but must land as awaiting-review>
+- Pre-action approval required: <work that must stop before implementation>
 - Never unattended: <irreversible/external hard stops>
 
 ## Irreversible/External Hard Stops
@@ -51,6 +52,6 @@ clarity: resolved | unresolved
 - real-world external side effects
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing doctrine field unanswered. Use `clarity: unresolved` whenever any intent file is incomplete, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear. The proof gate is a per-item, entry-time check (see SKILL.md "Clarity gate"), so an interactive first run sets `clarity` from file completion and unknown resolution, then each item's proof gate is checked before that item auto-runs.
+Use `completion: incomplete` when the user chose `continue later` or left a load-bearing doctrine field unanswered. Set `intent_clarity: unresolved` while any intent file is incomplete or any blocking ambiguity-ledger unknown remains open. Item proof belongs to `execution_eligibility`, not doctrine metadata.
 
-The doctrine can authorize protected code areas for autonomous work, but it cannot authorize the irreversible/external hard stops. Branch protection still decides self-merge eligibility; absent branch protection produces awaiting-review.
+Doctrine can support item-level proof for protected code areas but cannot authorize execution or any irreversible/external hard stop. V1 publication always stops at awaiting-review.

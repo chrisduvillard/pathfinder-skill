@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/artifacts/runtime-boundary.schema.json",
+  "title": "Pathfinder Runtime Boundary",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "boundary_id", "primary_runtime", "filesystem", "process", "network", "credentials", "repo_code_execution", "tool_allowlist_enforced", "pre_execution_consent", "execution_eligible", "blocking_reasons", "observed_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "boundary_id": {"type": "string", "pattern": "^boundary_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "primary_runtime": {"type": "string", "minLength": 1},
+    "filesystem": {"enum": ["enforced", "unenforced", "unknown"]},
+    "process": {"enum": ["enforced", "unenforced", "unknown"]},
+    "network": {"enum": ["denied", "restricted", "open", "unknown"]},
+    "credentials": {"enum": ["isolated", "exposed", "unknown"]},
+    "repo_code_execution": {"enum": ["denied", "allowlisted", "unrestricted", "unknown"]},
+    "tool_allowlist_enforced": {"type": "boolean"},
+    "pre_execution_consent": {"type": "boolean"},
+    "execution_eligible": {"type": "boolean"},
+    "blocking_reasons": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "observed_at": {"type": "string", "format": "date-time"}
+  }
+}

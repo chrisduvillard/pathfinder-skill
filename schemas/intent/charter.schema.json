@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/intent/charter.schema.json",
+  "title": "Pathfinder Charter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "charter_id", "completion", "intent_clarity", "established_at", "refreshed_at", "source_basis", "purpose", "users", "success", "constraints", "non_goals", "finished_state", "autonomy_policy"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "charter_id": {"type": "string", "pattern": "^charter_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "completion": {"enum": ["complete", "incomplete"]},
+    "intent_clarity": {"enum": ["resolved", "unresolved"]},
+    "established_at": {"type": "string", "format": "date-time"},
+    "refreshed_at": {"type": "string", "format": "date-time"},
+    "source_basis": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+    "purpose": {
+      "type": "object", "additionalProperties": false,
+      "required": ["north_star", "primary_promise"],
+      "properties": {"north_star": {"type": "string", "minLength": 1}, "primary_promise": {"type": "string", "minLength": 1}}
+    },
+    "users": {
+      "type": "object", "additionalProperties": false,
+      "required": ["primary", "secondary", "excluded", "key_journeys"],
+      "properties": {
+        "primary": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "secondary": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "excluded": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "key_journeys": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+      }
+    },
+    "success": {
+      "type": "object", "additionalProperties": false,
+      "required": ["durable_metrics", "quality_bars", "tradeoffs"],
+      "properties": {
+        "durable_metrics": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "quality_bars": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "tradeoffs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "constraints": {
+      "type": "object", "additionalProperties": false,
+      "required": ["technical", "product", "protected_surfaces"],
+      "properties": {
+        "technical": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "product": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "protected_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "non_goals": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "finished_state": {"type": "string", "minLength": 1},
+    "autonomy_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["may_derive", "human_review_required", "never_unattended"],
+      "properties": {
+        "may_derive": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "human_review_required": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "never_unattended": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+      }
+    }
+  }
+}

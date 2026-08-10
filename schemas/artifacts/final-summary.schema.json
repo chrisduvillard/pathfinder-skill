@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/artifacts/final-summary.schema.json",
+  "title": "Pathfinder Final Summary",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "mission_id", "final_state", "goals", "residual_risks", "next_input_needed", "replay_artifacts", "completed_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "final_state": {"enum": ["goal-saved", "awaiting-review", "blocked", "abandoned", "merged"]},
+    "goals": {"type": "array", "items": {"$ref": "#/$defs/goal"}, "minItems": 1, "maxItems": 1},
+    "residual_risks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "next_input_needed": {"type": ["string", "null"]},
+    "replay_artifacts": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "completed_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "goal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["goal_id", "attempt_id", "disposition", "binding_status", "verification", "commit_ids", "pr_url"],
+      "properties": {
+        "goal_id": {"type": "string", "pattern": "^goal_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "attempt_id": {"type": ["string", "null"], "pattern": "^attempt_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "disposition": {"enum": ["goal-saved", "awaiting-review", "blocked", "abandoned", "merged"]},
+        "binding_status": {"enum": ["matched", "missing", "stale-objective", "mismatched", "not-run"]},
+        "verification": {"enum": ["passed", "failed", "blocked", "not-run"]},
+        "commit_ids": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}, "uniqueItems": true},
+        "pr_url": {"type": ["string", "null"], "format": "uri"}
+      }
+    }
+  }
+}

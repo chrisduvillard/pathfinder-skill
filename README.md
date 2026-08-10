@@ -27,7 +27,7 @@
 
 <br>
 
-Pathfinder is a small **agent skill** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks the highest-value next moves, asks a few sharp questions, and forges a bounded, verifiable **`/goal`** you can run or hand to another agent — or, once it understands your intent deeply enough, runs the work itself and lands reviewable pull requests.
+Pathfinder is an **agent skill plus a deterministic controller** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks useful next moves, asks only the questions that affect the outcome, and forges a bounded, verifiable **Goal**. With a fresh explicit autonomous request and an enforceable runtime boundary, it can run one Goal to a verified local branch or an awaiting-review GitHub pull request.
 
 No micro-managing exploration. No guessing where to start.
 
@@ -40,8 +40,11 @@ No micro-managing exploration. No guessing where to start.
 ```text
 /plugin marketplace add chrisduvillard/pathfinder-skill
 /plugin install pathfinder@pathfinder
-/pathfinder
+/pathfinder:pathfinder
 ```
+
+The namespaced command is for the plugin install. A manual Claude skill install
+uses `/pathfinder`.
 
 **Codex**
 
@@ -50,6 +53,12 @@ codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
 # then run /skills, or type $pathfinder to invoke it
 ```
+
+`$pathfinder` invokes this skill; Codex's native `/goal` command controls a
+durable Goal after Pathfinder has prepared one.
+
+Marketplace installs use the immutable **stable** release tag. Repository `main`
+is the explicitly labeled **edge** channel for manual/development installs.
 
 > [!NOTE]
 > Prefer no plugin system? Copy `skills/pathfinder/` into `~/.claude/skills/` (Claude Code) or `~/.codex/skills/` (Codex). Full notes in [`README-INSTALL.md`](README-INSTALL.md).
@@ -64,39 +73,36 @@ Bare **`/pathfinder`** opens a chooser so you can see every path before anything
 |:--|:--|:--|
 | 🗺️ **Explore** | you're new to the repo and want the best next move | `Use the pathfinder skill on this repository.` |
 | 🎯 **Prompt&#8209;to&#8209;goal** | you already know the task | `Pathfinder, turn this into a /goal: <the work>` |
-| ⚡ **Autonomous**<br><sub>*(clarity-gated)*</sub> | you want it done hands-off | `Run Pathfinder autonomously on this repository.` |
+| ⚡ **Autonomous**<br><sub>*(explicitly authorized)*</sub> | you want one bounded Goal run to review | `Run Pathfinder autonomously on this repository.` |
 
 <br>
 
-**🗺️ Explore** reads the code itself — never the README, so a stale or missing doc can't mislead it — ranks the moves, adversarially verifies the top ones, captures your intent (charter, roadmap, doctrine + clarity gate), asks a few sharp questions, then forges the goal:
+**🗺️ Explore** starts from code, tests, manifests, and configuration, then checks documentation only after that source-first pass so stale prose cannot define reality. It ranks the moves, adversarially verifies the top ones, asks focused questions, then forges the Goal. Existing creator intent can influence ranking, but ordinary exploration does not require the creator interview:
 
 ```mermaid
 flowchart LR
-    A["<b>1 · DISCOVER</b><br/><i>read code, not docs</i>"]
+    A["<b>1 · DISCOVER</b><br/><i>source-first, docs later</i>"]
     B["<b>2 · SCOUT</b><br/><i>brief each domain</i>"]
     C["<b>3 · SYNTHESIZE</b><br/><i>rank the next moves</i>"]
     V["<b>4 · VERIFY</b><br/><i>adversarially re-check</i>"]
-    G["<b>5 · DOCTRINE</b><br/><i>capture intent · clarity gate</i>"]
-    D["<b>6 · ASK</b><br/><i>a few sharp questions</i>"]
-    E["<b>7 · FORGE /goal</b><br/><i>bounded · proven · ready</i>"]
+    D["<b>5 · ASK</b><br/><i>a few sharp questions</i>"]
+    E["<b>6 · FORGE /goal</b><br/><i>bounded · proven · ready</i>"]
 
-    A --> B --> C --> V --> G --> D --> E
+    A --> B --> C --> V --> D --> E
 
     classDef step fill:#0F172A,stroke:#2DD4BF,stroke-width:2px,color:#E6EDF3;
-    classDef gate fill:#0F172A,stroke:#A78BFA,stroke-width:2px,color:#DDD6FE;
     classDef forge fill:#0F172A,stroke:#F59E0B,stroke-width:2px,color:#FBBF24;
     class A,B,C,V step;
-    class G gate;
     class E forge;
 ```
 
-**🎯 Prompt-to-goal** skips the full sweep and researches only what your prompt touches, then forges the same bounded goal:
+**🎯 Prompt-to-goal** skips the full sweep and the Doctrine Interview. It researches only what your prompt touches, asks zero questions when outcome/proof/scope/safety/stop are already clear, then forges the same bounded Goal:
 
 ```text
 Pathfinder, turn this into a /goal: stop the dashboard empty-state from crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** is `/pathfinder auto` as **Full Autonomous Mission Mode**. It runs only after the **clarity gate** resolves: Pathfinder has built local doctrine (`.pathfinder/doctrine.md`, marker `pathfinder:doctrine v1`) plus the charter and roadmap, and each goal clears a model-depth proof gate. It creates an isolated mission worktree, then loops hands-off: **branch → implement → verify → commit → push → open a PR → merge only if branch protection positively allows it**. When roadmap work runs out, the Autonomous Opportunity Scout derives more doctrine-aligned candidates. Work needing review lands as an awaiting-review PR and the loop continues until the work is done, blocked, unsafe, capped, or out of budget. → [Safety](#-safety)
+**⚡ Autonomous** is an explicit `/pathfinder auto` run. V1 selects one existing Goal, binds authority to the current request and base commit, verifies controller-enforced isolation, then runs sequentially: **worktree → implement → verify → commit → optional GitHub PR → awaiting review**. It never activates from saved intent, derives an unbounded backlog, edits charter/doctrine policy, or self-merges. If enforcement is unavailable, Pathfinder saves the Goal and stops. Goal generation works in any readable folder; autonomous v1 requires a clean Git repository and the capabilities in the [compatibility matrix](docs/compatibility.md). → [Safety](#-safety)
 
 <br>
 
@@ -126,7 +132,7 @@ That `/goal` is **bounded, measurable, and self-proving** — paste it into Clau
 
 ## 📦 What you get
 
-Every run leaves a clean, resumable trail inside the repo:
+Every work-producing run leaves a clean, resumable trail; routes that skip a phase write an explicit placeholder:
 
 ```text
 .agent-work/pathfinder/<date>-<task>/
@@ -158,16 +164,16 @@ Three private files persist across runs — **`.pathfinder/charter.md`** (stable
 
 Every repo file is treated as **untrusted data**. Pathfinder won't run scripts, install packages, read secrets, or push changes without your say-so, and it redacts tokens and private paths from its artifacts.
 
-Autonomous mode is the one path that commits and merges without a per-step prompt. Even then:
+Autonomous mode is the one path that may commit and open a PR without a per-step prompt. Even then:
 
-- 🧭 **Doctrine is required** — missing, stale, incomplete, tracked, or contradicted doctrine triggers the interview before autonomy can run.
+- 🧭 **Fresh authority is required** — intent guides selection but every run needs an explicit `/pathfinder auto` request.
 - 🌿 **Autonomous work is isolated** — `/pathfinder auto` creates a mission worktree before edits, using `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto>` when possible.
 - 🔐 **Irreversible/external hard stops stay blocked** — secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, and real-world external side effects.
-- 🧪 **Protected areas need proof** — auth, payments, CI/CD, schemas, migrations, public APIs, and network-related code can be improved autonomously only with doctrine alignment, scoped proof, verification, diff review, and branch-protected merge gates.
+- 🧪 **Protected areas need proof** — auth, payments, CI/CD, schemas, migrations, public APIs, and network-related code require item-level eligibility, enforceable isolation, scoped proof, verification, and diff review.
 - 🧱 **The trust boundary holds** — repo content can't redirect the goal or widen authorization.
 - 🔑 **Credentials stay out** of the environment while repo code runs.
-- ✅ **Self-merge is default-deny** — only on a positive branch-protection signal; anything that needs review lands as an awaiting-review PR.
-- 🛑 **Doubt blocks autonomy** — no escalation on a fresh repo or while any blocking question is open.
+- ✅ **No self-merge in v1** — every published change lands as an awaiting-review PR.
+- 🛑 **Unknown enforcement blocks autonomy** — Pathfinder falls back to a saved Goal instead of claiming best-effort isolation.
 
 <br>
 
@@ -178,7 +184,7 @@ Autonomous mode is the one path that commits and merges without a per-step promp
 
 <br>
 
-- **Reads the source, not the docs.** The current default uses five domain scouts (architecture, frontend/product, backend/data, testing/reliability, DX/security) and a ranked **Top 5**, but those are adaptive strategies: future stronger models can search shorter or deeper routes while satisfying the same evidence and sidecar contracts.
+- **Defers docs until after a source-first pass.** Full exploration selects one to five scout domains from the initial map, expanding only where uncertainty or risk justifies it, then ranks a **Top 5**. Prompt-to-goal loads only its focused route. Both retain the same evidence and sidecar contracts.
 - **Adversarial verification.** The default blind **three-verifier panel** re-checks top candidates, downgrades or rejects the weak ones, and surfaces a `Verified:` grade. Low-risk work can take cheaper paths; protected, autonomous, or contested work uses deeper verification.
 - **Pick the work your way.** Choose from ranked candidate cards, drill down *intent → domain → surface → target → boundaries*, or select several moves as a numbered **goal pack**.
 - **Proof bound to the goal.** Each goal records a Goal Binding plus capability profile; run logs and summaries record the Runtime Boundary and Binding Status, so "done" is checked against the original objective instead of drifting into looks-done prose.
@@ -191,7 +197,7 @@ Autonomous mode is the one path that commits and merges without a per-step promp
 
 <br>
 
-On first use, Pathfinder runs the Doctrine Interview: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, finished state, future capabilities, product philosophy, quality bars, improvement heuristics, autonomy policy, and hard stops. It keeps asking until no blocking doubt remains (the **clarity gate**) and skips questions whose answers would not change the goal, proof, safety, or autonomy decision. It saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and the deep end-state model to `.pathfinder/doctrine.md`. Later runs reuse all three, show their influence, reconcile them against the current code, and let you refresh or override with `/pathfinder charter`.
+Full exploration and autonomous mode establish or reconcile creator intent when needed: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, future work, product philosophy, quality bars, autonomy policy, and hard stops. Prompt-to-goal deliberately skips this interview for ordinary Goal creation. Pathfinder saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and Project Doctrine to `.pathfinder/doctrine.md`. Intent improves selection but never authorizes execution; every autonomous run still needs a fresh explicit request.
 
 </details>
 
@@ -200,7 +206,7 @@ On first use, Pathfinder runs the Doctrine Interview: up to 8–12 compact, valu
 
 <br>
 
-Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state — repo/branch, whether the charter, roadmap, and doctrine exist and are complete, the latest run, and the available paths — without creating artifacts or triggering the interview.
+Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state—repo/branch, intent files, latest run, controller capabilities, and current mission status—without creating artifacts or triggering the interview. A full plugin install uses its bundled `scripts/pathfinder-controller.sh`; a manual skill-only copy is Goal-generation-only unless the controller is installed separately.
 
 </details>
 
@@ -210,7 +216,9 @@ Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look a
 
 Contributions are welcome when they keep Pathfinder **safe, bounded, and easy to run** on unfamiliar repos. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md); get usage help in [`SUPPORT.md`](SUPPORT.md); report vulnerabilities privately via [`SECURITY.md`](SECURITY.md), not public issues. Version and changelog live in [`VERSION.md`](VERSION.md).
 
-<sub>CI guards manifest/version consistency, artifact evals, CodeQL scanning, OpenSSF Scorecard, and dependency review.</sub>
+Operator and design references: [compatibility/guarantees](docs/compatibility.md), [operator recovery](docs/operator-guide.md), [threat model](docs/threat-model.md), [worked outcomes](docs/examples.md), and [promise coverage](docs/coverage-matrix.md).
+
+<sub>CI guards Linux/macOS/Windows portability, schemas, controller crash/resume, recorded replays, manifest/version consistency, CodeQL, Scorecard, and dependency review.</sub>
 
 <br>
 

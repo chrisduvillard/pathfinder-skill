@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see "Autonomous mode" in `SKILL.md`) the Deep Intent Gate and Doctrine Interview may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate resolves clarity (`clarity: resolved`), autonomous mode selects or derives goals from the sanitized charter, roadmap, doctrine, and current repo evidence — by explicit invocation or by auto-escalation — and runs continuous execution until a stop condition, cap, or auto-resume boundary is reached.
+This template is the interactive funnel. In autonomous mode the Deep Intent Gate and Doctrine Interview may ask creator-model questions before execution; the work-selection screens below do not run. A fresh explicit autonomous request selects one existing Goal, then the controller separately evaluates item eligibility and runs it sequentially. Intent clarity never authorizes execution.
 
 ## Universal rules
 
@@ -23,7 +23,7 @@ This template is the interactive funnel. In autonomous mode (see "Autonomous mod
 
 ## Phase 4c: Deep Intent Gate (runs before entry-point continuation)
 
-When `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md` is missing, schema-invalid, incomplete, marked `clarity: unresolved` with a still-open blocking unknown, explicitly refreshed, or contradicted by a light re-inference of current evidence (a charter non-goal now has implementing code, a stable field the code now contradicts, or the Project Doctrine no longer matches the repo — a stale intent model, caught on every work-producing entry and re-opened as a blocking unknown), Phase 4c runs the Deep Intent Gate and Doctrine Interview before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked `blocked` on creator input (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when all three files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
+When an intent file is missing, schema-invalid, incomplete, marked `intent_clarity: unresolved`, explicitly refreshed, or contradicted by current evidence, Phase 4c runs the Deep Intent Gate and Doctrine Interview for routes that need creator context. The first-run gate is not a skippable offer. If the user chooses `continue later`, save partial answers and stop. Intent clarity becomes `resolved` only when all three files are complete and no blocking unknown remains; the item-level proof gate is recorded later as `execution_eligibility`.
 
 The gate opens with an evidence draft, then asks a recognition-first interview that usually spans 8 to 12 compact screens. Every screen shows inferred answers with evidence and confidence, offers 3 to 6 concrete options where possible, includes `Agent recommends:`, includes free text, and asks directly about future capabilities not started yet. The 8 to 12 compact screens are a maximum/default depth, not a quota: skip or merge any screen whose answer cannot change the run under the value-of-information rule, then record the skip reason.
 
@@ -154,7 +154,7 @@ Escape: None of these - describe it yourself; continue later; or
 clarity resolves for the rest).
 ```
 
-Clarity resolves (`clarity: resolved`) only when every blocking unknown is resolved or converted.
+Intent clarity resolves (`intent_clarity: resolved`) only when every blocking unknown is resolved or converted.
 
 Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, evolving desired work in `.pathfinder/roadmap.md`, and the Project Doctrine in `.pathfinder/doctrine.md`. Also record the ambiguity ledger, each loop pass, the final `clarity` value on all three files, and any blocking-unknown conversions to roadmap Open Questions.
 

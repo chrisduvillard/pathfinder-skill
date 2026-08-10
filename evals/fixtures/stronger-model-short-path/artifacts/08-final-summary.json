@@ -1,1 +1,1 @@
-{"status":"saved","adaptive_short_path":true}
+{"schema_version":1,"mission_id":"mission_fixture02","final_state":"goal-saved","goals":[{"goal_id":"goal_fixture0002","attempt_id":null,"disposition":"goal-saved","binding_status":"not-run","verification":"not-run","commit_ids":[],"pr_url":null}],"residual_risks":["broader integration proof not run"],"next_input_needed":"explicit approval to run the saved Goal","replay_artifacts":["06-goal-command.md","06-goal-binding.json"],"completed_at":"2026-08-10T12:04:00Z"}

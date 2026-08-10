@@ -14,7 +14,7 @@
 # between Claude and Codex plugin manifests; (5) Codex default prompts cover the
 # supported entry paths; (6) neither marketplace.json declares a version anywhere
 # (plugin.json is the single source Claude Code resolves first); (7) the Codex
-# marketplace keeps source.ref pinned to main for rolling release.
+# marketplace pins source.ref to the immutable release tag for the stable channel.
 #
 # Usage: bash scripts/check-manifests.sh [ROOT]   (ROOT defaults to ".")
 # Exit 0 when all checks pass; non-zero otherwise.
@@ -166,15 +166,23 @@ for f in "$root"/.claude-plugin/marketplace.json "$root"/.agents/plugins/marketp
   fi
 done
 
-# (7) The Codex marketplace deliberately tracks main as a rolling release. Guard
-#     the ref so a tag pin cannot silently diverge from the documented distribution
-#     model while all version checks stay green.
+# (7) Stable installs resolve immutably on both hosts. The release tag must
+#     match VERSION.md; `main` is documented separately as the edge channel.
 codex_market="$root/.agents/plugins/marketplace.json"
 codex_refs=$("$jq_bin" -r '[.plugins[]? | select(.name == "pathfinder") | .source.ref?] | @tsv' "$codex_market" | tr -d '\r')
-if [ "$codex_refs" = "main" ]; then
-  echo "ok: $codex_market pathfinder source.ref = main"
+if [ "$codex_refs" = "v$v" ]; then
+  echo "ok: $codex_market stable pathfinder source.ref = v$v"
 else
-  echo "::error file=$codex_market::pathfinder marketplace source.ref must be \"main\" for rolling release, got \"${codex_refs:-<missing>}\""
+  echo "::error file=$codex_market::stable pathfinder source.ref must equal immutable tag \"v$v\", got \"${codex_refs:-<missing>}\""
+  fail=1
+fi
+claude_market="$root/.claude-plugin/marketplace.json"
+claude_ref=$("$jq_bin" -r '.plugins[]? | select(.name == "pathfinder") | .source.ref? // empty' "$claude_market" | tr -d '\r')
+claude_repo=$("$jq_bin" -r '.plugins[]? | select(.name == "pathfinder") | .source.repo? // empty' "$claude_market" | tr -d '\r')
+if [ "$claude_ref" = "v$v" ] && [ "$claude_repo" = "chrisduvillard/pathfinder-skill" ]; then
+  echo "ok: $claude_market stable source = $claude_repo@$claude_ref"
+else
+  echo "::error file=$claude_market::stable source must be chrisduvillard/pathfinder-skill at v$v"
   fail=1
 fi
 

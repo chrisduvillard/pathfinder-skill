@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/intent/doctrine.schema.json",
+  "title": "Pathfinder Doctrine",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "doctrine_id", "completion", "intent_clarity", "created_at", "refreshed_at", "source_basis", "end_goal", "product_philosophy", "user_intent", "quality_bars", "improvement_heuristics", "autonomous_mission_policy", "hard_stops"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "doctrine_id": {"type": "string", "pattern": "^doctrine_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "completion": {"enum": ["complete", "incomplete"]},
+    "intent_clarity": {"enum": ["resolved", "unresolved"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "refreshed_at": {"type": "string", "format": "date-time"},
+    "source_basis": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+    "end_goal": {"type": "string", "minLength": 1},
+    "product_philosophy": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "user_intent": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "quality_bars": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "improvement_heuristics": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "autonomous_mission_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["may_derive_and_edit", "requires_extra_proof", "human_review_required", "never_unattended"],
+      "properties": {
+        "may_derive_and_edit": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "requires_extra_proof": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "human_review_required": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "never_unattended": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+      }
+    },
+    "hard_stops": {
+      "type": "array", "uniqueItems": true, "minItems": 7,
+      "items": {"enum": ["secrets-or-credentials", "destructive-data-operations", "releases", "repository-administration", "force-push", "branch-or-tag-deletion", "external-side-effects"]}
+    }
+  }
+}

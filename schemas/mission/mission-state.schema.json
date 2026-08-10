@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/mission/mission-state.schema.json",
+  "title": "Pathfinder Mission State",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "mission_id", "goal_id", "binding_id", "authorization_id", "attempt_id", "state", "revision", "base_commit", "dirty_policy", "worktree_id", "worktree_path", "branch_id", "branch_name", "commit_ids", "pr_id", "pr_url", "created_at", "updated_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "goal_id": {"type": "string", "pattern": "^goal_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "authorization_id": {"type": ["string", "null"], "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "attempt_id": {"type": ["string", "null"], "pattern": "^attempt_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "state": {"enum": ["planned", "authorized", "prepared", "running", "verifying", "verified", "committed", "published", "awaiting-review", "merged", "blocked", "abandoned"]},
+    "revision": {"type": "integer", "minimum": 0},
+    "base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+    "dirty_policy": {"enum": ["block", "committed-base"]},
+    "worktree_id": {"type": ["string", "null"], "pattern": "^worktree_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "worktree_path": {"type": ["string", "null"]},
+    "branch_id": {"type": ["string", "null"], "pattern": "^branch_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "branch_name": {"type": ["string", "null"]},
+    "commit_ids": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}, "uniqueItems": true},
+    "pr_id": {"type": ["string", "null"]},
+    "pr_url": {"type": ["string", "null"], "format": "uri"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/replays/replay.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "replay_id", "scenario", "recorded_at", "explicit_authorization", "execution_eligible", "injection_detected", "clarification_screens", "observed_states", "commands_attempted", "commit_records", "pr_records", "duplicate_side_effects", "self_merge", "final_state"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "replay_id": {"type": "string", "pattern": "^replay_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "scenario": {"enum": ["prompt-fast-path", "authorization-denied", "sandbox-blocked", "injection-blocked", "crash-resume", "awaiting-review"]},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "explicit_authorization": {"type": "boolean"},
+    "execution_eligible": {"type": "boolean"},
+    "injection_detected": {"type": "boolean"},
+    "clarification_screens": {"type": "integer", "minimum": 0},
+    "observed_states": {"type": "array", "items": {"enum": ["goal-saved", "planned", "authorized", "prepared", "running", "verifying", "verified", "committed", "published", "awaiting-review", "blocked", "abandoned"]}, "minItems": 1},
+    "commands_attempted": {"type": "integer", "minimum": 0},
+    "commit_records": {"type": "integer", "minimum": 0, "maximum": 1},
+    "pr_records": {"type": "integer", "minimum": 0, "maximum": 1},
+    "duplicate_side_effects": {"const": 0},
+    "self_merge": {"const": false},
+    "final_state": {"enum": ["goal-saved", "awaiting-review", "blocked", "abandoned"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"scenario": {"const": "prompt-fast-path"}}}, "then": {"properties": {"clarification_screens": {"const": 0}, "commands_attempted": {"const": 0}, "commit_records": {"const": 0}, "pr_records": {"const": 0}, "final_state": {"const": "goal-saved"}}}},
+    {"if": {"properties": {"scenario": {"const": "authorization-denied"}}}, "then": {"properties": {"explicit_authorization": {"const": false}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
+    {"if": {"properties": {"scenario": {"const": "sandbox-blocked"}}}, "then": {"properties": {"execution_eligible": {"const": false}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
+    {"if": {"properties": {"scenario": {"const": "injection-blocked"}}}, "then": {"properties": {"injection_detected": {"const": true}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
+    {"if": {"properties": {"scenario": {"enum": ["crash-resume", "awaiting-review"]}}}, "then": {"properties": {"explicit_authorization": {"const": true}, "execution_eligible": {"const": true}, "commit_records": {"const": 1}, "pr_records": {"const": 1}, "final_state": {"const": "awaiting-review"}}}}
+  ]
+}

@@ -1,1 +1,1 @@
-{"binding_status":"not-run","runtime_boundary":{"primary_runtime":"fixture"}}
+{"schema_version":1,"mission_id":"mission_fixture02","attempt_id":null,"binding_id":"binding_fixture02","runtime_boundary_id":null,"commands":[],"binding_status":"not-run","verification":"not-run","publication":"not-requested","updated_at":"2026-08-10T12:03:00Z"}

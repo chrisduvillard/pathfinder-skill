@@ -7,8 +7,8 @@ name: release
 # v<version> at the merged commit and a release whose body is the matching
 # "Changes in v<version>:" changelog block. It is idempotent: if the tag/release
 # already exists (e.g. a changelog wording fix with no version bump), it does
-# nothing. Marketplace installs still resolve from plugin.json on main (rolling
-# release); this only keeps the human-facing Releases page in sync.
+# nothing. The default marketplace resolves the matching immutable tag; `main`
+# remains the explicitly documented edge channel.
 
 on:
   push:
@@ -32,6 +32,12 @@ jobs:
       contents: write # create the tag and the release
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install release-candidate validation dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
+
+      - name: Smoke-test the exact release archive
+        run: bash scripts/package-smoke.sh . "" git
 
       - name: Create release if VERSION.md declares a new version
         env:

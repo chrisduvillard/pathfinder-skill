@@ -20,6 +20,7 @@ By the end of this guide, you will be able to:
 ## Prerequisites
 
 - A Codex build that supports Goals.
+- Goals enabled in Codex configuration (see the setup below).
 - A task with a clear finish line and an evidence source you can inspect, such as tests, a benchmark, or a final artifact.
 - Enough repository or research context for Codex to verify progress rather than merely narrate it.
 
@@ -63,6 +64,23 @@ Then set a Goal with /goal followed by the outcome:
 ```text
 /goal Reduce p95 latency below 120 ms without regressing correctness tests
 ```
+
+If `/goal` is missing from the slash-command list, enable the feature in
+`config.toml`:
+
+```toml
+[features]
+goals = true
+```
+
+Or enable it from the CLI:
+
+```bash
+codex features enable goals
+```
+
+OpenAI's official [Follow a goal](https://learn.chatgpt.com/use-cases/follow-goals)
+guide is the source of truth for current setup and lifecycle behavior.
 
 You can manage the lifecycle from the same command surface:
 

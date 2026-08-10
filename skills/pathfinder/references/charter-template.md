@@ -6,7 +6,7 @@ It holds the creator model that should stay true across many runs: purpose, user
 
 ## Format
 
-Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:charter v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep the `clarity: resolved | unresolved` line, which is distinct from `completion` (see SKILL.md "Clarity gate").
+Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:charter v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep `intent_clarity: resolved | unresolved`, which is descriptive state distinct from `completion`, item-level execution eligibility, and authorization.
 
 ```text
 # Pathfinder Charter
@@ -20,7 +20,7 @@ last-refreshed: <YYYY-MM-DD HH:MM>
 established-by: pathfinder vX.Y.Z (<repo-root basename>)
 source-basis: creator interview + repo evidence + git-history
 completion: complete | incomplete
-clarity: resolved | unresolved
+intent_clarity: resolved | unresolved
 
 ## Purpose
 - North-star: <glyph> <one durable sentence> - basis: <one line> (<your charter | inferred, unconfirmed | incomplete>)
@@ -54,4 +54,4 @@ clarity: resolved | unresolved
 - Never unattended: <glyph> <work Pathfinder must never run unattended> - basis: <one line> (<...>)
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Use `clarity: unresolved` whenever `completion` is incomplete on `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md`, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear. The proof gate is a per-item, entry-time check (see SKILL.md "Clarity gate"), so an interactive first run sets `clarity` from file completion and unknown resolution, then each item's proof gate is checked before that item auto-runs.
+Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Set `intent_clarity: unresolved` whenever any intent file is incomplete or a blocking ambiguity-ledger unknown remains open; set it to `resolved` only when those descriptive conditions clear. A selected item's proof is recorded separately as `execution_eligibility`, and neither field grants authorization.

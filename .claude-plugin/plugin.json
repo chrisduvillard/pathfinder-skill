@@ -1,7 +1,7 @@
 {
   "name": "pathfinder",
-  "version": "2.23.0",
-  "description": "Map an unfamiliar repository, choose the highest-value next move, generate a bounded goal, or run doctrine-gated autonomous mission work.",
+  "version": "3.0.0",
+  "description": "Map an unfamiliar repository, create a bounded Goal, or run one explicitly authorized controller-backed mission to review.",
   "author": {
     "name": "Chris Duvillard",
     "url": "https://github.com/chrisduvillard"

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/intent/roadmap.schema.json",
+  "title": "Pathfinder Roadmap",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "roadmap_id", "completion", "intent_clarity", "created_at", "refreshed_at", "source_basis", "future_state", "items", "open_questions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "roadmap_id": {"type": "string", "pattern": "^roadmap_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "completion": {"enum": ["complete", "incomplete"]},
+    "intent_clarity": {"enum": ["resolved", "unresolved"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "refreshed_at": {"type": "string", "format": "date-time"},
+    "source_basis": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+    "future_state": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "items": {"type": "array", "items": {"$ref": "#/$defs/item"}},
+    "open_questions": {"type": "array", "items": {"$ref": "#/$defs/open_question"}}
+  },
+  "$defs": {
+    "item": {
+      "type": "object", "additionalProperties": false,
+      "required": ["item_id", "status", "priority", "rationale", "depends_on", "evidence", "safety", "desired_outcome", "execution_eligibility"],
+      "properties": {
+        "item_id": {"type": "string", "pattern": "^R[1-9][0-9]*$"},
+        "status": {"enum": ["not-started", "active", "complete", "blocked", "manual-only", "obsolete"]},
+        "priority": {"enum": ["high", "medium", "low"]},
+        "rationale": {"type": "string", "minLength": 1},
+        "depends_on": {"type": "array", "items": {"type": "string", "pattern": "^R[1-9][0-9]*$"}, "uniqueItems": true},
+        "evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "safety": {"enum": ["autonomous-eligible", "human-review-required", "pre-action-approval-required", "blocked-by-safety"]},
+        "desired_outcome": {"type": "string", "minLength": 1},
+        "execution_eligibility": {"$ref": "#/$defs/execution_eligibility"}
+      }
+    },
+    "execution_eligibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "reasons", "evaluated_at", "base_commit"],
+      "properties": {
+        "status": {"enum": ["eligible", "ineligible", "unknown"]},
+        "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "evaluated_at": {"type": ["string", "null"], "format": "date-time"},
+        "base_commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40,64}$"}
+      }
+    },
+    "open_question": {
+      "type": "object", "additionalProperties": false,
+      "required": ["question_id", "question", "blocked_item_ids"],
+      "properties": {
+        "question_id": {"type": "string", "pattern": "^Q[1-9][0-9]*$"},
+        "question": {"type": "string", "minLength": 1},
+        "blocked_item_ids": {"type": "array", "items": {"type": "string", "pattern": "^R[1-9][0-9]*$"}, "minItems": 1, "uniqueItems": true}
+      }
+    }
+  }
+}

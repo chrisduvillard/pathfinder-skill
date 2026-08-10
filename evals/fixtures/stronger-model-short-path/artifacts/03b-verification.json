@@ -1,1 +1,1 @@
-{"verification":"complete","candidates":[{"id":"C2","verdict":"downgraded","post_grade":"inferred"}]}
+{"schema_version":1,"mission_id":"mission_fixture02","verified_at":"2026-08-10T12:01:00Z","verifier_depth":"focused","lenses":["fidelity"],"results":[{"candidate_id":"C2","verdict":"downgraded","final_grade":"partial","proof_gaps":["broader integration proof unavailable"],"adjudication":"focused proof supports a narrower Goal"}]}

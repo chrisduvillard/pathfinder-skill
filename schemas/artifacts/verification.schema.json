@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/artifacts/verification.schema.json",
+  "title": "Pathfinder Candidate Verification",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "mission_id", "verified_at", "verifier_depth", "lenses", "results"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "verified_at": {"type": "string", "format": "date-time"},
+    "verifier_depth": {"enum": ["focused", "standard", "deep"]},
+    "lenses": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+    "results": {"type": "array", "items": {"$ref": "#/$defs/result"}}
+  },
+  "$defs": {
+    "result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidate_id", "verdict", "final_grade", "proof_gaps", "adjudication"],
+      "properties": {
+        "candidate_id": {"type": "string", "pattern": "^C[1-9][0-9]*$"},
+        "verdict": {"enum": ["accepted", "downgraded", "rejected"]},
+        "final_grade": {"enum": ["verified", "strong", "partial", "weak", "rejected"]},
+        "proof_gaps": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "adjudication": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

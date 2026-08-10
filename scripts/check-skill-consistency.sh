@@ -13,13 +13,35 @@
 # and the named mirror, so deleting one from a single file (the usual drift)
 # fails CI instead of shipping silently.
 #
-# Usage: bash scripts/check-skill-consistency.sh [ROOT]   (ROOT defaults to ".")
+# Usage: bash scripts/check-skill-consistency.sh [ROOT] [--verbose]
+# ROOT defaults to "."; successful per-invariant lines are hidden by default.
 # Exit 0 when all invariants hold; non-zero otherwise.
 
 set -uo pipefail
 
 root="${1:-.}"
+verbose=0
+if [ "${2:-}" = "--verbose" ] || [ "${PATHFINDER_VERBOSE:-}" = "1" ]; then
+  verbose=1
+fi
 skill="$root/skills/pathfinder/SKILL.md"
+route_dir="$root/skills/pathfinder/references/routes"
+route_files=(
+  "$route_dir/prompt-to-goal.md"
+  "$route_dir/discovery.md"
+  "$route_dir/synthesis.md"
+  "$route_dir/intent-refresh.md"
+  "$route_dir/question-routing.md"
+  "$route_dir/candidate-selection.md"
+  "$route_dir/explore-drilldown.md"
+  "$route_dir/post-save.md"
+  "$route_dir/goal-generation.md"
+  "$route_dir/goal-contract.md"
+  "$route_dir/autonomous.md"
+  "$route_dir/execute-review.md"
+  "$route_dir/final-summary.md"
+)
+skill_files=("$skill" "${route_files[@]}")
 funnel="$root/skills/pathfinder/references/question-funnel-template.md"
 goal="$root/skills/pathfinder/references/goal-best-practices.md"
 arts="$root/skills/pathfinder/references/artifact-structure.md"
@@ -34,8 +56,9 @@ contributing="$root/CONTRIBUTING.md"
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
+verbose_ok() { [ "$verbose" -eq 1 ] && printf 'ok: %s\n' "$*" || true; }
 
-for f in "$skill" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$doctrine" "$scout" "$kernel" "$strategies" "$capability" "$contributing"; do
+for f in "${skill_files[@]}" "$funnel" "$goal" "$arts" "$charter" "$roadmap" "$doctrine" "$scout" "$kernel" "$strategies" "$capability" "$contributing"; do
   [ -f "$f" ] || err "missing required file: $f"
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
@@ -44,7 +67,7 @@ if [ "$fail" -ne 0 ]; then exit "$fail"; fi
 #     exist on disk, and the cited set must include every required reference.
 #     This catches both a renamed reference and a citation removed together with
 #     its file.
-cited_refs="$(grep -oE 'references/[a-z0-9-]+\.md' "$skill" | sort -u)"
+cited_refs="$(grep -oE 'references/(routes/)?[a-z0-9-]+\.md' "$skill" | sort -u)"
 expected_refs="$(printf '%s\n' \
   'references/artifact-structure.md' \
   'references/adaptive-strategies.md' \
@@ -56,17 +79,30 @@ expected_refs="$(printf '%s\n' \
   'references/question-funnel-template.md' \
   'references/roadmap-template.md' \
   'references/scout-brief-template.md' \
+  'references/routes/autonomous.md' \
+  'references/routes/candidate-selection.md' \
+  'references/routes/discovery.md' \
+  'references/routes/execute-review.md' \
+  'references/routes/explore-drilldown.md' \
+  'references/routes/final-summary.md' \
+  'references/routes/goal-contract.md' \
+  'references/routes/goal-generation.md' \
+  'references/routes/intent-refresh.md' \
+  'references/routes/post-save.md' \
+  'references/routes/prompt-to-goal.md' \
+  'references/routes/question-routing.md' \
+  'references/routes/synthesis.md' \
   | sort -u)"
 while IFS= read -r ref; do
   [ -n "$ref" ] || continue
   if [ -f "$root/skills/pathfinder/$ref" ]; then
-    echo "ok: cited reference exists: $ref"
+    verbose_ok "cited reference exists: $ref"
   else
     err "SKILL.md cites a missing reference path: $ref"
   fi
 done < <(printf '%s\n' "$cited_refs")
 if [ "$cited_refs" = "$expected_refs" ]; then
-  echo "ok: required reference citation set matches SKILL.md"
+  verbose_ok "required reference citation set matches SKILL.md"
 else
   err "required-reference citation drift: SKILL.md must cite exactly the required references"
   echo "  missing from SKILL.md:  $(comm -23 <(printf '%s\n' "$expected_refs") <(printf '%s\n' "$cited_refs") | tr '\n' ' ')"
@@ -77,11 +113,11 @@ fi
 # cited set equals expected_refs, but neither enumerates references/*.md ON DISK — so a new reference
 # file added but never cited (and not added to expected_refs) would ship unguarded, never compared by
 # any check_pair. Fail if a references/*.md exists that is not in the required set.
-for path in "$root"/skills/pathfinder/references/*.md; do
+for path in "$root"/skills/pathfinder/references/*.md "$root"/skills/pathfinder/references/routes/*.md; do
   [ -f "$path" ] || continue
-  ref="references/$(basename "$path")"
+  ref="${path#"$root/skills/pathfinder/"}"
   if printf '%s\n' "$expected_refs" | grep -Fxq -- "$ref"; then
-    echo "ok: reference file is in the required set: $ref"
+    verbose_ok "reference file is in the required set: $ref"
   else
     err "orphan reference file: $ref exists on disk but is not a required reference (cite it in SKILL.md and add it to expected_refs, or remove it)"
   fi
@@ -92,10 +128,10 @@ done
 #     both fails.
 check_pair() {
   local token="$1" mirror="$2" label="$3" a b
-  grep -qF -- "$token" "$skill" && a=1 || a=0
+  grep -qF -- "$token" "${skill_files[@]}" && a=1 || a=0
   grep -qF -- "$token" "$mirror" && b=1 || b=0
   if [ "$a" = 1 ] && [ "$b" = 1 ]; then
-    echo "ok: $label consistent (SKILL.md + $(basename "$mirror"))"
+    verbose_ok "$label consistent (SKILL.md + $(basename "$mirror"))"
   else
     err "$label drift: SKILL.md=$a $(basename "$mirror")=$b — token \"$token\""
   fi
@@ -113,8 +149,8 @@ check_skill_section() {
     in_section && index($0, stop) == 1 { exit }
     in_section && index(tolower($0), token) { found = 1 }
     END { exit found ? 0 : 1 }
-  ' "$skill"; then
-    echo "ok: $label present in section \"$start\""
+  ' "${skill_files[@]}"; then
+    verbose_ok "$label present in section \"$start\""
   else
     err "$label drift: token \"$token\" missing from section \"$start\""
   fi
@@ -125,8 +161,8 @@ check_skill_section() {
 # re-scoping one (the window would otherwise extend past the renamed stop and a deleted safety phrase
 # could then read as present). Keep this list in sync with the start/stop args passed below.
 for heading in "## Autonomous mode" "## Phase 7:" "### Phase 7-A:" "### Reporting" "## Cross-Model Review" "## Phase 8:"; do
-  if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "$skill"; then
-    echo "ok: section-boundary heading present: \"$heading\""
+  if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "${skill_files[@]}"; then
+    verbose_ok "section-boundary heading present: \"$heading\""
   else
     err "section-boundary heading missing or renamed: \"$heading\" (check_skill_section keys on it; update both together)"
   fi
@@ -192,7 +228,7 @@ check_pair "checks_run_with_exit_results" "$goal" "structured completion check-r
 # to mirrored SKILL/reference behavior does not update prose while forgetting the
 # validator token that makes drift visible in CI.
 if grep -qF -- 'add or update the matching `check_pair` or section guard' "$contributing"; then
-  echo "ok: mirror guard guidance present in CONTRIBUTING.md"
+  verbose_ok "mirror guard guidance present in CONTRIBUTING.md"
 else
   err "mirror guard guidance drift: CONTRIBUTING.md must tell maintainers to update check_pair or section guards"
 fi
@@ -213,13 +249,14 @@ check_pair "protected code areas are eligible with doctrine proof" "$doctrine" "
 # Clarity gate (v2.21.0): the clarity field and ambiguity-ledger / anti-deadlock tokens
 # must be mirrored, the same way the completion marker is, so dropping one from a single
 # file fails CI instead of silently regressing the "ask until no doubt" gate.
-check_pair "clarity: resolved | unresolved" "$charter" "charter clarity marker"
-check_pair "clarity: resolved | unresolved" "$roadmap" "roadmap clarity marker"
-check_pair "clarity: resolved | unresolved" "$doctrine" "doctrine clarity marker"
+check_pair "intent_clarity: resolved | unresolved" "$charter" "charter intent-clarity marker"
+check_pair "intent_clarity: resolved | unresolved" "$roadmap" "roadmap intent-clarity marker"
+check_pair "intent_clarity: resolved | unresolved" "$doctrine" "doctrine intent-clarity marker"
 check_pair "ambiguity ledger" "$funnel" "ambiguity ledger mirror"
 check_pair "Open Question" "$roadmap" "anti-deadlock open question"
 check_pair "awaiting-review" "$arts" "autonomous awaiting-review disposition"
-check_pair "manual-approval-required" "$roadmap" "roadmap manual-approval class"
+check_pair "human-review-required" "$roadmap" "roadmap human-review class"
+check_pair "pre-action-approval-required" "$roadmap" "roadmap pre-action approval class"
 check_pair "Deep Intent Gate" "$funnel" "deep-intent gate mirror"
 check_pair "not a skippable offer" "$funnel" "deep-intent non-skippable default"
 check_pair "future capabilities not started yet" "$funnel" "future-capabilities question"
@@ -254,8 +291,8 @@ for lvl in "#### L1. Domain" "#### L2. Surface" "#### L3. Target" "#### L4. Boun
       insec && index($0, "#### ") == 1 { exit }
       insec && index($0, tok) { found = 1 }
       END { exit found ? 0 : 1 }
-    ' "$skill"; then
-      echo "ok: Explore level \"$lvl\" carries escape \"$tok\""
+    ' "${skill_files[@]}"; then
+      verbose_ok "Explore level \"$lvl\" carries escape \"$tok\""
     else
       err "Explore level \"$lvl\" is missing its universal escape \"$tok\" (the funnel two-channel + ignore-objectives rules require both at every level)"
     fi
@@ -297,19 +334,19 @@ while IFS= read -r example; do
   [ -n "$example" ] || continue
   good_example_i=$((good_example_i + 1))
   case "$example" in
-    *"Final report must include"*) echo "ok: good goal example $good_example_i includes final-report proof language" ;;
+    *"Final report must include"*) verbose_ok "good goal example $good_example_i includes final-report proof language" ;;
     *) err "good goal example $good_example_i is missing final-report proof language" ;;
   esac
   case "$example" in
-    *"deep verification/testing"*) echo "ok: good goal example $good_example_i includes deep verification/testing language" ;;
+    *"deep verification/testing"*) verbose_ok "good goal example $good_example_i includes deep verification/testing language" ;;
     *) err "good goal example $good_example_i is missing deep verification/testing language" ;;
   esac
   case "$example" in
-    *"changed_files"*complexity_notes*) echo "ok: good goal example $good_example_i includes structured completion claim fields" ;;
+    *"changed_files"*complexity_notes*) verbose_ok "good goal example $good_example_i includes structured completion claim fields" ;;
     *) err "good goal example $good_example_i is missing structured completion claim fields" ;;
   esac
   if [[ "$example" == *"Stop before touching"* || "$example" == *"Do not touch"* ]]; then
-    echo "ok: good goal example $good_example_i includes protected-area stop language"
+    verbose_ok "good goal example $good_example_i includes protected-area stop language"
   else
     err "good goal example $good_example_i is missing protected-area stop language"
   fi
@@ -318,12 +355,12 @@ done < <(printf '%s\n' "$good_examples")
 check_pair "manual-handoff" "$arts" "cross-model manual handoff mode"
 check_pair "failed-to-launch" "$arts" "cross-model failed-to-launch mode"
 if grep -qF -- 'launch mode is `launched`, `manual-handoff`, `skipped`, or `failed-to-launch`' "$arts"; then
-  echo "ok: cross-model launch-mode contract present in $(basename "$arts")"
+  verbose_ok "cross-model launch-mode contract present in $(basename "$arts")"
 else
   err "artifact-structure.md is missing the exact cross-model launch-mode contract"
 fi
 if grep -qF -- 'final disposition is `clean`, `fixed-clean`, `needs-primary-followup`, `needs-user-review`, `blocked`, or `skipped`' "$arts"; then
-  echo "ok: cross-model final-disposition contract present in $(basename "$arts")"
+  verbose_ok "cross-model final-disposition contract present in $(basename "$arts")"
 else
   err "artifact-structure.md is missing the exact cross-model final-disposition contract"
 fi
@@ -338,8 +375,8 @@ check_skill_section "### Phase 7-A:" "### Reporting" "before commit or publicati
 #      prompt-to-goal routing that lives only in SKILL.md (it is deliberately not
 #      mirrored into the funnel template), so it cannot use check_pair. Assert it is
 #      present so silently dropping the routing screen fails CI like any other drift.
-if grep -qF -- "How should I help?" "$skill"; then
-  echo "ok: Track B entry-menu screen present in SKILL.md"
+if grep -qF -- "How should I help?" "${skill_files[@]}"; then
+  verbose_ok "Track B entry-menu screen present in SKILL.md"
 else
   err "SKILL.md is missing the Track B \"How should I help?\" entry-menu screen"
 fi
@@ -366,7 +403,7 @@ entry_chooser_invariants=(
 )
 for inv in "${entry_chooser_invariants[@]}"; do
   if grep -qF -- "$inv" "$skill"; then
-    echo "ok: entry chooser invariant present: \"$inv\""
+    verbose_ok "entry chooser invariant present: \"$inv\""
   else
     err "SKILL.md is missing entry chooser invariant: \"$inv\""
   fi
@@ -374,7 +411,7 @@ done
 if grep -qF -- "[recommended for an unfamiliar repo]" "$skill"; then
   err "SKILL.md still contains the stale static entry recommendation label"
 else
-  echo "ok: entry chooser has no stale static unfamiliar-repo recommendation label"
+  verbose_ok "entry chooser has no stale static unfamiliar-repo recommendation label"
 fi
 
 # (2d) Autonomous-mode safety invariants (SKILL-only presence). Autonomous mode is an
@@ -386,7 +423,8 @@ fi
 #      fails CI instead of shipping a weakened autonomous tier green.
 auto_invariants=(
   "autonomous-eligible"
-  "manual-approval-required"
+  "human-review-required"
+  "pre-action-approval-required"
   "Never unattended"
   "excluded from autonomous execution"
   "pathfinder:doctrine v1"
@@ -398,25 +436,24 @@ auto_invariants=(
   "force-pushes"
   "mission worktree"
   "<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto"
-  "Autonomous Opportunity Scout"
-  "auto-resume ledger"
+  "Autonomous Opportunity Scout is disabled in v1"
+  "Resume ledger"
   "absent branch protection produces awaiting-review"
   "post-execution protected-path gate"
   "credential separation"
   "must not run repo-defined hooks"
-  "positive branch-protection signal"
+  "The former **conditional self-merge** path is prohibited"
   "injection-disqualifies-autonomy"
-  "continuous execution"
   "explicit invocation every run"
   "budget-limited"
   "model-depth proof gate"
-  "independence check before parallel execution"
-  "separate branches or worktrees"
-  "clarity: resolved"
-  "auto-escalat"
+  "one Goal, sequential v1"
+  "intent_clarity: resolved"
+  "Never auto-escalate"
   "awaiting-review"
-  "never self-merge"
-  "per-run PR cap"
+  "No self-merge in v1"
+  "never edits .pathfinder/charter.md or .pathfinder/doctrine.md"
+  "total/open PRs"
 )
 for inv in "${auto_invariants[@]}"; do
   # Case-insensitive: the phrase is load-bearing as a concept, whether it appears
@@ -425,18 +462,13 @@ for inv in "${auto_invariants[@]}"; do
   check_skill_section "## Autonomous mode" "## Phase 7:" "$inv" "autonomous-mode safety invariant \"$inv\""
 done
 
-# (C3) The `clarity: resolved` gate — the safety definition that authorizes unattended auto-escalation —
-# is stated TWICE in SKILL.md: the "### Clarity gate" definition and the "### Ambiguity ledger and the
-# clarity gate" definition. The check_pair "clarity: resolved | unresolved" guard above only proves the
-# MARKER co-exists across the mirror files; it does NOT prove both SKILL.md definitions still enumerate
-# all three load-bearing conditions. Relaxing one copy (dropping the model-depth proof gate, or the
-# blocking-unknowns / completion condition) would leave the two definitions contradictory — the
-# coherence class VERSION.md v2.21.6 already had to fix. Assert each region names each condition; this
-# checks presence of the condition TOKENS, not prose token-identity, so legitimate rewording stays free.
-clarity_conditions=("completion: complete" "unknowns" "model-depth proof gate")
-for cond in "${clarity_conditions[@]}"; do
-  check_skill_section "### Clarity gate" "## Claude Code" "$cond" "clarity-gate definition 1 keeps condition \"$cond\""
-  check_skill_section "### Ambiguity ledger and the clarity gate" "### Reuse and reconcile" "$cond" "clarity-gate definition 2 keeps condition \"$cond\""
+# Intent clarity is descriptive state, stated in two places. Both definitions
+# must retain completion + blocking-unknown conditions and keep item execution
+# eligibility separate rather than turning persistent intent into authority.
+intent_clarity_conditions=("completion: complete" "unknowns" "execution_eligibility")
+for cond in "${intent_clarity_conditions[@]}"; do
+  check_skill_section "### Intent clarity" "## Claude Code" "$cond" "intent-clarity definition 1 keeps condition \"$cond\""
+  check_skill_section "### Ambiguity ledger and intent clarity" "### Reuse and reconcile" "$cond" "intent-clarity definition 2 keeps condition \"$cond\""
 done
 
 # Objectives-charter SKILL-only presence invariants (no Phase 5/6 mirror; guard like Track B).
@@ -454,8 +486,8 @@ for inv in "${charter_invariants[@]}"; do
   # on GNU grep 3.0 under MSYS/Git-for-Windows, which would falsely fail every
   # charter invariant for local contributors on that platform; awk index(tolower())
   # is the portable equivalent and matches the same case-insensitive substring.
-  if awk -v inv="$inv" 'BEGIN { inv = tolower(inv) } index(tolower($0), inv) { found = 1 } END { exit found ? 0 : 1 }' "$skill"; then
-    echo "ok: objectives-charter invariant present: \"$inv\""
+  if awk -v inv="$inv" 'BEGIN { inv = tolower(inv) } index(tolower($0), inv) { found = 1 } END { exit found ? 0 : 1 }' "${skill_files[@]}"; then
+    verbose_ok "objectives-charter invariant present: \"$inv\""
   else
     err "SKILL.md is missing objectives-charter invariant: \"$inv\""
   fi
@@ -468,10 +500,10 @@ done
 #     above. (TR-1) The middle alternative captures the 02-scout-briefs/ directory slot,
 #     which has no .md extension and was previously invisible to this check.
 art_re='[0-9]{2}[a-z]?-[a-z-]+\.md|[0-9]{2}-[a-z-]+/|[a-z-]+-scout\.md'
-skill_arts="$(grep -oE "$art_re" "$skill" | sort -u)"
+skill_arts="$(grep -hoE "$art_re" "${skill_files[@]}" | sort -u)"
 struct_arts="$(grep -oE "$art_re" "$arts" | sort -u)"
 if [ "$skill_arts" = "$struct_arts" ]; then
-  echo "ok: artifact filename set matches (SKILL.md + artifact-structure.md)"
+  verbose_ok "artifact filename set matches (SKILL.md + artifact-structure.md)"
 else
   err "artifact-contract drift: SKILL.md and artifact-structure.md list different artifact files"
   echo "  only in SKILL.md:            $(comm -23 <(printf '%s\n' "$skill_arts") <(printf '%s\n' "$struct_arts") | tr '\n' ' ')"
@@ -485,7 +517,7 @@ fi
 #     compensating odd defects also net even. Instead, track open/close state honoring
 #     fence length: a block opened with N backticks closes only on an info-less line of
 #     >= N backticks. A file that ends inside an open fence fails.
-for f in "$skill" "$root"/skills/pathfinder/references/*.md; do
+for f in "${skill_files[@]}" "$root"/skills/pathfinder/references/*.md; do
   state=$(awk '
     {
       n = 0
@@ -500,7 +532,7 @@ for f in "$skill" "$root"/skills/pathfinder/references/*.md; do
     END { print (depth == 0) ? "ok" : "open" }
   ' "$f")
   if [ "$state" = "ok" ]; then
-    echo "ok: code fences nest and close ($(basename "$f"))"
+    verbose_ok "code fences nest and close ($(basename "$f"))"
   else
     err "mis-nested or unterminated code fence in $f (ends inside an open fence; check 3- vs 4-backtick nesting)"
   fi
@@ -511,9 +543,9 @@ done
 # wrapper (both fences) re-pairs into valid-but-wrong markdown it cannot see. The goal-pack
 # example in SKILL.md nests 3-backtick blocks, so it MUST keep a 4-backtick wrapper. Assert
 # those 4-backtick fences are present and balanced so downgrading them fails CI.
-quad=$(grep -cE '^`{4}' "$skill" || true)
+quad=$(grep -hcE '^`{4}' "${skill_files[@]}" | awk '{ total += $1 } END { print total + 0 }')
 if [ "$quad" -ge 2 ] && [ $((quad % 2)) -eq 0 ]; then
-  echo "ok: goal-pack 4-backtick wrapper present and balanced ($quad) in SKILL.md"
+  verbose_ok "goal-pack 4-backtick wrapper present and balanced ($quad) in SKILL.md"
 else
   err "goal-pack 4-backtick wrapper drift in SKILL.md: found $quad 4-backtick fence line(s) (need an even count >= 2; a 4->3 downgrade corrupts the nested goal-pack render)"
 fi
@@ -534,8 +566,8 @@ if awk '
     }
   }
   END { exit (bad || open) ? 1 : 0 }
-' "$skill"; then
-  echo "ok: every 4-backtick wrapper in SKILL.md encloses a nested triple fence"
+' "${skill_files[@]}"; then
+  verbose_ok "every 4-backtick wrapper in SKILL.md encloses a nested triple fence"
 else
   err "goal-pack quad-wrapper structure drift in SKILL.md: a 4-backtick-wrapped region encloses no 3-backtick fence (the net-even trap: a 4->3 goal-pack downgrade plus a stray even quad pair nets even but corrupts the render)"
 fi

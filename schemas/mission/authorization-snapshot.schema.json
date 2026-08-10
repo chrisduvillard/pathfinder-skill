@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/mission/authorization-snapshot.schema.json",
+  "title": "Pathfinder Authorization Snapshot",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "authorization_id", "mission_id", "binding_id", "explicit_request", "trusted_source", "authorized_at", "base_commit", "intent_hashes", "limits", "publication_target", "snapshot_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "authorization_id": {"type": "string", "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "explicit_request": {"type": "boolean", "const": true},
+    "trusted_source": {"enum": ["current-user-turn", "host-approval-store"]},
+    "authorized_at": {"type": "string", "format": "date-time"},
+    "base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+    "intent_hashes": {"type": "object", "additionalProperties": false, "required": ["charter", "roadmap", "doctrine"], "properties": {"charter": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "roadmap": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "doctrine": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "limits": {"type": "object", "additionalProperties": false, "required": ["max_goals", "max_attempts", "max_wall_seconds", "max_total_prs"], "properties": {"max_goals": {"const": 1}, "max_attempts": {"type": "integer", "minimum": 1}, "max_wall_seconds": {"type": "integer", "minimum": 1}, "max_total_prs": {"type": "integer", "minimum": 0}}},
+    "publication_target": {"enum": ["none", "local-branch", "github-awaiting-review"]},
+    "snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

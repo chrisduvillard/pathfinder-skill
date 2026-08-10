@@ -26,7 +26,12 @@ codex plugin add pathfinder@pathfinder
 
 Then invoke it in Codex with `$pathfinder`, or run `/skills` to pick it.
 
+`$pathfinder` invokes the installed skill. Codex's native `/goal` command is a
+separate lifecycle control for the durable Goal that Pathfinder prepares.
+
 Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
+
+The marketplace entry is the stable channel and resolves to an immutable `v<version>` tag. Repository `main` is the edge channel for manual/development installs; use it only when you intentionally want unreleased changes.
 
 ## Manual Claude Code install
 
@@ -68,3 +73,32 @@ Invoke it in Codex with `$pathfinder` or by running `/skills`. If your Codex run
 Pathfinder saves both a ready-to-copy `/goal <condition>` command and an equivalent `Implementation Goal` Markdown fallback for Codex, older Claude Code versions, or environments where slash commands cannot be executed directly.
 
 The generated `/goal` condition is bounded, measurable, under the character budget, and requires the implementation agent to surface proof in the transcript because the `/goal` evaluator does not independently run tools or read files.
+
+## Autonomous controller requirements
+
+Goal generation does not require the controller. Autonomous v1 requires Python 3.11+ and the pinned validator packages:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-controller.txt
+.venv/bin/python -m pathfinder_core doctor --json
+```
+
+On Windows use `.venv/Scripts/python.exe`. An autonomous run also needs a clean Git repository and host-proven filesystem/process/network/credential isolation. GitHub publication additionally needs `gh` and a publication-only credential. Unknown enforcement degrades to saved-Goal-only behavior.
+
+Full plugin installs include `scripts/pathfinder-controller.sh`, which resolves the plugin root even while Pathfinder operates on another repository. A manual copy of only `skills/pathfinder/` is Goal-generation-only unless the controller is separately installed.
+
+See [`docs/compatibility.md`](docs/compatibility.md) and [`docs/operator-guide.md`](docs/operator-guide.md).
+
+## Codex `/goal` compatibility
+
+If `/goal` is absent from Codex's slash-command list, enable it in `config.toml`:
+
+```toml
+[features]
+goals = true
+```
+
+Or run `codex features enable goals`. See OpenAI's official
+[Follow a goal](https://learn.chatgpt.com/use-cases/follow-goals) guide for the
+current setup and lifecycle controls.
