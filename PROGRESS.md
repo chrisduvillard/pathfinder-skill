@@ -45,3 +45,11 @@
 2026-08-10 R5.1 mission start — added local-only validated mission initialization with immutable contract copies, stable attempt identity, crash-safe planned-to-authorized recovery, idempotent retries, and a JSON CLI; mission-runner availability remains false and full check-all passes 117 tests.
 2026-08-10 R5.2 next action — added deterministic one-action host requests whose exact authority/runtime/input hashes are journaled before return; lost responses now yield reconcile-required without replay, contracts are sealed read-only, and full check-all passes 119 tests.
 2026-08-10 R5.3 record/resume — added typed receipt persistence before terminal operation results, validated state advancement, manual/reconcile fail-closed outcomes, and start/next/record/resume CLI recovery through a verified local branch; full check-all passes 123 tests while publication and mission-runner availability remain disabled.
+2026-08-10 R6 worktree crash matrix — before-intent through after-transition fixtures preserve one worktree effect and require reconciliation after an ambiguous response.
+2026-08-10 R6 Goal activation crash matrix — native Goal activation is never replayed after a lost response; stable identity or manual blocked handoff remains mandatory.
+2026-08-10 R6 implementation crash matrix — persistent host fixtures prove intent-first execution, receipt/result recovery, and one implementation effect across restarts.
+2026-08-10 R6 verification crash matrix — verification receipts recover across both journal boundaries without rerunning the verifier action.
+2026-08-10 R6 commit crash matrix — one stable commit record survives receipt, result, and transition crashes; repeated receipts are idempotent.
+2026-08-10 R6 push crash matrix — an ambiguous push stays pending/reconcile-required and the operation driver refuses a blind second push.
+2026-08-10 R6 pull-request crash matrix — a lost create response reuses the exact persisted head/base/mission PR and creates at most one PR record.
+2026-08-10 R6 check-poll crash matrix — ambiguous polls require reconciliation and ordinary pending checks remain bounded; full discovery and check-all pass 130 tests locally.
