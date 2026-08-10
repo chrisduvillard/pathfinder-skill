@@ -34,6 +34,9 @@ permissions:
 jobs:
   check:
     name: preflight (${{ matrix.os }})
+    env:
+      PATHFINDER_CONTROLLER_PYTHON: python
+      PATHFINDER_EVAL_PYTHON: python
     strategy:
       fail-fast: false
       matrix:
