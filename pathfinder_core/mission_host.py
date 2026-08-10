@@ -6,10 +6,10 @@ import stat
 from pathlib import Path
 
 from .errors import StateError
-from .host_protocol import HostProtocol
+from .host_protocol import HostAction, HostActionRequest, HostOutcome, HostProtocol
 from .operations import OperationJournal
 from .policy import ExecutionPolicy
-from .state import utc_now
+from .state import transition, utc_now
 from .storage import MissionLock, MissionStore, read_json, write_atomic
 
 
@@ -21,6 +21,20 @@ ACTION_BY_STATE = {
     "verified": ("commit", "commit"),
 }
 TERMINAL_STATES = {"awaiting-review", "merged", "blocked", "abandoned"}
+SUCCESS_BY_ACTION = {
+    "prepare-worktree": ("authorized", "prepared", "worktree-prepared"),
+    "activate-goal": ("prepared", "running", "goal-active"),
+    "implement": ("running", "verifying", "implementation-complete"),
+    "verify": ("verifying", "verified", "verification-passed"),
+    "commit": ("verified", "committed", "commit-created"),
+}
+RESULT_CODES = {
+    "succeeded": "completed",
+    "failed": "command-failed",
+    "manual-handoff": "backend-unavailable",
+    "not-observed": "not-found",
+    "reconcile-required": "ambiguous",
+}
 
 
 def document_sha256(document: dict) -> str:
@@ -33,6 +47,7 @@ class HostMissionController:
         self.root = Path(root)
         self.contracts_path = self.root / "contracts"
         self.start_lock_path = self.root / "mission-start.lock"
+        self.receipt_lock_path = self.root / "host-receipts.lock"
         self.store = MissionStore(self.root)
         self.journal = OperationJournal(self.root)
         self.protocol = HostProtocol()
@@ -216,6 +231,11 @@ class HostMissionController:
         intent_path = self.journal.operations_path / f"{operation_id}.intent.json"
         if intent_path.exists():
             loaded = self.journal.load(operation_id)
+            receipt_path = self._receipt_path(operation_id)
+            if receipt_path.exists():
+                return self._finish_receipt(
+                    state, loaded["intent"], read_json(receipt_path)
+                )
             if loaded["state"] == "pending":
                 return {
                     "status": "reconcile-required",
@@ -224,13 +244,129 @@ class HostMissionController:
                     "operation_id": operation_id,
                     "action_kind": ACTION_BY_STATE[state["state"]][1],
                 }
-            return {
-                "status": "result-pending-transition",
-                "operation_id": operation_id,
-                "outcome": loaded["disposition"],
-            }
+            raise StateError("operation result exists without its typed host receipt")
         request, intent = self._documents_for_action(
             state, binding, authorization, boundary, started_at=self.clock()
         )
         self.journal.record_intent(intent)
         return {"status": "action-required", "action": request}
+
+    def _receipt_path(self, operation_id: str) -> Path:
+        return self.journal.operations_path / f"{operation_id}.receipt.json"
+
+    def _request_from_intent(self, intent: dict) -> HostActionRequest:
+        action_id = f"action_{hashlib.sha256(intent['operation_id'].encode()).hexdigest()[:24]}"
+        return HostActionRequest(
+            action_id=action_id, operation_id=intent["operation_id"],
+            mission_id=intent["mission_id"], attempt_id=intent["attempt_id"],
+            action_kind=HostAction(intent["action_kind"]),
+            request_sha256=intent["request_sha256"],
+            authorization_snapshot_sha256=intent["authorization_snapshot_sha256"],
+            runtime_boundary_sha256=intent["runtime_boundary_sha256"],
+            context={}, requested_at=intent["started_at"],
+        )
+
+    def _persist_receipt(self, receipt: dict) -> None:
+        path = self._receipt_path(receipt["operation_id"])
+        with MissionLock(self.receipt_lock_path):
+            if path.is_symlink():
+                raise StateError("host receipt cannot be a symlink")
+            if path.exists():
+                if read_json(path) != receipt:
+                    raise StateError("different host receipt already exists")
+                path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+                return
+            write_atomic(path, receipt)
+            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+
+    def _operation_result(self, intent: dict, receipt: dict) -> dict:
+        outcome = receipt["outcome"]
+        operation_outcome = "failed" if outcome == "manual-handoff" else outcome
+        return {
+            "schema_version": 1,
+            **{field: intent[field] for field in (
+                "operation_id", "mission_id", "attempt_id", "stage", "action_kind",
+                "request_sha256", "authorization_snapshot_sha256",
+                "runtime_boundary_sha256", "started_at",
+            )},
+            "outcome": operation_outcome,
+            "evidence": {
+                "summary_code": RESULT_CODES[outcome],
+                "external_id": receipt["evidence"]["stable_id"],
+                "exit_status": receipt["evidence"]["exit_status"],
+                "output_sha256": document_sha256(receipt),
+            },
+            "completed_at": receipt["completed_at"],
+        }
+
+    def _success_changes(self, action_kind: str, evidence: dict) -> dict:
+        if action_kind == "prepare-worktree":
+            return {
+                "worktree_id": evidence["stable_id"],
+                "worktree_path": evidence["worktree_path"],
+                "branch_id": evidence["branch_id"],
+                "branch_name": evidence["branch_name"],
+            }
+        if action_kind == "commit":
+            return {"commit_ids": [evidence["stable_id"]]}
+        return {}
+
+    def _advance(self, state: dict, receipt: dict, *, apply: bool) -> dict:
+        action_kind = receipt["action_kind"]
+        outcome = receipt["outcome"]
+        source, target, success_code = SUCCESS_BY_ACTION[action_kind]
+        if state["state"] == "abandoned":
+            return state
+        if outcome != HostOutcome.SUCCEEDED.value:
+            if state["state"] == "blocked":
+                return state
+            if state["state"] != source:
+                raise StateError("failed host receipt does not match current mission state")
+            if not apply:
+                return transition(state, "blocked")
+            return self.store.move("blocked", attempt_id=state["attempt_id"])
+        if receipt["evidence"]["code"] != success_code:
+            raise StateError(f"successful {action_kind} receipt has the wrong evidence code")
+        changes = self._success_changes(action_kind, receipt["evidence"])
+        if state["state"] == source:
+            candidate = transition(state, target)
+            candidate.update(changes)
+            self.store.validate("mission/mission-state.schema.json", candidate)
+            if not apply:
+                return candidate
+            return self.store.move(
+                target, attempt_id=state["attempt_id"], changes=changes
+            )
+        if state["state"] == target or state["state"] in TERMINAL_STATES | {"published", "committed"}:
+            for field, value in changes.items():
+                if state[field] != value:
+                    raise StateError(f"applied host receipt state drift: {field}")
+            return state
+        raise StateError("successful host receipt does not match current mission state")
+
+    def _validate_receipt_for_state(self, state: dict, intent: dict, receipt: dict) -> None:
+        binding, authorization, boundary = self._load_contracts()
+        self._validate_state_identity(state, binding, self._attempt_id(binding))
+        if intent["authorization_snapshot_sha256"] != document_sha256(authorization):
+            raise StateError("operation authorization hash no longer matches mission contract")
+        if intent["runtime_boundary_sha256"] != document_sha256(boundary):
+            raise StateError("operation runtime hash no longer matches mission contract")
+        self.protocol.validate_receipt(receipt, request=self._request_from_intent(intent))
+        self._advance(state, receipt, apply=False)
+
+    def _finish_receipt(self, state: dict, intent: dict, receipt: dict) -> dict:
+        self._validate_receipt_for_state(state, intent, receipt)
+        self.journal.record_result(self._operation_result(intent, receipt))
+        updated = self._advance(state, receipt, apply=True)
+        status = receipt["outcome"] if receipt["outcome"] != "succeeded" else "advanced"
+        return {"status": status, "operation_id": intent["operation_id"], "state": updated}
+
+    def record(self, receipt: dict) -> dict:
+        operation_id = receipt.get("operation_id")
+        if not isinstance(operation_id, str):
+            raise StateError("host receipt requires an operation_id")
+        loaded = self.journal.load(operation_id)
+        state = self.store.load()
+        self._validate_receipt_for_state(state, loaded["intent"], receipt)
+        self._persist_receipt(receipt)
+        return self._finish_receipt(state, loaded["intent"], receipt)

@@ -74,6 +74,52 @@ def write_document(path, document):
     path.write_text(json.dumps(document))
 
 
+RECEIPT_CODES = {
+    "prepare-worktree": "worktree-prepared",
+    "activate-goal": "goal-active",
+    "implement": "implementation-complete",
+    "verify": "verification-passed",
+    "commit": "commit-created",
+}
+
+
+def host_receipt(action, *, outcome="succeeded"):
+    stable_ids = {
+        "prepare-worktree": "worktree_12345678",
+        "activate-goal": "goal_native_12345678",
+        "implement": "implementation_12345678",
+        "verify": "verification_12345678",
+        "commit": "c" * 40,
+    }
+    evidence = {
+        "code": RECEIPT_CODES[action["action_kind"]],
+        "redacted_summary": f"{action['action_kind']} fixture complete",
+        "stable_id": stable_ids[action["action_kind"]],
+        "artifact_sha256": HASH,
+        "exit_status": 0,
+        "changed_files": ["src/example.py"] if action["action_kind"] == "implement" else [],
+        "worktree_path": None,
+        "branch_id": None,
+        "branch_name": None,
+    }
+    if action["action_kind"] == "prepare-worktree":
+        evidence.update(
+            worktree_path="/tmp/pathfinder-fixture",
+            branch_id="branch_12345678",
+            branch_name="pathfinder/auto/test-goal",
+        )
+    return {
+        "schema_version": 1,
+        **{field: action[field] for field in (
+            "action_id", "operation_id", "mission_id", "attempt_id", "action_kind",
+            "request_sha256", "authorization_snapshot_sha256", "runtime_boundary_sha256",
+        )},
+        "outcome": outcome,
+        "evidence": evidence,
+        "completed_at": NOW,
+    }
+
+
 BOUNDARY = {
     "schema_version": 1, "boundary_id": "boundary_12345678", "primary_runtime": "fixture",
     "filesystem": "enforced", "process": "enforced", "network": "denied", "credentials": "isolated",
@@ -299,6 +345,108 @@ class OneGoalMissionTests(unittest.TestCase):
                     "mission", "next", "--state-dir", str(root), "--json"
                 ]), 0)
             self.assertEqual(json.loads(output.getvalue())["status"], "reconcile-required")
+
+    def test_receipt_and_result_crash_boundaries_resume_without_replay(self):
+        for boundary in ("after-receipt", "after-result"):
+            with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory) / "mission"
+                controller = HostMissionController(root, clock=lambda: NOW)
+                controller.start(
+                    binding=goal_binding(), authorization=local_authorization(),
+                    runtime_boundary=BOUNDARY,
+                )
+                action = controller.next()["action"]
+                receipt = host_receipt(action)
+                target = controller.journal if boundary == "after-receipt" else controller.store
+                method = "record_result" if boundary == "after-receipt" else "move"
+                with mock.patch.object(target, method, side_effect=RuntimeError("crash")):
+                    with self.assertRaises(RuntimeError):
+                        controller.record(receipt)
+                recovered = HostMissionController(root, clock=lambda: NOW).next()
+                self.assertEqual(recovered["status"], "advanced")
+                self.assertEqual(recovered["state"]["state"], "prepared")
+                repeated = HostMissionController(root).record(receipt)
+                self.assertEqual(repeated["state"], recovered["state"])
+                self.assertEqual(len(list((root / "operations").glob("*.intent.json"))), 1)
+
+    def test_manual_goal_handoff_blocks_instead_of_fabricating_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            controller.start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            controller.record(host_receipt(controller.next()["action"]))
+            action = controller.next()["action"]
+            receipt = host_receipt(action, outcome="manual-handoff")
+            receipt["evidence"].update(
+                code="manual-handoff", stable_id=None, artifact_sha256=None,
+                exit_status=None, redacted_summary="Run /goal manually",
+            )
+            result = controller.record(receipt)
+            self.assertEqual(result["status"], "manual-handoff")
+            self.assertEqual(result["state"]["state"], "blocked")
+
+    def test_semantically_invalid_receipt_is_not_persisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            controller.start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            action = controller.next()["action"]
+            receipt = host_receipt(action)
+            receipt["evidence"]["code"] = "action-failed"
+            with self.assertRaisesRegex(StateError, "wrong evidence code"):
+                controller.record(receipt)
+            operation_prefix = root / "operations" / action["operation_id"]
+            self.assertFalse(Path(f"{operation_prefix}.receipt.json").exists())
+            self.assertFalse(Path(f"{operation_prefix}.result.json").exists())
+
+    def test_cli_transcript_reaches_verified_local_branch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mission_root = root / "mission"
+            binding_path, authorization_path, boundary_path = (
+                root / "binding.json", root / "authorization.json", root / "boundary.json"
+            )
+            write_document(binding_path, goal_binding())
+            write_document(authorization_path, local_authorization())
+            write_document(boundary_path, BOUNDARY)
+
+            def invoke(arguments):
+                output, errors = StringIO(), StringIO()
+                with redirect_stdout(output), redirect_stderr(errors):
+                    code = main(arguments)
+                self.assertEqual(code, 0, errors.getvalue())
+                return json.loads(output.getvalue())
+
+            invoke([
+                "mission", "start", "--state-dir", str(mission_root),
+                "--goal-binding", str(binding_path), "--authorization", str(authorization_path),
+                "--runtime-boundary", str(boundary_path), "--json",
+            ])
+            for expected_action in RECEIPT_CODES:
+                next_result = invoke([
+                    "mission", "resume", "--state-dir", str(mission_root), "--json"
+                ])
+                self.assertEqual(next_result["action"]["action_kind"], expected_action)
+                receipt_path = root / "receipt.json"
+                write_document(receipt_path, host_receipt(next_result["action"]))
+                record_result = invoke([
+                    "mission", "record", "--state-dir", str(mission_root),
+                    "--receipt-file", str(receipt_path), "--json",
+                ])
+                self.assertEqual(record_result["status"], "advanced")
+            terminal = invoke([
+                "mission", "resume", "--state-dir", str(mission_root), "--json"
+            ])
+            self.assertEqual(terminal["status"], "terminal")
+            self.assertEqual(terminal["state"]["state"], "awaiting-review")
+            self.assertEqual(terminal["state"]["commit_ids"], ["c" * 40])
+            self.assertIsNone(terminal["state"]["pr_id"])
 
 
 if __name__ == "__main__":

@@ -29,6 +29,13 @@ def _parser() -> argparse.ArgumentParser:
     next_action = mission_commands.add_parser("next", help="return the next journaled host action")
     next_action.add_argument("--state-dir", required=True)
     next_action.add_argument("--json", action="store_true", dest="as_json")
+    record = mission_commands.add_parser("record", help="record one typed host receipt")
+    record.add_argument("--state-dir", required=True)
+    record.add_argument("--receipt-file", required=True)
+    record.add_argument("--json", action="store_true", dest="as_json")
+    resume = mission_commands.add_parser("resume", help="resume without replaying pending work")
+    resume.add_argument("--state-dir", required=True)
+    resume.add_argument("--json", action="store_true", dest="as_json")
     status = mission_commands.add_parser("status", help="show current mission state")
     status.add_argument("--state-dir", required=True)
     status.add_argument("--json", action="store_true", dest="as_json")
@@ -104,7 +111,7 @@ def main(argv=None) -> int:
                 print(f"attempt: {state['attempt_id']}")
                 print("publication: local-only")
             return 0
-        if args.command == "mission" and args.mission_command == "next":
+        if args.command == "mission" and args.mission_command in {"next", "resume"}:
             result = HostMissionController(args.state_dir).next()
             if args.as_json:
                 print(json.dumps(result, indent=2, sort_keys=True))
@@ -115,6 +122,17 @@ def main(argv=None) -> int:
                     print(f"operation: {result['action']['operation_id']}")
                 elif result.get("operation_id"):
                     print(f"operation: {result['operation_id']}")
+            return 0
+        if args.command == "mission" and args.mission_command == "record":
+            result = HostMissionController(args.state_dir).record(
+                read_json(Path(args.receipt_file))
+            )
+            if args.as_json:
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"status: {result['status']}")
+                print(f"operation: {result['operation_id']}")
+                print(f"state: {result['state']['state']}")
             return 0
         if args.command == "mission" and args.mission_command == "abandon":
             store = MissionStore(args.state_dir)
