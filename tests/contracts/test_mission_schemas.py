@@ -9,6 +9,7 @@ from tests.contracts.test_intent_schemas import reject_duplicate_keys
 
 
 ROOT = Path(__file__).resolve().parents[2]
+FIXTURES = ROOT / "tests" / "contracts" / "fixtures"
 NOW = "2026-08-10T12:00:00+00:00"
 HASH = "a" * 64
 COMMIT = "b" * 40
@@ -22,6 +23,12 @@ def validate(path, instance):
     document = schema(path)
     Draft202012Validator.check_schema(document)
     Draft202012Validator(document, format_checker=FormatChecker()).validate(instance)
+
+
+def fixture(name):
+    return json.loads(
+        (FIXTURES / name).read_text(), object_pairs_hook=reject_duplicate_keys
+    )
 
 
 STATE = {
@@ -63,9 +70,55 @@ class MissionSchemaTests(unittest.TestCase):
                     Draft202012Validator.check_schema(schema(f"{folder}/{path.name}"))
 
     def test_valid_mission_documents(self):
-        for path, instance in [("mission/mission-state.schema.json", STATE), ("mission/authorization-snapshot.schema.json", AUTHORIZATION), ("mission/event.schema.json", EVENT), ("artifacts/runtime-boundary.schema.json", BOUNDARY)]:
+        for path, instance in [("mission/mission-state.schema.json", STATE), ("mission/authorization-snapshot.schema.json", AUTHORIZATION), ("mission/event.schema.json", EVENT), ("artifacts/runtime-boundary.schema.json", BOUNDARY), ("mission/operation-intent.schema.json", fixture("operation-intent.valid.json")), ("mission/operation-result.schema.json", fixture("operation-result.valid.json"))]:
             with self.subTest(path=path):
                 validate(path, instance)
+
+    def test_all_operation_fixtures_are_duplicate_safe_json(self):
+        for path in FIXTURES.glob("*.json"):
+            with self.subTest(path=path.name):
+                fixture(path.name)
+
+    def test_operation_result_rejects_raw_output(self):
+        with self.assertRaises(Exception):
+            validate(
+                "mission/operation-result.schema.json",
+                fixture("operation-result-secret.invalid.json"),
+            )
+
+    def test_operation_contract_rejects_unknown_enums_and_fields(self):
+        intent = fixture("operation-intent.valid.json")
+        intent["action_kind"] = "run-anything"
+        with self.assertRaises(Exception):
+            validate("mission/operation-intent.schema.json", intent)
+        result = fixture("operation-result.valid.json")
+        result["outcome"] = "still-running"
+        result["environment"] = {"TOKEN": "not-recorded"}
+        with self.assertRaises(Exception):
+            validate("mission/operation-result.schema.json", result)
+
+    def test_operation_fixture_loader_rejects_duplicate_keys(self):
+        with self.assertRaises(ValueError):
+            json.loads(
+                '{"operation_id":"first","operation_id":"second"}',
+                object_pairs_hook=reject_duplicate_keys,
+            )
+
+    def test_one_receipt_shape_covers_host_git_and_reconciliation(self):
+        result = fixture("operation-result.valid.json")
+        result.update(stage="goal-activation", action_kind="activate-goal")
+        result["evidence"].update(
+            external_id="goal_native_12345678", exit_status=None, output_sha256=None
+        )
+        validate("mission/operation-result.schema.json", result)
+
+        result.update(stage="commit", action_kind="commit")
+        result["evidence"]["external_id"] = "e" * 40
+        validate("mission/operation-result.schema.json", result)
+
+        result.update(stage="publication", action_kind="push", outcome="reconcile-required")
+        result["evidence"].update(summary_code="ambiguous", external_id=None)
+        validate("mission/operation-result.schema.json", result)
 
     def test_unknown_state_fails(self):
         instance = copy.deepcopy(STATE)
