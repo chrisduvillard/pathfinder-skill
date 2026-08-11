@@ -1,5 +1,6 @@
 import copy
 import json
+import stat
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -233,6 +234,7 @@ class GoalPackMissionTests(unittest.TestCase):
             boundary_path = controller.contracts_path / "runtime-boundary.json"
             outside = Path(directory) / "outside-boundary.json"
             write_document(outside, BOUNDARY)
+            boundary_path.chmod(boundary_path.stat().st_mode | stat.S_IWUSR)
             boundary_path.unlink()
             try:
                 boundary_path.symlink_to(outside)
