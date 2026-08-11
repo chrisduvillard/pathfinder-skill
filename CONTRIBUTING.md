@@ -22,10 +22,12 @@ Run the local preflight — it runs the same logic CI does, so green locally mea
 bash scripts/check-all.sh
 ```
 
-`scripts/check-manifests.sh` needs [`jq`](https://jqlang.github.io/jq/) on your `PATH`
+The preflight needs [`jq`](https://jqlang.github.io/jq/) and
+[`ShellCheck`](https://www.shellcheck.net/) on your `PATH`
 (`apt-get install jq`, `brew install jq`, `choco install jq`, or `winget install jqlang.jq`);
-it exits early with an error if `jq` is missing. The other checks need only `bash` and
-standard POSIX tools (`awk`, `sed`, `grep`).
+install ShellCheck with the same package manager. The checks exit early with an actionable
+error when either dependency is missing. The other checks need only `bash` and standard
+POSIX tools (`awk`, `sed`, `grep`).
 
 Controller tests require Python 3.11+ and the pinned packages in
 `requirements-controller.txt`. An ignored `.venv` is recommended:
@@ -42,6 +44,7 @@ bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-escape invariants
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
+bash scripts/check-shell.sh               # warning-or-higher ShellCheck over every Bash file
 bash scripts/check-evals.sh               # deterministic artifact-contract eval fixtures
 bash scripts/check-replay-evals.sh        # required recorded controller/route replays
 bash scripts/test-validators.sh           # meta-tests for the drift-guard parsers themselves

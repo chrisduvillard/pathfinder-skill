@@ -79,7 +79,10 @@ run_case_file() {
   mkdir -p "$workspace"
   cp -R "$root/$fixture/." "$workspace/"
 
+  # These globals are consumed by functions loaded dynamically from eval-lib.sh.
+  # shellcheck disable=SC2034
   ARTIFACT_DIR="$workspace/artifacts"
+  # shellcheck disable=SC2034
   REPO_DIR="$workspace/repo"
   case_errors=""
 

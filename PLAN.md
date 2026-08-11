@@ -160,7 +160,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add a seeded meta-test proving the portability guard catches `sed -i`.
 - [x] Remove the duplicate artifact-eval invocation from `scripts/check-all.sh`.
 - [x] Add macOS and Windows jobs to the required preflight workflow; keep Ubuntu.
-- [ ] Add a lightweight ShellCheck job or locally reproducible ShellCheck command for all Bash files.
+- [x] Add a lightweight ShellCheck job or locally reproducible ShellCheck command for all Bash files.
 - [x] Make validator success output concise by default and add `--verbose` for the full per-invariant list.
 - [x] Correct Claude plugin installation examples so namespaced and manual invocations are clearly distinguished.
 - [x] Update `docs/goal_command_codex.md` with the current `features.goals` enablement check and Goal lifecycle controls.

@@ -13,6 +13,7 @@
 - [ ] `bash scripts/check-skill-behavior.sh`
 - [ ] `bash scripts/check-manifests.sh`
 - [ ] `bash scripts/check-portability.sh`
+- [ ] `bash scripts/check-shell.sh`
 - [ ] `bash scripts/check-evals.sh`
 - [ ] `bash scripts/test-validators.sh`
 - [ ] `git diff --check`

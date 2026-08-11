@@ -58,6 +58,7 @@ fi
 bash "$package/scripts/check-manifests.sh" "$package"
 bash "$package/scripts/check-skill-consistency.sh" "$package"
 bash "$package/scripts/check-skill-behavior.sh" "$package"
+bash "$package/scripts/check-shell.sh" "$package"
 PATHFINDER_EVAL_PYTHON="$smoke_python" bash "$package/scripts/check-evals.sh" "$package"
 PATHFINDER_EVAL_PYTHON="$smoke_python" bash "$package/scripts/check-replay-evals.sh" "$package"
 PATHFINDER_CONTROLLER_PYTHON="$smoke_python" bash "$package/scripts/check-controller.sh" "$package"

@@ -214,6 +214,17 @@ else
   bad "portability guard MISSED GNU-only argument-less in-place sed (exit=$port_ec)"
 fi
 
+echo "== parser 5c: ShellCheck wrapper discovers and rejects a warning =="
+S="$(mktemp -d "$tmp/shellcheck.XXXXXX")"
+mkdir -p "$S/scripts"
+printf '%s\n' '#!/usr/bin/env bash' 'unused="dead assignment"' > "$S/scripts/unused.sh"
+shell_out="$(bash "$here/scripts/check-shell.sh" "$S" 2>&1)"; shell_ec=$?
+if [ "$shell_ec" -ne 0 ] && printf '%s' "$shell_out" | grep -q 'SC2034'; then
+  ok "ShellCheck wrapper discovers Bash files and rejects warning-level findings"
+else
+  bad "ShellCheck wrapper missed an unused assignment (exit=$shell_ec)"
+fi
+
 echo "== parser 6: orphan-reference guard (TR-5) =="
 # check-skill-consistency.sh must flag a references/*.md that exists on disk but is not a required
 # (cited + expected) reference. Drop an uncited orphan into a fixture and assert the guard fails.
