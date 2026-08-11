@@ -1128,16 +1128,16 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 
 #### Sub-prompt J4.1 — intent JSON store and pure renderers
 
-- [ ] `[writes code]` Add only an intent storage module, intent renderers, and focused tests; first present a file/lock/atomicity plan.
-- [ ] Validate `charter.json`, `roadmap.json`, and `doctrine.json` against existing schemas before writing; render corresponding `.md` views deterministically.
-- [ ] Imitate `MissionStore` duplicate-safe JSON loading and atomic writes, plus current charter/roadmap/doctrine template headings.
-- [ ] Never derive authorization, clarity, safety, or hard stops from the Markdown view.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] No deletion is allowed in this slice.
-- [ ] Expected diff: 100-150 lines per intent kind; split common storage from renderers if larger.
-- [ ] Verify with round-trip-independent tests: JSON -> Markdown, tamper Markdown, rerender, unchanged JSON hash.
-- [ ] Append a line to `PROGRESS.md` recording intent authority behavior and verification.
-- [ ] Stop if the three schemas need semantic changes; version and migrate one schema at a time rather than accepting extra properties.
+- [x] `[writes code]` Add only an intent storage module, intent renderers, and focused tests; first present a file/lock/atomicity plan.
+- [x] Validate `charter.json`, `roadmap.json`, and `doctrine.json` against existing schemas before writing; render corresponding `.md` views deterministically.
+- [x] Imitate `MissionStore` duplicate-safe JSON loading and atomic writes, plus current charter/roadmap/doctrine template headings.
+- [x] Never derive authorization, clarity, safety, or hard stops from the Markdown view.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] No deletion is allowed in this slice.
+- [x] Expected diff: 100-150 lines per intent kind; split common storage from renderers if larger.
+- [x] Verify with round-trip-independent tests: JSON -> Markdown, tamper Markdown, rerender, unchanged JSON hash.
+- [x] Append a line to `PROGRESS.md` recording intent authority behavior and verification.
+- [x] Stop if the three schemas need semantic changes; version and migrate one schema at a time rather than accepting extra properties.
 
 #### Sub-prompt J4.2 — creator-confirmed activation and legacy backup
 
