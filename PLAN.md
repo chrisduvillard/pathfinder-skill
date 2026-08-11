@@ -1374,17 +1374,19 @@ Observable completion means:
 
 #### Sub-prompt K1.1 — policy and authorization schemas
 
-- [ ] `[writes code]` Add only `schemas/publication/merge-policy.schema.json`, `schemas/publication/merge-authorization.schema.json`, focused fixtures/tests, and schema documentation; present the proposed fields and invariants before editing.
-- [ ] The policy must bind immutable repository id/node id, owner/name, base branch, allowed low-risk paths, additive deny paths/categories, strict diff ceilings, required check context+app identities, approval floor, one supported merge method, workflow-side-effect acknowledgement, issuer, issued/expiry times, and canonical hash.
-- [ ] The authorization must bind a fresh explicit trusted request, one mission/binding/authorization id set, one policy hash, one repository/base, one merge budget, issue/expiry times, and a source limited to current user or authenticated host approval storage.
-- [ ] Enforce non-configurable floors: one independent human approval, one pinned required check, one same-repository PR, zero protected categories, one merge, and no pack/parallel authority.
-- [ ] Do not add a merge publication target to the existing mission authorization or make the local controller accept publication.
-- [ ] Imitate existing Draft 2020-12 closed schemas, canonical hashes, stable id patterns, fixture validators, and additional-property rejection.
-- [ ] Existing schema tests must pass unmodified. Add negative fixtures for repo-local provenance, widened floor, wildcard identity, missing app id, missing expiry, pack authority, and hash drift.
-- [ ] No deletion is expected. Show all callers before changing an existing authorization enum or schema.
-- [ ] Expected diff: 220-320 lines. Split policy and authorization if either review exceeds 180 lines.
-- [ ] Append a `PROGRESS.md` line recording contracts only and the continued absence of a merge caller.
-- [ ] Stop if policy storage cannot be authenticated outside the repository or if the host cannot distinguish a current explicit merge request from ordinary autonomy.
+- [x] `[writes code]` Add only `schemas/publication/merge-policy.schema.json`, `schemas/publication/merge-authorization.schema.json`, focused fixtures/tests, and schema documentation; present the proposed fields and invariants before editing.
+- [x] The policy must bind immutable repository id/node id, owner/name, base branch, allowed low-risk paths, additive deny paths/categories, strict diff ceilings, required check context+app identities, approval floor, one supported merge method, workflow-side-effect acknowledgement, issuer, issued/expiry times, and canonical hash.
+- [x] The authorization must bind a fresh explicit trusted request, one mission/binding/authorization id set, one policy hash, one repository/base, one merge budget, issue/expiry times, and a source limited to current user or authenticated host approval storage.
+- [x] Enforce non-configurable floors: one independent human approval, one pinned required check, one same-repository PR, zero protected categories, one merge, and no pack/parallel authority.
+- [x] Do not add a merge publication target to the existing mission authorization or make the local controller accept publication.
+- [x] Imitate existing Draft 2020-12 closed schemas, canonical hashes, stable id patterns, fixture validators, and additional-property rejection.
+- [x] Existing schema tests must pass unmodified. Add negative fixtures for repo-local provenance, widened floor, wildcard identity, missing app id, missing expiry, pack authority, and hash drift.
+- [x] No deletion is expected. Show all callers before changing an existing authorization enum or schema.
+- [x] Expected diff: 220-320 lines. Split policy and authorization if either review exceeds 180 lines.
+- [x] Append a `PROGRESS.md` line recording contracts only and the continued absence of a merge caller.
+- [x] Stop if policy storage cannot be authenticated outside the repository or if the host cannot distinguish a current explicit merge request from ordinary autonomy.
+
+**Implementation note (2026-08-11):** added separate 99-line policy and 71-line current-run authorization schemas, a paired fixture with eight fail-closed mutations, seven focused cross-document/hash/freshness tests, and a 66-line trust/canonicalization contract. The complete schema/fixture/test/documentation slice is 425 lines before plan/progress bookkeeping—above the estimate because authentication caveats and cross-key invariants remain explicit, while each schema stays below the 180-line split threshold. Existing mission schemas and enums are byte-identical, repository search finds no production consumer or merge method, and full preflight passes with 230 tests.
 
 #### Sub-prompt K1.2 — evidence, intent, and result schemas
 
@@ -1618,4 +1620,4 @@ Observable completion means:
 
 ### Recommended first implementation slice
 
-**K0.1 is complete.** Execute **K1.1 only** next: define the closed, host-owned policy and authorization schemas without changing the existing mission authorization or adding a network writer. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
+**K0.1 and K1.1 are complete.** Execute **K1.2 only** next: define closed evidence, one-use intent, and result/reconciliation schemas without adding a network observer or writer. Do not begin K4 or K5.2 without a new explicit security/enablement decision.

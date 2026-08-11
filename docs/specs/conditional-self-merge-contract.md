@@ -29,6 +29,10 @@ A checked-in policy file may document intent but cannot supply either key. Bare 
 `/pathfinder auto`, `run all`, resolved intent, a previous approval, a Goal Binding, or an
 `awaiting-review` publication target never implies merge authority.
 
+The closed, inert representation of both keys is defined by the
+[policy and authorization schema contract](conditional-self-merge-schema-contract.md). Its fields
+do not authenticate themselves and add no executable route.
+
 ### Locked decisions
 
 | ID | Normative decision |
