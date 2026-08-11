@@ -1045,41 +1045,43 @@ Implementation note: the prompt replay's six output paths and safety semantics w
 
 #### Sub-prompt J2.1 — mission projection builder
 
-- [ ] `[writes code]` Add only `pathfinder_core/projections.py` and `tests/core/test_projections.py`; first present a field-mapping table from canonical source to projection field.
-- [ ] Read and validate existing `state.json`, binding, runtime boundary, operation intents/results, and typed receipts; construct schema-v1 run-log/final-summary documents without reading Markdown.
-- [ ] Imitate `OperationJournal.load`, `MissionStore.load`, and `evals/harness/validate-bundle.py` identity checks.
-- [ ] Use only redacted receipt fields; do not expose argv, output, environment, credentials, or raw repository content.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] No deletion is expected; show callers before replacing any bundle loader.
-- [ ] Expected diff: 100-150 lines per projection; split run-log and final-summary builders if larger.
-- [ ] Verify with `python3 -m unittest tests.core.test_projections` for authorized, verifying, awaiting-review, blocked, abandoned, and reconcile-required bundles.
-- [ ] Append a line to `PROGRESS.md` recording mappings, verification, and any schema insufficiency.
-- [ ] Stop if schema v1 cannot represent an honest required status; add a versioned schema/migration plan rather than overloading an enum or prose field.
+- [x] `[writes code]` Add only `pathfinder_core/projections.py` and `tests/core/test_projections.py`; first present a field-mapping table from canonical source to projection field.
+- [x] Read and validate existing `state.json`, binding, runtime boundary, operation intents/results, and typed receipts; construct schema-v1 run-log/final-summary documents without reading Markdown.
+- [x] Imitate `OperationJournal.load`, `MissionStore.load`, and `evals/harness/validate-bundle.py` identity checks.
+- [x] Use only redacted receipt fields; do not expose argv, output, environment, credentials, or raw repository content.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] No deletion is expected; show callers before replacing any bundle loader.
+- [x] Expected diff: 100-150 lines per projection; split run-log and final-summary builders if larger.
+- [x] Verify with `python3 -m unittest tests.core.test_projections` for authorized, verifying, awaiting-review, blocked, abandoned, and reconcile-required bundles.
+- [x] Append a line to `PROGRESS.md` recording mappings, verification, and any schema insufficiency.
+- [x] Stop if schema v1 cannot represent an honest required status; add a versioned schema/migration plan rather than overloading an enum or prose field.
 
 #### Sub-prompt J2.2 — atomic mission view writer and CLI
 
-- [ ] `[writes code]` Change only `pathfinder_core/rendering.py`, one new view-writer module if needed, `pathfinder_core/__main__.py`, and focused tests; first present the write/crash model.
-- [ ] Add `artifacts mission-view --repo-root --state-dir --output-dir --json` that validates the ignored output path, loads canonical mission state, writes JSON projections atomically, then writes Markdown views derived from those in-memory documents.
-- [ ] Imitate `_validated_output_dir`, `write_atomic`, and the prompt renderer; do not couple canonical state transitions to view writes.
-- [ ] Active views remain replaceable; terminal views may be sealed after every document is present and validated.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] Show zero-caller evidence before sharing or moving `_validated_output_dir`.
-- [ ] Expected diff: 100-150 lines; split CLI wiring from crash tests if larger.
-- [ ] Verify with focused tests for missing view, tampered view, crash after JSON projection, repeated refresh, symlink path, and unignored output.
-- [ ] Append a line to `PROGRESS.md` recording view repair and verification.
-- [ ] Stop if a view failure mutates or rolls back mission state; views must remain downstream projections only.
+- [x] `[writes code]` Change only `pathfinder_core/rendering.py`, one new view-writer module if needed, `pathfinder_core/__main__.py`, and focused tests; first present the write/crash model.
+- [x] Add `artifacts mission-view --repo-root --state-dir --output-dir --json` that validates the ignored output path, loads canonical mission state, writes JSON projections atomically, then writes Markdown views derived from those in-memory documents.
+- [x] Imitate `_validated_output_dir`, `write_atomic`, and the prompt renderer; do not couple canonical state transitions to view writes.
+- [x] Active views remain replaceable; terminal views may be sealed after every document is present and validated.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] Show zero-caller evidence before sharing or moving `_validated_output_dir`.
+- [x] Expected diff: 100-150 lines; split CLI wiring from crash tests if larger.
+- [x] Verify with focused tests for missing view, tampered view, crash after JSON projection, repeated refresh, symlink path, and unignored output.
+- [x] Append a line to `PROGRESS.md` recording view repair and verification.
+- [x] Stop if a view failure mutates or rolls back mission state; views must remain downstream projections only.
 
 #### Sub-prompt J2.3 — autonomous route and crash replay
 
-- [ ] `[writes code]` Change only the autonomous/final-summary route modules, artifact contract, one recorded replay, and matching eval assertions; first present the exact controller call points.
-- [ ] Require a mission-view refresh after each surfaced checkpoint and before final reporting, while stating that JSON state remains authoritative if rendering is interrupted.
-- [ ] Imitate the current `mission next/record/resume` sequence and fail-closed reconciliation language.
-- [ ] Existing safety tests must pass unmodified; report failures.
-- [ ] Show callers before replacing any direct `07-run-log.md` or `08-final-summary.md` writing instruction.
-- [ ] Expected diff: 80-140 lines; split route mirrors if larger.
-- [ ] Verify with `bash scripts/check-replay-evals.sh .`, the host bridge crash matrix, and a replay where canonical state exists but Markdown is missing and is repaired once.
-- [ ] Append a line to `PROGRESS.md` recording route enforcement and verification.
-- [ ] Stop if refresh requires credentials, repository code execution, or a state transition; it must be a local read/projection operation only.
+- [x] `[writes code]` Change only the autonomous/final-summary route modules, artifact contract, one recorded replay, and matching eval assertions; first present the exact controller call points.
+- [x] Require a mission-view refresh after each surfaced checkpoint and before final reporting, while stating that JSON state remains authoritative if rendering is interrupted.
+- [x] Imitate the current `mission next/record/resume` sequence and fail-closed reconciliation language.
+- [x] Existing safety tests must pass unmodified; report failures.
+- [x] Show callers before replacing any direct `07-run-log.md` or `08-final-summary.md` writing instruction.
+- [x] Expected diff: 80-140 lines; split route mirrors if larger.
+- [x] Verify with `bash scripts/check-replay-evals.sh .`, the host bridge crash matrix, and a replay where canonical state exists but Markdown is missing and is repaired once.
+- [x] Append a line to `PROGRESS.md` recording route enforcement and verification.
+- [x] Stop if refresh requires credentials, repository code execution, or a state transition; it must be a local read/projection operation only.
+
+Implementation note: the v1 final-summary schema has no active or reconcile-required disposition, so active checkpoints intentionally project only replaceable run-log views. Terminal states project and seal all four views. The operation journal stores typed host actions but no argv/environment evidence; `commands` therefore remains empty, while Markdown renders only schema-validated redacted receipt fields.
 
 **Phase verification:** a complete host mission produces schema-valid JSON views and matching Markdown; all crash boundaries retain one canonical transition history and repairable views.
 

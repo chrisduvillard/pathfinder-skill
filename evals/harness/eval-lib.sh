@@ -112,6 +112,22 @@ assert_replay_contract() {
   }
 }
 
+assert_mission_view_repair() {
+  local file
+  require_artifact "mission-view-repair.txt" || return
+  file="$(artifact_file "mission-view-repair.txt")"
+  contains_fixed "$file" "canonical-state-present: yes" \
+    || add_error "mission view repair lacks canonical state"
+  contains_fixed "$file" "first-refresh: interrupted-after-json" \
+    || add_error "mission view repair lacks interrupted refresh evidence"
+  contains_fixed "$file" "host-action-replayed: no" \
+    || add_error "mission view repair replayed a host action"
+  contains_fixed "$file" "second-refresh: repaired-from-canonical-state" \
+    || add_error "mission view repair did not rerender from canonical state"
+  contains_fixed "$file" "final-views-present: yes" \
+    || add_error "mission view repair lacks final views"
+}
+
 assert_rejected_candidate_not_selectable() {
   local verification funnel id
   require_artifact "03b-verification.md" || return
@@ -276,6 +292,7 @@ run_assertion() {
     manual-handoff-review) assert_manual_handoff_review ;;
     publication-safety) assert_publication_safety ;;
     replay-contract) assert_replay_contract ;;
+    mission-view-repair) assert_mission_view_repair ;;
     *) add_error "unknown assertion $1" ;;
   esac
 }

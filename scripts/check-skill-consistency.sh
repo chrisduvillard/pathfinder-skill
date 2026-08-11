@@ -174,6 +174,7 @@ check_skill_section "## Work folder" "### Intent files" "never create the run di
 check_pair "Never create the run directory or any repository-local artifact until" "$arts" "pre-write artifact ignore gate"
 check_pair 'never hand-author `06-goal-binding.json` or `08-final-summary.json`' "$arts" "controller-owned prompt sidecar gate"
 check_pair 'never hand-author `06-goal-command.md` or `08-final-summary.md`' "$arts" "controller-generated prompt view gate"
+check_pair 'artifacts mission-view' "$arts" "controller-generated autonomous view gate"
 check_pair '${CLAUDE_PLUGIN_ROOT}' "$route_prompt" "portable full-plugin root"
 check_pair "the prompt-to-goal route is static-inspection" "$route_prompt" "prompt route pre-approval execution boundary"
 legacy_goal_option='--goal'"-file"

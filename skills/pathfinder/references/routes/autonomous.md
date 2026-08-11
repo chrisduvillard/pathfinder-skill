@@ -71,6 +71,8 @@ Do not execute this phase unless `doctor --json` reports `mission_runner_availab
 5. Continue with `mission resume --state-dir <path> --json`. A receipt/result crash is reconciled from persisted evidence; an intent without a trustworthy receipt remains `reconcile-required`. Never synthesize success. A missing stable native Goal id becomes `manual-handoff` and `blocked`.
 6. The enabled bridge ends after one verified commit at a local `awaiting-review` branch with no PR id. `publish` is disabled by `mission start`; push, PR creation, CI polling, merge, releases, and live credentials remain disabled and isolated outside this bridge.
 
+After `mission start`, and after every surfaced `mission next`, `mission record`, or `mission resume` result, refresh the run views with `bash <resolved-plugin-root>/scripts/pathfinder-controller.sh artifacts mission-view --repo-root <repo-root> --state-dir <path> --output-dir <run-dir> --json`. This is a local read/projection operation: it requires no credentials, executes no repository code, and never advances or rolls back mission state. Active states produce replaceable `07-run-log.json` and `07-run-log.md` only because the v1 final-summary schema permits terminal dispositions only. A terminal `awaiting-review`, `blocked`, or `abandoned` state produces and seals both run-log views plus `08-final-summary.json` and `08-final-summary.md`. If refresh is interrupted, the canonical state/contracts/journal/receipts remain authoritative; rerun only `artifacts mission-view`, never the host action. Do not issue the final mission report until the terminal refresh succeeds.
+
 ### Sequential v1 invariant
 
 Parallel execution, additional queued Goals, and opportunity-derived Goals are unsupported in v1. Save additional work for a later explicit mission.
@@ -102,4 +104,4 @@ The mission stops after its one Goal reaches awaiting-review, blocked, or abando
 
 ### Reporting (Phase 8 ledger)
 
-`07-run-log.md` renders controller-owned JSON state: worktree, branch, Runtime Boundary, command evidence, Binding Status, verification, and publication outcome. `08-final-summary.md` records the one Goal's awaiting-review, blocked, or abandoned disposition and the exact recovery input.
+`07-run-log.md` renders controller-owned JSON state: worktree, branch, Runtime Boundary, the redacted host-action ledger, Binding Status, verification, and publication outcome. The host action protocol does not persist argv or environment details, so `commands` remains empty rather than fabricating command evidence. `08-final-summary.md` records the one Goal's awaiting-review, blocked, or abandoned disposition and the exact recovery input. Both Markdown files are generated views and must never be parsed back into mission authority.

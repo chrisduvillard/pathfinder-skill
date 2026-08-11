@@ -33,7 +33,7 @@ def _validate(schema_name: str, document: dict) -> None:
         ) from error
 
 
-def _validated_output_dir(repo_root: Path, output_dir: Path) -> Path:
+def validated_output_dir(repo_root: Path, output_dir: Path) -> Path:
     lexical_root = Path(os.path.abspath(repo_root))
     root = lexical_root.resolve()
     output = Path(os.path.abspath(output_dir))
@@ -163,7 +163,7 @@ def write_saved_prompt_goal(
 ) -> dict:
     lexical_repo = Path(os.path.abspath(repo_root))
     repo = lexical_repo.resolve()
-    output = _validated_output_dir(lexical_repo, output_dir)
+    output = validated_output_dir(lexical_repo, output_dir)
     request_path = Path(request_file).resolve()
     if consume_request and (
         request_path.parent != output or request_path.name != REQUEST_NAME

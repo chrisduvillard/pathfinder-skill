@@ -10,6 +10,7 @@ from .capabilities import capabilities_json, probe_capabilities
 from .errors import PathfinderError, StateError
 from .migrations import migrate_intent, migrate_mission
 from .mission_host import HostMissionController
+from .mission_views import write_mission_views
 from .storage import MissionStore, read_json
 
 
@@ -66,6 +67,13 @@ def _parser() -> argparse.ArgumentParser:
     goal_saved.add_argument("--request-file", required=True)
     goal_saved.add_argument("--consume-request", action="store_true")
     goal_saved.add_argument("--json", action="store_true", dest="as_json")
+    mission_view = artifact_commands.add_parser(
+        "mission-view", help="render mission views from canonical controller state"
+    )
+    mission_view.add_argument("--repo-root", required=True)
+    mission_view.add_argument("--state-dir", required=True)
+    mission_view.add_argument("--output-dir", required=True)
+    mission_view.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
@@ -178,6 +186,20 @@ def main(argv=None) -> int:
                 print(f"mission: {result['mission_id']}")
                 print(f"goal: {result['goal_id']}")
                 print(f"binding: {result['binding_id']}")
+                for path in result["artifacts"]:
+                    print(f"artifact: {path}")
+            return 0
+        if args.command == "artifacts" and args.artifact_command == "mission-view":
+            result = write_mission_views(args.repo_root, args.state_dir, args.output_dir)
+            if args.as_json:
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"mission: {result['mission_id']}")
+                print(f"state: {result['state']}")
+                print(
+                    "requires_reconciliation: "
+                    f"{str(result['requires_reconciliation']).lower()}"
+                )
                 for path in result["artifacts"]:
                     print(f"artifact: {path}")
             return 0

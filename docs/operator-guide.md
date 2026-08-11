@@ -10,7 +10,7 @@ bash scripts/pathfinder-controller.sh doctor --json
 
 `controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` reports whether the local host-driven start/next/record/resume protocol is callable. `unattended_execution_eligible` remains false in the read-only doctor because it does not fabricate or probe host filesystem, process, network, or credential enforcement. A real host attestation is validated again by `mission start`.
 
-For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs through `artifacts goal-saved`. The command consumes only a validated `.prompt-goal-request.json` inside an already ignored Pathfinder run directory, verifies the bound Git base and safe path, validates `06-goal-command.md`, emits schema-valid `06-goal-binding.json` and `08-final-summary.json`, renders `08-final-summary.md` with the stable IDs, seals all four final artifacts read-only, and is idempotent for the same request.
+For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs through `artifacts goal-saved`. The command consumes only a validated `.prompt-goal-request.json` inside an already ignored Pathfinder run directory, verifies the bound Git base and safe path, emits schema-valid `06-goal-binding.json` and `08-final-summary.json`, deterministically renders both Markdown views, seals all four final artifacts read-only, and is idempotent for the same request.
 
 ## Run the local host-driven protocol
 
@@ -21,9 +21,12 @@ bash scripts/pathfinder-controller.sh mission start --state-dir <path> --goal-bi
 bash scripts/pathfinder-controller.sh mission next --state-dir <path> --json
 bash scripts/pathfinder-controller.sh mission record --state-dir <path> --receipt-file <receipt.json> --json
 bash scripts/pathfinder-controller.sh mission resume --state-dir <path> --json
+bash scripts/pathfinder-controller.sh artifacts mission-view --repo-root <repo-root> --state-dir <path> --output-dir <ignored-run-dir> --json
 ```
 
 `start` rejects an authorization whose Goal, attempt, wall-time, or PR limit widens the immutable Goal Binding. `next` journals one closed action before returning it, including the fixed mission deadline in the trusted action context. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, then local `awaiting-review`. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
+
+Run `artifacts mission-view` after `mission start` and after every surfaced `next`, `record`, or `resume` result. Active missions refresh only replaceable `07-run-log.json` and `07-run-log.md`; terminal missions also write `08-final-summary.json` and `08-final-summary.md` and seal all four. This command reads validated controller state and writes only the confirmed ignored run directory. It executes no repository code, uses no credentials, performs no state transition, and is safe to retry after an interrupted view write. Never replay a host action to repair a view.
 
 The bundled protected-surface registry is always active. To add repository-specific categories, pass `--protected-policy <additive-policy.json>` to `mission start`; this explicit input can only add rules. The effective policy is sealed with the mission and bound into each operation. Every successful receipt's `changed_files` is classified, and an undeclared protected category stops before the receipt is persisted. See [protected surface policy](protected-surfaces.md).
 
