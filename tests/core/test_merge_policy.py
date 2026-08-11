@@ -19,6 +19,7 @@ AUTHORITY_FIXTURE = ROOT / "tests" / "contracts" / "fixtures" / "publication-con
 EVIDENCE_FIXTURE = ROOT / "tests" / "contracts" / "fixtures" / "publication-journal-contracts.json"
 CASE_FIXTURE = ROOT / "tests" / "core" / "fixtures" / "merge-policy-cases.json"
 NOW = datetime.fromisoformat("2026-08-11T12:08:30+00:00")
+REREAD_NOW = datetime.fromisoformat("2026-08-11T12:08:45+00:00")
 
 
 def load_json(path):
@@ -56,6 +57,25 @@ def rehash_evidence(evidence, *, diff=False):
         signature.sort(key=lambda item: item["rule_type"])
         source["active_rules_sha256"] = canonical_sha256(signature)
     evidence["evidence_sha256"] = canonical_sha256(evidence, "evidence_sha256")
+
+
+def complete_reread(evidence):
+    reread = copy.deepcopy(evidence)
+    reread["evidence_id"] = "merge_evidence_example1_reread"
+    observation = reread["observation"]
+    observation.update({
+        "observed_at": "2026-08-11T12:08:21+00:00",
+        "completed_at": "2026-08-11T12:08:40+00:00",
+        "expires_at": "2026-08-11T12:09:40+00:00",
+    })
+    for item in observation["requests"]:
+        item["request_id"] = f"{item['request_id']}-reread"
+        item["observed_at"] = "2026-08-11T12:08:30+00:00"
+    observation["request_ids_sha256"] = canonical_sha256([
+        item["request_id"] for item in observation["requests"]
+    ])
+    rehash_evidence(reread)
+    return reread
 
 
 def rebind_authority(policy, authorization, evidence):
@@ -174,6 +194,98 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         evidence["observation"]["expires_at"] = "2026-08-11T12:08:25+00:00"
         rehash_evidence(evidence)
         self.assertIn(DenyCode.EVIDENCE_EXPIRED, codes(self.evaluate(evidence=evidence)))
+
+    def test_snapshot_hard_window_expires_at_the_sixty_second_boundary(self):
+        before = datetime.fromisoformat("2026-08-11T12:08:59.999999+00:00")
+        boundary = datetime.fromisoformat("2026-08-11T12:09:00+00:00")
+        self.assertTrue(self.evaluate(now=before).eligible)
+        verdict = self.evaluate(now=boundary)
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+        self.assertIn(DenyCode.EVIDENCE_EXPIRED, codes(verdict))
+
+    def test_complete_disjoint_reread_is_required_and_stays_pure(self):
+        reread = complete_reread(self.evidence)
+        original = copy.deepcopy((self.policy, self.authorization, self.evidence, reread))
+        verdict = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.evidence, reread, now=REREAD_NOW
+        )
+        self.assertTrue(verdict.eligible)
+        self.assertEqual(verdict.evidence_sha256, reread["evidence_sha256"])
+        self.assertEqual((self.policy, self.authorization, self.evidence, reread), original)
+
+        reused = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.evidence, self.evidence, now=NOW
+        )
+        self.assertIn(DenyCode.IDENTITY_DRIFT, codes(reused))
+        missing = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.evidence, None, now=NOW
+        )
+        self.assertIn(DenyCode.EVIDENCE_MISSING, codes(missing))
+
+    def test_reread_drift_matrix_forces_a_new_complete_snapshot_cycle(self):
+        cases = []
+
+        reread = complete_reread(self.evidence)
+        reread["repository"]["merge_methods"]["squash"] = False
+        cases.append(("repository-settings", DenyCode.IDENTITY_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["pull_request"]["base_sha"] = "d" * 40
+        cases.append(("base-advance", DenyCode.IDENTITY_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        for document, field in (
+            (reread["pull_request"], "head_sha"),
+            (reread["mergeability"], "required_sha"),
+            (reread["reviews"][0], "commit_sha"),
+        ):
+            document[field] = "d" * 40
+        for check in reread["checks"]:
+            check["sha"] = "d" * 40
+        cases.append(("force-push", DenyCode.IDENTITY_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["source_rulesets"][0]["updated_at"] = "2026-08-11T12:08:30+00:00"
+        cases.append(("ruleset-update", DenyCode.RULESET_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["reviews"][0].update({"state": "DISMISSED", "dismissed": True})
+        reread["mergeability"]["review_decision"] = "REVIEW_REQUIRED"
+        cases.append(("review-dismissal", DenyCode.REVIEW_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["checks"][0].update({
+            "id": 8101,
+            "completed_at": "2026-08-11T12:08:35+00:00",
+        })
+        cases.append(("check-rerun", DenyCode.CHECK_EVIDENCE_INCOMPLETE, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["actor"].update({
+            "installation_id": 13580,
+            "actor_id": 97532,
+            "actor_node_id": "U_kgDOBot5678",
+            "login": "pathfinder-merge-rotated[bot]",
+        })
+        cases.append(("actor-rotation", DenyCode.IDENTITY_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["bindings"]["policy_sha256"] = "d" * 64
+        cases.append(("policy-hash", DenyCode.IDENTITY_DRIFT, reread))
+
+        for name, code, reread in cases:
+            with self.subTest(case=name):
+                rehash_evidence(reread)
+                verdict = self.evaluator.evaluate_reread(
+                    self.policy,
+                    self.authorization,
+                    self.evidence,
+                    reread,
+                    now=REREAD_NOW,
+                )
+                self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+                self.assertIn(code, codes(verdict))
+                self.assertFalse(verdict.eligible)
 
     def test_fixture_driven_candidate_matrix_returns_exact_codes(self):
         for case in load_json(CASE_FIXTURE)["cases"]:
@@ -625,6 +737,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             (ROOT / "pathfinder_core" / name).read_text()
             for name in (
                 "merge_policy.py", "merge_policy_types.py", "merge_policy_proofs.py",
+                "merge_policy_freshness.py",
             )
         )
         for forbidden in (
@@ -643,8 +756,11 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             name for name, value in MergePolicyEvaluator.__dict__.items()
             if callable(value) and not name.startswith("_")
         }
-        self.assertEqual(public, {"evaluate"})
+        self.assertEqual(public, {"evaluate", "evaluate_reread"})
         self.assertNotIn("network", inspect.signature(MergePolicyEvaluator.evaluate).parameters)
+        self.assertNotIn(
+            "network", inspect.signature(MergePolicyEvaluator.evaluate_reread).parameters
+        )
 
 
 if __name__ == "__main__":

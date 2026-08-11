@@ -1478,14 +1478,26 @@ Observable completion means:
 
 #### Sub-prompt K3.2 — freshness and drift re-evaluation
 
-- [ ] `[writes code]` Change only the pure evaluator, evidence snapshot helpers, and focused tests; present the time/reread algorithm before editing.
-- [ ] Bind the snapshot to observed start/end times and a hard maximum age of 60 seconds; allow host policy to shorten but not lengthen it.
-- [ ] Require immediate rereads of repository, actor, PR head/base, policy/ruleset version identifiers, review decision, and check rollup before a future intent can be issued. Any mismatch requires a complete new snapshot, not selective patching.
-- [ ] Record that GitHub offers no atomic policy-snapshot precondition on the merge call. Treat a concurrent trusted-admin control-plane mutation after the final reread as a documented residual risk, not as something the client has solved.
-- [ ] Existing tests must pass unmodified. Use a fake clock and fixtures for expiry at the boundary, base advance, force-push, ruleset update, review dismissal, check rerun, actor rotation, and policy hash drift.
-- [ ] No deletion is expected. Expected diff: 100-180 lines.
-- [ ] Append a `PROGRESS.md` line recording the residual TOCTOU non-guarantee.
-- [ ] Stop if implementation attempts to cache or selectively reuse earlier green evidence after any identity/control-plane drift.
+- [x] `[writes code]` Change only the pure evaluator, evidence snapshot helpers, and focused tests; present the time/reread algorithm before editing.
+- [x] Bind the snapshot to observed start/end times and a hard maximum age of 60 seconds; allow host policy to shorten but not lengthen it.
+- [x] Require immediate rereads of repository, actor, PR head/base, policy/ruleset version identifiers, review decision, and check rollup before a future intent can be issued. Any mismatch requires a complete new snapshot, not selective patching.
+- [x] Record that GitHub offers no atomic policy-snapshot precondition on the merge call. Treat a concurrent trusted-admin control-plane mutation after the final reread as a documented residual risk, not as something the client has solved.
+- [x] Existing tests must pass unmodified. Use a fake clock and fixtures for expiry at the boundary, base advance, force-push, ruleset update, review dismissal, check rerun, actor rotation, and policy hash drift.
+- [x] No deletion is expected. Expected diff: 100-180 lines.
+- [x] Append a `PROGRESS.md` line recording the residual TOCTOU non-guarantee.
+- [x] Stop if implementation attempts to cache or selectively reuse earlier green evidence after any identity/control-plane drift.
+
+**Implementation note (2026-08-11):** the pure evaluator now applies the earlier of the
+host-provided expiry and `observed_at + 60 seconds`, with the exact boundary expired. Its separate
+`evaluate_reread` path independently evaluates two complete snapshots, requires the reread to start
+after the first collection, and rejects reused evidence identities, hashes, or request ids. Whole
+normalized authority, repository, actor, PR/merge-state, diff, protection/ruleset, review/decision,
+check, and completeness domains must remain equal; a mismatch returns typed unknown and requires a
+brand-new complete snapshot cycle. The fake-clock/drift matrix and all 280 repository tests pass.
+The evaluator remains unused and unable to read, cache, issue an intent, access a credential, call a
+network, or merge. GitHub still offers no atomic precondition over the base, policy, protection,
+rules, reviews, and checks after that final reread, so trusted-admin control-plane mutation remains a
+documented residual race.
 
 **Phase verification:** a pure process can explain exactly why a PR is eligible or blocked, and exhaustive negative fixtures prove it cannot merge or perform network access.
 

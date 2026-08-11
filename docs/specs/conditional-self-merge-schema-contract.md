@@ -61,8 +61,11 @@ block. Schema validity alone is never an eligibility verdict or authority to loa
 
 ## Current executable boundary
 
-These schemas and the pure evaluator have no production caller. The v1 mission authorization enum
-remains `none`, `local-branch`, or `github-awaiting-review`; enabled host transition maps still
-contain no remote publication or merge action. The fixture observer can supply a complete dry-run
-snapshot, while the GET-only live boundary cannot collect required GraphQL facts. Remote mutation
-still requires the separate security and enablement gates in the security contract.
+These schemas and the pure evaluator have no production caller. The evaluator caps snapshot age at
+60 seconds from observed start even when `expires_at` is later, and its pure reread path requires a
+separate complete snapshot with no identity or control-plane drift before a future intent could be
+considered. The v1 mission authorization enum remains `none`, `local-branch`, or
+`github-awaiting-review`; enabled host transition maps still contain no remote publication or merge
+action. The fixture observer can supply a complete dry-run snapshot, while the GET-only live
+boundary cannot collect required GraphQL facts. Remote mutation still requires the separate
+security and enablement gates in the security contract.

@@ -1,8 +1,8 @@
 # Conditional self-merge security contract
 
 > Status: design ratified on 2026-08-11; inert evidence contracts, a fixture observer, an
-> uncomposed GET-only REST transport, and an unused pure eligibility evaluator exist. Live
-> observation, mutation, and enablement are not authorized.
+> uncomposed GET-only REST transport, and an unused pure eligibility/freshness evaluator exist.
+> Live observation, mutation, and enablement are not authorized.
 
 ## Precedence and invariant
 
@@ -195,6 +195,16 @@ required GraphQL review-decision/thread/queue evidence. Live conditional merge t
 unsupported, and no ordinary `/goal`, mission, publication, or resume path evaluates or acts on a
 verdict.
 
+Snapshot validity ends at the earlier of the authenticated host's `expires_at` and exactly 60
+seconds after `observed_at`; `completed_at` and every request audit must stay inside that window.
+Thus a host can shorten the lifetime but cannot extend the shipped ceiling. The pure reread path
+independently evaluates an initial and final complete snapshot. The final collection must begin
+after the first completes and have a new evidence id/hash plus disjoint request ids for the full
+required surface. It compares whole normalized authority/policy binding, repository, actor, PR
+head/base and merge state, diff, classic/ruleset, review/decision, check, and completeness domains.
+Any mismatch is typed unknown and invalidates the attempt; consumers must start a new complete
+two-snapshot cycle and may not patch or retain an earlier green domain.
+
 ## Future mutation and crash reconciliation
 
 Before any future remote call, a write-once intent must bind policy, authorization and evidence
@@ -214,7 +224,9 @@ GitHub's synchronous merge request atomically binds the PR head through `sha`; i
 base SHA, protection response, ruleset versions, reviews, checks, or policy snapshot. Pathfinder
 must minimize this time-of-check/time-of-use window with an immediate complete reread and a
 non-bypass merge actor. A trusted repository administrator changing control-plane policy after the
-final reread remains an explicit residual risk, not a solved guarantee.
+final reread remains an explicit residual risk, not a solved guarantee. The pure reread comparison
+detects change between two observations; it does not claim that GitHub freezes those observations
+between the last response and a future merge request.
 
 ## Explicit non-goals
 

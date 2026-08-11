@@ -11,6 +11,7 @@ from typing import Mapping, Sequence
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from .merge_policy_freshness import compare_complete_reread, evaluate_snapshot_window
 from .merge_policy_proofs import evaluate_checks, evaluate_reviews
 from .merge_policy_types import (
     CheckRequirement,
@@ -167,6 +168,39 @@ class MergePolicyEvaluator:
             required_checks=required_checks,
         )
 
+    def evaluate_reread(
+        self,
+        policy: Mapping[str, object] | None,
+        authorization: Mapping[str, object] | None,
+        initial_evidence: Mapping[str, object] | None,
+        reread_evidence: Mapping[str, object] | None,
+        *,
+        now: datetime,
+    ) -> MergeEligibilityVerdict:
+        """Evaluate two complete observations and reject all intervening drift."""
+        initial = self.evaluate(policy, authorization, initial_evidence, now=now)
+        reread = self.evaluate(policy, authorization, reread_evidence, now=now)
+        blocks = _Blocks()
+        for block in (*initial.blocks, *reread.blocks):
+            blocks.add(block.code, block.surface, block.detail)
+        if reread_evidence is None:
+            blocks.add(DenyCode.EVIDENCE_MISSING, "reread", "complete reread is required")
+        elif (
+            initial_evidence is not None
+            and next(VALIDATORS["evidence"].iter_errors(initial_evidence), None) is None
+            and next(VALIDATORS["evidence"].iter_errors(reread_evidence), None) is None
+        ):
+            compare_complete_reread(initial_evidence, reread_evidence, blocks)
+        return self._verdict(
+            blocks,
+            policy,
+            authorization,
+            reread_evidence,
+            required_approvals=reread.required_approvals,
+            approval_actor_ids=reread.approval_actor_ids,
+            required_checks=set(reread.required_checks),
+        )
+
     @staticmethod
     def _verdict(
         blocks: _Blocks,
@@ -248,19 +282,18 @@ class MergePolicyEvaluator:
     @staticmethod
     def _evidence_integrity(evidence, now, blocks: _Blocks) -> None:
         observation = evidence["observation"]
+        evaluate_snapshot_window(evidence, now, blocks)
         try:
             observed = _time(observation["observed_at"])
             completed = _time(observation["completed_at"])
-            expires = _time(observation["expires_at"])
-            current = observed <= completed <= now < expires
             audits_current = all(
                 observed <= _time(item["observed_at"]) <= completed
                 for item in observation["requests"]
             )
         except (TypeError, ValueError):
-            current = audits_current = False
-        if not current or not audits_current:
-            blocks.add(DenyCode.EVIDENCE_EXPIRED, "observation", "evidence window is invalid or expired")
+            audits_current = False
+        if not audits_current:
+            blocks.add(DenyCode.EVIDENCE_EXPIRED, "observation.requests", "request audit is outside the snapshot window")
         request_ids = [item["request_id"] for item in observation["requests"]]
         if observation["request_ids_sha256"] != canonical_sha256(request_ids):
             blocks.add(DenyCode.IDENTITY_DRIFT, "observation.requests", "request audit hash differs")
