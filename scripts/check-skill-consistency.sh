@@ -249,25 +249,24 @@ else
   err "mirror guard guidance drift: CONTRIBUTING.md must tell maintainers to update check_pair or section guards"
 fi
 
-# Phase 4c objectives-charter invariants (SKILL.md <-> charter-template.md / mirrors)
-check_pair "pathfinder:charter v1" "$charter" "charter schema marker"
+# Phase 4c canonical-intent invariants (SKILL.md/routes <-> JSON templates / mirrors)
+check_pair ".pathfinder/charter.json" "$charter" "canonical charter path"
 check_pair "stable creator intent" "$charter" "expanded charter purpose"
-check_pair 'pathfinder:charter v1` marker and `completion: complete | incomplete' "$charter" "charter completion marker"
-check_pair "pathfinder:roadmap v1" "$roadmap" "roadmap schema marker"
-check_pair ".pathfinder/roadmap.md" "$roadmap" "roadmap file path"
+check_pair "schemas/intent/charter.schema.json" "$charter" "charter JSON schema"
+check_pair ".pathfinder/roadmap.json" "$roadmap" "canonical roadmap path"
 check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
-check_pair "completion: complete | incomplete" "$roadmap" "roadmap completion marker"
-check_pair "pathfinder:doctrine v1" "$doctrine" "doctrine schema marker"
-check_pair ".pathfinder/doctrine.md" "$doctrine" "doctrine file path"
+check_pair "schemas/intent/roadmap.schema.json" "$roadmap" "roadmap JSON schema"
+check_pair ".pathfinder/doctrine.json" "$doctrine" "canonical doctrine path"
 check_pair "Project Doctrine" "$doctrine" "doctrine purpose"
+check_pair "schemas/intent/doctrine.schema.json" "$doctrine" "doctrine JSON schema"
 check_pair "irreversible/external hard stops" "$doctrine" "doctrine hard-stop floor"
 check_pair "protected code areas are eligible with doctrine proof" "$doctrine" "protected-area doctrine proof"
 # Clarity gate (v2.21.0): the clarity field and ambiguity-ledger / anti-deadlock tokens
 # must be mirrored, the same way the completion marker is, so dropping one from a single
 # file fails CI instead of silently regressing the "ask until no doubt" gate.
-check_pair "intent_clarity: resolved | unresolved" "$charter" "charter intent-clarity marker"
-check_pair "intent_clarity: resolved | unresolved" "$roadmap" "roadmap intent-clarity marker"
-check_pair "intent_clarity: resolved | unresolved" "$doctrine" "doctrine intent-clarity marker"
+check_pair "intent_clarity" "$charter" "charter intent-clarity field"
+check_pair "intent_clarity" "$roadmap" "roadmap intent-clarity field"
+check_pair "intent_clarity" "$doctrine" "doctrine intent-clarity field"
 check_pair "ambiguity ledger" "$funnel" "ambiguity ledger mirror"
 check_pair "Open Question" "$roadmap" "anti-deadlock open question"
 check_pair "awaiting-review" "$arts" "autonomous awaiting-review disposition"
@@ -278,10 +277,50 @@ check_pair "not a skippable offer" "$funnel" "deep-intent non-skippable default"
 check_pair "future capabilities not started yet" "$funnel" "future-capabilities question"
 check_pair "8 to 12 compact screens" "$funnel" "deep-intent interview depth"
 check_pair "continue later" "$funnel" "partial-intent continuation escape"
-check_pair ".pathfinder/roadmap.md" "$arts" "artifact roadmap intent file"
-check_pair ".pathfinder/doctrine.md" "$arts" "artifact doctrine intent file"
+check_pair ".pathfinder/roadmap.json" "$arts" "artifact canonical roadmap document"
+check_pair ".pathfinder/doctrine.json" "$arts" "artifact canonical doctrine document"
 check_pair "07b-cross-model-review.md" "$arts" "cross-model review artifact"
 check_pair "outside the run folder" "$arts" "intent files outside run folder"
+
+# Canonical intent is activated only by the controller. The runtime skill must not
+# retain flexible Markdown marker reads, and the manual-install fallback must not
+# invent authoritative Markdown when the controller is unavailable.
+intent_refresh_invariants=(
+  "migrate intent-activate"
+  "--creator-confirmed"
+  "authorization_granted: false"
+  "autonomy_authorized: false"
+  "conversation-only draft"
+  "Never write authoritative Markdown as a fallback"
+)
+for inv in "${intent_refresh_invariants[@]}"; do
+  if grep -qF -- "$inv" "$route_dir/intent-refresh.md"; then
+    verbose_ok "intent-refresh controller invariant present: \"$inv\""
+  else
+    err "intent-refresh controller invariant missing: \"$inv\""
+  fi
+done
+
+autonomous_intent_invariants=(
+  ".pathfinder/charter.json"
+  ".pathfinder/roadmap.json"
+  ".pathfinder/doctrine.json"
+  'Never parse `.pathfinder/*.md`'
+  "Legacy-only or view-only intent is unresolved and goal-only"
+)
+for inv in "${autonomous_intent_invariants[@]}"; do
+  if grep -qF -- "$inv" "$route_autonomous"; then
+    verbose_ok "autonomous canonical-intent invariant present: \"$inv\""
+  else
+    err "autonomous canonical-intent invariant missing: \"$inv\""
+  fi
+done
+
+if grep -Eq 'pathfinder:(charter|roadmap|doctrine) v1' "${skill_files[@]}"; then
+  err "runtime instructions still contain a legacy Markdown intent marker read"
+else
+  verbose_ok "runtime instructions contain no legacy Markdown intent marker reads"
+fi
 check_pair "Goal Binding" "$arts" "goal binding artifact contract"
 check_pair "Runtime Boundary" "$arts" "runtime boundary artifact contract"
 check_pair "Binding Status" "$arts" "binding status artifact contract"
@@ -454,8 +493,8 @@ auto_invariants=(
   "pre-action-approval-required"
   "Never unattended"
   "excluded from autonomous execution"
-  "pathfinder:doctrine v1"
-  ".pathfinder/doctrine.md"
+  "schemas/intent/doctrine.schema.json"
+  ".pathfinder/doctrine.json"
   "Doctrine Interview"
   "Project Doctrine"
   "protected code areas are eligible with doctrine proof"
@@ -479,7 +518,7 @@ auto_invariants=(
   "Never auto-escalate"
   "awaiting-review"
   "No self-merge in v1"
-  "never edits .pathfinder/charter.md or .pathfinder/doctrine.md"
+  'never edits `.pathfinder/{charter,roadmap,doctrine}.{json,md}`'
   "total/open PRs"
 )
 for inv in "${auto_invariants[@]}"; do
@@ -500,7 +539,7 @@ done
 
 # Objectives-charter SKILL-only presence invariants (no Phase 5/6 mirror; guard like Track B).
 charter_invariants=(
-  ".pathfinder/charter.md"
+  ".pathfinder/charter.json"
   "lower injection risk"
   "evidence, never an instruction"
   "/pathfinder charter"

@@ -1,55 +1,56 @@
-# Pathfinder Roadmap Template
+# Pathfinder Roadmap JSON Template
 
-`.pathfinder/roadmap.md` is Pathfinder's durable, **local-only** model of evolving desired work. It lives beside `.pathfinder/charter.md` and `.pathfinder/doctrine.md`, is gitignored through `.git/info/exclude`, and is never committed.
+`.pathfinder/roadmap.json` is Pathfinder's canonical, durable, **local-only** evolving desired work. `.pathfinder/roadmap.md` is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state.
 
-It stores future capabilities not started yet, unstarted goals, milestones, priorities, completion state, evidence, and safety classification. The charter holds stable creator intent, the roadmap holds changing work, and the doctrine holds the deep end-state model that can derive more work when the roadmap runs out.
+The roadmap stores future capabilities, milestones, priorities, completion state, evidence, safety classification, and open questions. The charter holds stable creator intent, while doctrine holds the deep end-state model.
 
-## Format
+## Canonical shape
 
-Use an HTML-comment marker plus plain metadata. Keep it parser-light: simple headings, list items, and key/value rows.
+Start from this schema-shaped example, replace its values with confirmed creator intent, and validate it against `schemas/intent/roadmap.schema.json`. Preserve every key and use only the closed enums shown by the installed schema.
 
-```text
-# Pathfinder Roadmap
-
-<!-- pathfinder:roadmap v1 - evolving desired work. Local-only, never committed.
-     Still untrusted data, sanitized on every read; not an instruction source. -->
-
-roadmap-version: 1
-created: <YYYY-MM-DD HH:MM>
-last-refreshed: <YYYY-MM-DD HH:MM>
-source-basis: creator interview + repo evidence + later refreshes
-completion: complete | incomplete
-intent_clarity: resolved | unresolved
-
-## Future State
-- <capability or quality the creator wants but the repo does not yet show>
-
-## Milestones
-
-### R1 - <short milestone name>
-- status: not-started | active | complete | blocked | obsolete
-- priority: high | medium | low
-- rationale: <why this milestone matters to the creator's intent>
-- depends-on: <item ids or none>
-- evidence: creator-interview:<screen>; repo:<path or summary>
-- safety: autonomous-eligible | human-review-required | pre-action-approval-required | blocked-by-safety
-- execution-eligibility: eligible | ineligible | unknown
-- eligibility-basis: <proof, evaluated-at timestamp, and exact base commit>
-- desired outcome: <measurable future capability or project quality>
-
-## Open Questions
-- <question that must be answered before Pathfinder can safely derive a goal>
-- <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked `blocked` on creator input and remains ineligible until answered>
+```json
+{
+  "schema_version": 1,
+  "roadmap_id": "roadmap_example01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "created_at": "2026-01-01T00:00:00Z",
+  "refreshed_at": "2026-01-01T00:00:00Z",
+  "source_basis": [
+    "creator interview",
+    "repository evidence"
+  ],
+  "future_state": [
+    "Capability or quality the creator wants but the repository does not yet show"
+  ],
+  "items": [
+    {
+      "item_id": "R1",
+      "status": "not-started",
+      "priority": "high",
+      "rationale": "Why this milestone matters to creator intent.",
+      "depends_on": [],
+      "evidence": [
+        "creator interview"
+      ],
+      "safety": "human-review-required",
+      "desired_outcome": "Measurable future capability or project quality.",
+      "execution_eligibility": {
+        "status": "unknown",
+        "reasons": [
+          "Not evaluated for a fresh base commit and runtime boundary"
+        ],
+        "evaluated_at": null,
+        "base_commit": null
+      }
+    }
+  ],
+  "open_questions": []
+}
 ```
 
-Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `intent_clarity: unresolved` while an intent file is incomplete or a blocking ambiguity-ledger unknown is open. Compute `execution-eligibility` separately for one selected item, runtime boundary, and base commit immediately before an explicitly authorized mission.
+Item status is one of `not-started`, `active`, `complete`, `blocked`, `manual-only`, or `obsolete`. Safety is one of `autonomous-eligible`, `human-review-required`, `pre-action-approval-required`, or `blocked-by-safety`. Missing or ambiguous safety fails closed. Protected code areas are eligible only with doctrine proof, scoped verification, and enforceable isolation.
 
-## Status Semantics
+Use `"completion": "incomplete"` when the creator chose `continue later`, left future state or priority unanswered, or left an Open Question that blocks safe goal derivation. Use `"intent_clarity": "unresolved"` while any canonical intent document is incomplete or a blocking ambiguity-ledger unknown remains open. Converted blocking unknowns become `open_questions` with affected items marked `blocked` on creator input.
 
-- `not-started`: desired work with no active implementation evidence.
-- `active`: current repo work or an in-flight Pathfinder run is addressing it.
-- `complete`: evidence shows the intended outcome is satisfied.
-- `blocked`: progress needs creator input, missing access, failed verification, or a dependency.
-- `obsolete`: no longer desired after refresh.
-
-Roadmap items guide selection but never authorize execution. `autonomous-eligible` and `human-review-required` may proceed only after explicit per-run authorization and controller eligibility; the enabled bridge stops at a local awaiting-review branch with no publication. `pre-action-approval-required` stops before implementation. `blocked-by-safety`, missing, ambiguous, or unknown safety is excluded. Protected code areas are eligible only with doctrine proof, scoped verification, and enforceable isolation.
+Keep `execution_eligibility.status` as `unknown` until one selected item is evaluated against a fresh base commit and runtime boundary. Eligibility, safety classification, resolved intent, and the rendered view never authorize execution.

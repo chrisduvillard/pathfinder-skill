@@ -1154,15 +1154,15 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 
 #### Sub-prompt J4.3 — skill, templates, and intent eval cutover
 
-- [ ] `[writes code]` Change only the intent-refresh/autonomous route modules, `SKILL.md`, the three intent templates, artifact structure, relevant eval fixtures, and consistency guards; first present the mirror/caller list.
-- [ ] Make route behavior write canonical JSON through the controller and treat `.md` only as a human view. Require JSON schema validation and creator confirmation before intent becomes resolved.
-- [ ] Imitate existing ignore-ladder, tracked-file distrust, doctrine proof, and explicit authorization boundaries exactly.
-- [ ] Existing behavior tests must pass unmodified in meaning; add JSON fixtures instead of relaxing migration assertions.
-- [ ] Show zero-caller evidence before removing Markdown marker reads from runtime instructions.
-- [ ] Expected diff: under 150 lines per intent kind/route; split charter, roadmap, doctrine, and autonomous references if larger.
-- [ ] Verify with `bash scripts/check-skill-consistency.sh .`, `bash scripts/check-skill-behavior.sh .`, `bash scripts/check-evals.sh .`, and focused migration tests.
-- [ ] Append a line to `PROGRESS.md` recording the route cutover and verification.
-- [ ] Stop if a supported manual skill-only install cannot invoke the controller; degrade that install to conversation-only draft intent rather than writing authoritative Markdown.
+- [x] `[writes code]` Change only the intent-refresh/autonomous route modules, `SKILL.md`, the three intent templates, artifact structure, relevant eval fixtures, and consistency guards; first present the mirror/caller list.
+- [x] Make route behavior write canonical JSON through the controller and treat `.md` only as a human view. Require JSON schema validation and creator confirmation before intent becomes resolved.
+- [x] Imitate existing ignore-ladder, tracked-file distrust, doctrine proof, and explicit authorization boundaries exactly.
+- [x] Existing behavior tests must pass unmodified in meaning; add JSON fixtures instead of relaxing migration assertions.
+- [x] Show zero-caller evidence before removing Markdown marker reads from runtime instructions.
+- [x] Expected diff: under 150 lines per intent kind/route; split charter, roadmap, doctrine, and autonomous references if larger.
+- [x] Verify with `bash scripts/check-skill-consistency.sh .`, `bash scripts/check-skill-behavior.sh .`, `bash scripts/check-evals.sh .`, and focused migration tests.
+- [x] Append a line to `PROGRESS.md` recording the route cutover and verification.
+- [x] Stop if a supported manual skill-only install cannot invoke the controller; degrade that install to conversation-only draft intent rather than writing authoritative Markdown.
 
 **Phase verification:** only `.pathfinder/*.json` influences machine intent, rendered Markdown is replaceable, legacy-only state cannot authorize autonomy, and migration backups restore the exact original bytes.
 

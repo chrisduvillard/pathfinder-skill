@@ -210,16 +210,19 @@ assert_track_b_placeholder() {
 }
 
 assert_intent_schema_migration() {
-  local charter roadmap doctrine session stale
-  charter="$(repo_file ".pathfinder/charter.md")"
-  roadmap="$(repo_file ".pathfinder/roadmap.md")"
-  doctrine="$(repo_file ".pathfinder/doctrine.md")"
+  local kind path schema session stale
   session="$(artifact_file "00-session.md")"
   stale=0
 
-  [ -f "$charter" ] && contains_fixed "$charter" "clarity:" || stale=1
-  [ -f "$roadmap" ] && contains_fixed "$roadmap" "clarity:" || stale=1
-  [ -f "$doctrine" ] || stale=1
+  for kind in charter roadmap doctrine; do
+    path="$(repo_file ".pathfinder/$kind.json")"
+    schema="$PATHFINDER_SCHEMA_ROOT/intent/$kind.schema.json"
+    if [ ! -f "$path" ]; then
+      stale=1
+      continue
+    fi
+    "$PATHFINDER_EVAL_PYTHON" "$PATHFINDER_EVAL_VALIDATOR" "$schema" "$path" >/dev/null 2>&1 || stale=1
+  done
 
   if [ "$stale" -eq 1 ]; then
     require_artifact "00-session.md" || return

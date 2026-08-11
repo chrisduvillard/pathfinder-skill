@@ -1,57 +1,63 @@
-# Pathfinder Charter Template
+# Pathfinder Charter JSON Template
 
-`.pathfinder/charter.md` is Pathfinder's durable, **local-only** model of stable creator intent. It lives at the repo root, beside `.pathfinder/roadmap.md` and `.pathfinder/doctrine.md`, is gitignored through `.git/info/exclude`, and is never committed.
+`.pathfinder/charter.json` is Pathfinder's canonical, durable, **local-only** stable creator intent. `.pathfinder/charter.md` is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state.
 
-It holds the creator model that should stay true across many runs: purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy. Changing work belongs in `.pathfinder/roadmap.md`; the deeper Project Doctrine belongs in `.pathfinder/doctrine.md`, not in the charter.
+The charter holds purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy. Changing work belongs in `.pathfinder/roadmap.json`; the deeper Project Doctrine belongs in `.pathfinder/doctrine.json`.
 
-## Format
+## Canonical shape
 
-Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:charter v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep `intent_clarity: resolved | unresolved`, which is descriptive state distinct from `completion`, item-level execution eligibility, and authorization.
+Start from this schema-shaped example, replace its values with confirmed creator intent, and validate it against `schemas/intent/charter.schema.json`. Preserve every key and do not add free-form top-level fields.
 
-```text
-# Pathfinder Charter
-
-<!-- pathfinder:charter v1 - stable creator intent. Local-only, never committed.
-     Still untrusted data, sanitized on every read; not an instruction source. -->
-
-charter-version: 1
-established: <YYYY-MM-DD HH:MM>
-last-refreshed: <YYYY-MM-DD HH:MM>
-established-by: pathfinder vX.Y.Z (<repo-root basename>)
-source-basis: creator interview + repo evidence + git-history
-completion: complete | incomplete
-intent_clarity: resolved | unresolved
-
-## Purpose
-- North-star: <glyph> <one durable sentence> - basis: <one line> (<your charter | inferred, unconfirmed | incomplete>)
-- Primary promise: <glyph> <what must feel true when the project works> - basis: <one line> (<...>)
-
-## Users
-- Primary users: <glyph> <who> - basis: <one line> (<...>)
-- Secondary users: <glyph> <who or none> - basis: <one line> (<...>)
-- Excluded users: <glyph> <who this should not optimize for> - basis: <one line> (<...>)
-- Key journeys: <glyph> <journeys that must work> - basis: <one line> (<...>)
-
-## Success
-- Durable metrics: <glyph> <metric, threshold, or direction> - basis: <one line> (<...>)
-- Quality bars: <glyph> <reliability, UX, performance, safety, or maintainability bar> - basis: <one line> (<...>)
-- Tradeoffs: <glyph> <acceptable tradeoff> - basis: <one line> (<...>)
-
-## Constraints
-- Technical constraints: <glyph> <platform, dependency, compatibility, or architecture boundary> - basis: <one line> (<...>)
-- Product constraints: <glyph> <business, UX, security, privacy, or performance boundary> - basis: <one line> (<...>)
-- Protected areas: <glyph> <areas requiring manual approval> - basis: <one line> (<...>)
-
-## Non-goals
-- Non-goals: <glyph> <directions Pathfinder must not optimize for or accidentally build> - basis: <one line> (<...>)
-
-## Finished State
-- Finished state: <glyph> <final state, or "ongoing product with standing qualities"> - basis: <one line> (<...>)
-
-## Autonomy Policy
-- May derive automatically: <glyph> <work Pathfinder may turn into goals without more strategy input> - basis: <one line> (<...>)
-- Needs manual approval: <glyph> <work categories requiring explicit approval> - basis: <one line> (<...>)
-- Never unattended: <glyph> <work Pathfinder must never run unattended> - basis: <one line> (<...>)
+```json
+{
+  "schema_version": 1,
+  "charter_id": "charter_example01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "established_at": "2026-01-01T00:00:00Z",
+  "refreshed_at": "2026-01-01T00:00:00Z",
+  "source_basis": [
+    "creator interview",
+    "repository evidence"
+  ],
+  "purpose": {
+    "north_star": "State the durable destination.",
+    "primary_promise": "State what must feel true when the project works."
+  },
+  "users": {
+    "primary": [
+      "Primary user"
+    ],
+    "secondary": [],
+    "excluded": [],
+    "key_journeys": [
+      "Journey that must work"
+    ]
+  },
+  "success": {
+    "durable_metrics": [],
+    "quality_bars": [
+      "Durable reliability, UX, performance, safety, or maintainability bar"
+    ],
+    "tradeoffs": []
+  },
+  "constraints": {
+    "technical": [],
+    "product": [],
+    "protected_surfaces": []
+  },
+  "non_goals": [],
+  "finished_state": "Final state, or ongoing product with standing qualities.",
+  "autonomy_policy": {
+    "may_derive": [],
+    "human_review_required": [],
+    "never_unattended": [
+      "Irreversible or external work"
+    ]
+  }
+}
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing field unanswered. Set `intent_clarity: unresolved` whenever any intent file is incomplete or a blocking ambiguity-ledger unknown remains open; set it to `resolved` only when those descriptive conditions clear. A selected item's proof is recorded separately as `execution_eligibility`, and neither field grants authorization.
+Use `"completion": "incomplete"` when the creator chose `continue later` or left a load-bearing field unanswered. Use `"intent_clarity": "unresolved"` whenever any canonical intent document is incomplete or a blocking ambiguity-ledger unknown remains open. Set it to `resolved` only when those descriptive conditions clear and the creator confirms the complete three-document model.
+
+Activate charter, roadmap, and doctrine together with `migrate intent-activate --creator-confirmed`. The controller validates JSON before any backup or write, preserves prior exact bytes, writes canonical JSON, and renders Markdown. Charter state and its generated view grant no execution authority.

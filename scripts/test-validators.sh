@@ -250,12 +250,22 @@ rewrite "$R/skills/pathfinder/SKILL.md" \
 assert_catch "$R" "intent-clarity definition|execution_eligibility" "intent-clarity guard catches a conflated item-eligibility boundary"
 
 echo "== parser 9: doctrine-gated autonomy invariants =="
-# Full Autonomous Mission Mode depends on the local Project Doctrine contract. Dropping the schema
-# marker from SKILL.md must fail the mirror/section guard rather than leaving `.pathfinder/doctrine.md`
-# as undocumented local state.
+# Full Autonomous Mission Mode depends on canonical, schema-validated Project Doctrine. Dropping the
+# schema path from the autonomous route must fail the mirror/section guard rather than leaving
+# `.pathfinder/doctrine.json` as unvalidated local state.
 R="$(newroot)"
-rewrite "$R/skills/pathfinder/references/routes/autonomous.md" 's/pathfinder:doctrine v1/pathfinder:doctrine vX/'
-assert_catch "$R" "doctrine|pathfinder:doctrine v1" "doctrine marker removal is caught"
+rewrite "$R/skills/pathfinder/references/routes/autonomous.md" 's#schemas/intent/doctrine.schema.json#schemas/intent/doctrine.schema.old#'
+assert_catch "$R" "doctrine|doctrine.schema.json" "canonical doctrine schema removal is caught"
+
+echo "== parser 9b: generated intent views cannot become runtime state =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/references/routes/autonomous.md" 's/Never parse/Parse/'
+assert_catch "$R" "canonical-intent|Never parse|Markdown" "canonical-intent guard catches a generated-view parse grant"
+
+echo "== parser 9c: controller-less installs cannot author Markdown intent =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/references/routes/intent-refresh.md" 's/Never write authoritative Markdown as a fallback/Write authoritative Markdown as a fallback/'
+assert_catch "$R" "intent-refresh controller invariant|authoritative Markdown" "manual-install fallback guard catches authoritative Markdown writes"
 
 # ---- Behavioral invariant harness (check-skill-behavior.sh) ----
 skillbeh="$here/scripts/check-skill-behavior.sh"
