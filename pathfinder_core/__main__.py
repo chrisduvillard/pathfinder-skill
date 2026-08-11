@@ -8,7 +8,7 @@ from pathlib import Path
 from .artifacts import write_saved_prompt_goal
 from .capabilities import capabilities_json, probe_capabilities
 from .errors import PathfinderError, StateError
-from .migrations import migrate_intent, migrate_mission
+from .migrations import activate_intent, migrate_intent, migrate_mission
 from .mission_host import HostMissionController
 from .mission_views import write_mission_views
 from .storage import MissionStore, read_json
@@ -53,6 +53,16 @@ def _parser() -> argparse.ArgumentParser:
     migrate_intent_parser.add_argument("--root", required=True)
     migrate_intent_parser.add_argument("--backup-dir", required=True)
     migrate_intent_parser.add_argument("--json", action="store_true", dest="as_json")
+    activate_intent_parser = migrate_commands.add_parser(
+        "intent-activate", help="activate creator-confirmed canonical intent JSON"
+    )
+    activate_intent_parser.add_argument("--root", required=True)
+    activate_intent_parser.add_argument("--backup-dir", required=True)
+    activate_intent_parser.add_argument("--charter-json", required=True)
+    activate_intent_parser.add_argument("--roadmap-json", required=True)
+    activate_intent_parser.add_argument("--doctrine-json", required=True)
+    activate_intent_parser.add_argument("--creator-confirmed", action="store_true")
+    activate_intent_parser.add_argument("--json", action="store_true", dest="as_json")
     migrate_mission_parser = migrate_commands.add_parser("mission", help="migrate a mission state directory")
     migrate_mission_parser.add_argument("--state-dir", required=True)
     migrate_mission_parser.add_argument("--backup-dir", required=True)
@@ -164,6 +174,17 @@ def main(argv=None) -> int:
         if args.command == "migrate":
             if args.migrate_command == "intent":
                 result = migrate_intent(args.root, args.backup_dir)
+            elif args.migrate_command == "intent-activate":
+                result = activate_intent(
+                    args.root,
+                    args.backup_dir,
+                    {
+                        "charter": args.charter_json,
+                        "roadmap": args.roadmap_json,
+                        "doctrine": args.doctrine_json,
+                    },
+                    creator_confirmed=args.creator_confirmed,
+                )
             else:
                 result = migrate_mission(args.state_dir, args.backup_dir)
             if args.as_json:
@@ -172,6 +193,10 @@ def main(argv=None) -> int:
                 print(f"migration: {result['kind']} schema v{result['schema_version']}")
                 print(f"changed: {', '.join(result['changed']) or 'none'}")
                 print(f"backup: {result['backup_dir']}")
+                print(
+                    "authorization_granted: "
+                    f"{str(result['authorization_granted']).lower()}"
+                )
             return 0
         if args.command == "artifacts" and args.artifact_command == "goal-saved":
             result = write_saved_prompt_goal(

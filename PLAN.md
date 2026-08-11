@@ -1141,16 +1141,16 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 
 #### Sub-prompt J4.2 — creator-confirmed activation and legacy backup
 
-- [ ] `[writes code]` Change only `pathfinder_core/migrations.py`, `pathfinder_core/__main__.py`, `tests/core/test_migrations.py`, and golden migration fixtures; first present rollback and partial-failure behavior.
-- [ ] Add a command that backs up legacy `.md`, accepts creator-confirmed schema-valid JSON from the intent interview, writes canonical JSON atomically, renders views, and reports that no authorization was granted.
-- [ ] Imitate the current backup-before-write and rollback-on-exception behavior.
-- [ ] Unknown, incomplete, or legacy-only intent remains `intent_clarity: unresolved` for autonomy and is never automatically parsed into policy.
-- [ ] Existing migration tests must pass unmodified; report failures.
-- [ ] Show all `_migrate_intent_text` callers before deprecating it; do not delete the legacy reader until one full release can consume backups.
-- [ ] Expected diff: 100-150 lines; split activation from deprecation if larger.
-- [ ] Verify with legacy backup, creator-confirmed activation, invalid JSON, unknown schema, crash rollback, CRLF, symlink, and view-repair tests.
-- [ ] Append a line to `PROGRESS.md` recording migration safety and verification.
-- [ ] Stop if the input lacks explicit creator confirmation or all three policy-bearing documents required for autonomy; preserve legacy files and remain goal-only.
+- [x] `[writes code]` Change only `pathfinder_core/migrations.py`, `pathfinder_core/__main__.py`, `tests/core/test_migrations.py`, and golden migration fixtures; first present rollback and partial-failure behavior.
+- [x] Add a command that backs up legacy `.md`, accepts creator-confirmed schema-valid JSON from the intent interview, writes canonical JSON atomically, renders views, and reports that no authorization was granted.
+- [x] Imitate the current backup-before-write and rollback-on-exception behavior.
+- [x] Unknown, incomplete, or legacy-only intent remains `intent_clarity: unresolved` for autonomy and is never automatically parsed into policy.
+- [x] Existing migration tests must pass unmodified; report failures.
+- [x] Show all `_migrate_intent_text` callers before deprecating it; do not delete the legacy reader until one full release can consume backups.
+- [x] Expected diff: 100-150 lines; split activation from deprecation if larger.
+- [x] Verify with legacy backup, creator-confirmed activation, invalid JSON, unknown schema, crash rollback, CRLF, symlink, and view-repair tests.
+- [x] Append a line to `PROGRESS.md` recording migration safety and verification.
+- [x] Stop if the input lacks explicit creator confirmation or all three policy-bearing documents required for autonomy; preserve legacy files and remain goal-only.
 
 #### Sub-prompt J4.3 — skill, templates, and intent eval cutover
 
