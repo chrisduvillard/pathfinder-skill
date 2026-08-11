@@ -111,6 +111,18 @@ jobs:
         shell: bash
         run: git diff --check
 
+  required-preflight:
+    name: version + JSON consistency
+    needs: check
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require the complete preflight matrix
+        env:
+          PREFLIGHT_RESULT: ${{ needs.check.result }}
+        run: test "$PREFLIGHT_RESULT" = success
+
   host-install:
     name: host install/load (credential-free)
     runs-on: ubuntu-latest
