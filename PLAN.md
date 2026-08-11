@@ -964,27 +964,27 @@ Observable completion criteria:
 
 #### Sub-prompt J0.1 — authority inventory and characterization tests
 
-- [ ] `[read-only]` Inspect only `pathfinder_core/artifacts.py`, `pathfinder_core/migrations.py`, `pathfinder_core/mission_host.py`, `evals/harness/`, `tests/core/test_artifacts.py`, and the three intent templates. Run Codex in a read-only sandbox.
-- [ ] Confirm every production `read_text`/Markdown parser and classify it as generated-view input, legacy migration input, narrative evidence, or instruction validation.
-- [ ] Imitate the concise evidence table in `PLAN.md`; do not change code or tests.
-- [ ] Existing tests must pass unmodified; report a pre-existing failure and stop rather than edit it.
-- [ ] No deletion is allowed. If a later removal is proposed, record `rg` callers now.
-- [ ] Expected diff: zero code lines; only append the required finding to `PROGRESS.md`.
-- [ ] Verify with `rg -n "read_text|06-goal-command.md|07-run-log.md|08-final-summary.md|charter.md|roadmap.md|doctrine.md" pathfinder_core evals tests` and record the exact production readers.
-- [ ] Append a line to `PROGRESS.md` recording the inventory, verification, and any premise that contradicts this plan.
-- [ ] Stop if another runtime package or host writes these artifacts outside `pathfinder_core`; revise the ownership map before implementation.
+- [x] `[read-only]` Inspect only `pathfinder_core/artifacts.py`, `pathfinder_core/migrations.py`, `pathfinder_core/mission_host.py`, `evals/harness/`, `tests/core/test_artifacts.py`, and the three intent templates. Run Codex in a read-only sandbox.
+- [x] Confirm every production `read_text`/Markdown parser and classify it as generated-view input, legacy migration input, narrative evidence, or instruction validation.
+- [x] Imitate the concise evidence table in `PLAN.md`; do not change code or tests.
+- [x] Existing tests must pass unmodified; report a pre-existing failure and stop rather than edit it.
+- [x] No deletion is allowed. If a later removal is proposed, record `rg` callers now.
+- [x] Expected diff: zero code lines; only append the required finding to `PROGRESS.md`.
+- [x] Verify with `rg -n "read_text|06-goal-command.md|07-run-log.md|08-final-summary.md|charter.md|roadmap.md|doctrine.md" pathfinder_core evals tests` and record the exact production readers.
+- [x] Append a line to `PROGRESS.md` recording the inventory, verification, and any premise that contradicts this plan.
+- [x] Stop if another runtime package or host writes these artifacts outside `pathfinder_core`; revise the ownership map before implementation.
 
 #### Sub-prompt J0.2 — golden authority tests
 
-- [ ] `[writes code]` Change only `tests/core/test_artifacts.py` and new fixtures under `tests/core/fixtures/rendering/`; first present a short test plan.
-- [ ] Characterize the current valid prompt bundle, then add failing expectations for deterministic rerender, view tamper repair, and JSON hashes remaining unchanged after Markdown edits.
-- [ ] Imitate `tests/core/test_artifacts.py` setup and stable clock/hash fixtures.
-- [ ] Existing tests must pass unmodified; new tests may fail only for the missing renderer behavior.
-- [ ] No production deletion is allowed.
-- [ ] Expected diff: 80-120 test/fixture lines; split prompt and mission goldens if larger.
-- [ ] Verify with `python3 -m unittest tests.core.test_artifacts`; record which new tests fail before implementation.
-- [ ] Append a line to `PROGRESS.md` recording the characterization, expected failures, and contradictions.
-- [ ] Stop if the existing JSON documents cannot fully determine the promised prompt Markdown; identify the smallest missing schema field instead of embedding request-only state in the renderer.
+- [x] `[writes code]` Change only `tests/core/test_artifacts.py` and new fixtures under `tests/core/fixtures/rendering/`; first present a short test plan.
+- [x] Characterize the current valid prompt bundle, then add failing expectations for deterministic rerender, view tamper repair, and JSON hashes remaining unchanged after Markdown edits.
+- [x] Imitate `tests/core/test_artifacts.py` setup and stable clock/hash fixtures.
+- [x] Existing tests must pass unmodified; new tests may fail only for the missing renderer behavior.
+- [x] No production deletion is allowed.
+- [x] Expected diff: 80-120 test/fixture lines; split prompt and mission goldens if larger.
+- [x] Verify with `python3 -m unittest tests.core.test_artifacts`; record which new tests fail before implementation.
+- [x] Append a line to `PROGRESS.md` recording the characterization, expected failures, and contradictions.
+- [x] Stop if the existing JSON documents cannot fully determine the promised prompt Markdown; identify the smallest missing schema field instead of embedding request-only state in the renderer.
 
 **Phase verification:** the authority inventory is complete and focused tests distinguish JSON mutation from Markdown mutation.
 
@@ -996,40 +996,42 @@ Observable completion criteria:
 
 #### Sub-prompt J1.1 — pure prompt renderers
 
-- [ ] `[writes code]` Add only `pathfinder_core/rendering.py` and focused renderer tests/fixtures; first present a short function/input/output plan.
-- [ ] Implement pure deterministic renderers for `06-goal-command.md` from validated Goal Binding and `08-final-summary.md` from validated Goal Binding + Final Summary.
-- [ ] Imitate `_render_final_summary` formatting in `pathfinder_core/artifacts.py` and schema fixtures under `evals/fixtures/good-goal/`; do not introduce a template engine.
-- [ ] Escape or normalize untrusted text so values cannot create fake generated headings or generated-block markers; preserve the exact `/goal` objective as one line.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] Show `rg` evidence of all `_render_final_summary` callers before removing it in a later sub-prompt.
-- [ ] Expected diff: 100-150 production/test lines; split Goal and summary renderers if larger.
-- [ ] Verify with `python3 -m unittest tests.core.test_rendering`; expected output is byte-identical golden Markdown on two runs.
-- [ ] Append a line to `PROGRESS.md` recording renderer coverage and verification.
-- [ ] Stop if the current schemas cannot determine required output; propose one explicit schema addition and do not read the request or Markdown inside the renderer.
+- [x] `[writes code]` Add only `pathfinder_core/rendering.py` and focused renderer tests/fixtures; first present a short function/input/output plan.
+- [x] Implement pure deterministic renderers for `06-goal-command.md` from validated Goal Binding and `08-final-summary.md` from validated Goal Binding + Final Summary.
+- [x] Imitate `_render_final_summary` formatting in `pathfinder_core/artifacts.py` and schema fixtures under `evals/fixtures/good-goal/`; do not introduce a template engine.
+- [x] Escape or normalize untrusted text so values cannot create fake generated headings or generated-block markers; preserve the exact `/goal` objective as one line.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] Show `rg` evidence of all `_render_final_summary` callers before removing it in a later sub-prompt.
+- [x] Expected diff: 100-150 production/test lines; split Goal and summary renderers if larger.
+- [x] Verify with `python3 -m unittest tests.core.test_rendering`; expected output is byte-identical golden Markdown on two runs.
+- [x] Append a line to `PROGRESS.md` recording renderer coverage and verification.
+- [x] Stop if the current schemas cannot determine required output; propose one explicit schema addition and do not read the request or Markdown inside the renderer.
 
 #### Sub-prompt J1.2 — controller-owned prompt writes
 
-- [ ] `[writes code]` Change only `pathfinder_core/artifacts.py`, `pathfinder_core/__main__.py`, `tests/core/test_artifacts.py`, and focused CLI tests; first present the compatibility change.
-- [ ] Construct and schema-validate binding/summary JSON first, render both Markdown files from those documents, and atomically write the complete bundle. Remove the input role of `--goal-file`; the fixed output remains `06-goal-command.md`.
-- [ ] Imitate `_write_idempotent`, path/symlink guards, and sealing behavior already in `pathfinder_core/artifacts.py`.
-- [ ] A different Markdown view must be repaired from JSON, not accepted as authority and not used to alter JSON.
-- [ ] Existing tests must pass unmodified except tests explicitly characterizing the unreleased `--goal-file` input; replace those only after showing all CLI/route callers with `rg`.
-- [ ] Expected diff: 100-150 lines; split atomic bundle writing into a follow-up if larger.
-- [ ] Verify with `python3 -m unittest tests.core.test_artifacts tests.core.test_rendering` and a CLI run where a tampered view is restored.
-- [ ] Append a line to `PROGRESS.md` recording the authority reversal and verification.
-- [ ] Stop if canonical JSON would be written while another canonical document is invalid; validate the complete in-memory bundle before the first filesystem write.
+- [x] `[writes code]` Change only `pathfinder_core/artifacts.py`, `pathfinder_core/__main__.py`, `tests/core/test_artifacts.py`, and focused CLI tests; first present the compatibility change.
+- [x] Construct and schema-validate binding/summary JSON first, render both Markdown files from those documents, and atomically write the complete bundle. Remove the input role of `--goal-file`; the fixed output remains `06-goal-command.md`.
+- [x] Imitate `_write_idempotent`, path/symlink guards, and sealing behavior already in `pathfinder_core/artifacts.py`.
+- [x] A different Markdown view must be repaired from JSON, not accepted as authority and not used to alter JSON.
+- [x] Existing tests must pass unmodified except tests explicitly characterizing the unreleased `--goal-file` input; replace those only after showing all CLI/route callers with `rg`.
+- [x] Expected diff: 100-150 lines; split atomic bundle writing into a follow-up if larger.
+- [x] Verify with `python3 -m unittest tests.core.test_artifacts tests.core.test_rendering` and a CLI run where a tampered view is restored.
+- [x] Append a line to `PROGRESS.md` recording the authority reversal and verification.
+- [x] Stop if canonical JSON would be written while another canonical document is invalid; validate the complete in-memory bundle before the first filesystem write.
 
 #### Sub-prompt J1.3 — prompt route and replay cutover
 
-- [ ] `[writes code]` Change only `skills/pathfinder/SKILL.md`, `skills/pathfinder/references/artifact-structure.md`, `skills/pathfinder/references/routes/prompt-to-goal.md`, `evals/replays/cases/prompt-fast-path.md`, its replay fixture, and matching consistency guards; first present a route-diff plan.
-- [ ] Instruct hosts to create only the structured request, then let the controller generate and seal `06-goal-command.md`, both JSON sidecars, and `08-final-summary.md`.
-- [ ] Imitate the existing absolute-plugin-root and final-filesystem-write gate; keep static-inspection-only behavior and exact ignore checks unchanged.
-- [ ] Existing tests must pass unmodified in safety meaning; update replay expectations rather than weakening them.
-- [ ] Show zero-caller evidence for the old pre-authored `--goal-file` form before deleting it.
-- [ ] Expected diff: 80-140 lines across route/docs/replay; split mirror updates if larger.
-- [ ] Verify with `bash scripts/check-skill-consistency.sh .`, `bash scripts/check-replay-evals.sh .`, and `python3 -m unittest tests.core.test_artifacts`.
-- [ ] Append a line to `PROGRESS.md` recording the route cutover and verification.
-- [ ] Stop if any supported host requires the Goal file before the controller can run; retain a conversation-only preview, never a filesystem input presented as canonical.
+- [x] `[writes code]` Change only `skills/pathfinder/SKILL.md`, `skills/pathfinder/references/artifact-structure.md`, `skills/pathfinder/references/routes/prompt-to-goal.md`, `evals/replays/cases/prompt-fast-path.md`, its replay fixture, and matching consistency guards; first present a route-diff plan.
+- [x] Instruct hosts to create only the structured request, then let the controller generate and seal `06-goal-command.md`, both JSON sidecars, and `08-final-summary.md`.
+- [x] Imitate the existing absolute-plugin-root and final-filesystem-write gate; keep static-inspection-only behavior and exact ignore checks unchanged.
+- [x] Existing tests must pass unmodified in safety meaning; update replay expectations rather than weakening them.
+- [x] Show zero-caller evidence for the old pre-authored `--goal-file` form before deleting it.
+- [x] Expected diff: 80-140 lines across route/docs/replay; split mirror updates if larger.
+- [x] Verify with `bash scripts/check-skill-consistency.sh .`, `bash scripts/check-replay-evals.sh .`, and `python3 -m unittest tests.core.test_artifacts`.
+- [x] Append a line to `PROGRESS.md` recording the route cutover and verification.
+- [x] Stop if any supported host requires the Goal file before the controller can run; retain a conversation-only preview, never a filesystem input presented as canonical.
+
+Implementation note: the prompt replay's six output paths and safety semantics were already correct, so its fixture required no mutation. The final-summary route mirror was updated with the same generated-view rule, and a consistency guard now fails if the removed Goal-file input returns.
 
 **Phase verification:** `rg` finds no production read of `06-goal-command.md`; prompt JSON hashes remain stable after view tampering; full preflight passes.
 

@@ -1,7 +1,12 @@
+import hashlib
+import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
 
+from pathfinder_core.__main__ import main
 from pathfinder_core.artifacts import REQUEST_NAME, write_saved_prompt_goal
 from pathfinder_core.errors import PolicyError, StateError
 from pathfinder_core.storage import read_json, write_atomic
@@ -48,18 +53,12 @@ class ArtifactTests(unittest.TestCase):
         request_path = output / REQUEST_NAME
         write_atomic(request_path, request(root))
         goal_path = output / "06-goal-command.md"
-        objective = request(root)["objective"]
-        goal_path.write_text(
-            f"# Goal\n\n/goal {objective}\n\n# Implementation Goal\n\n{objective}\n"
-        )
         return root, output, request_path, goal_path
 
     def test_writes_schema_valid_idempotent_prompt_goal_sidecars(self):
         with tempfile.TemporaryDirectory() as directory:
             root, output, request_path, goal_path = self.make_ignored_run(directory)
-            first = write_saved_prompt_goal(
-                root, output, request_path, goal_path, consume_request=True
-            )
+            first = write_saved_prompt_goal(root, output, request_path, consume_request=True)
             self.assertFalse(request_path.exists())
             binding = read_json(output / "06-goal-binding.json")
             summary = read_json(output / "08-final-summary.json")
@@ -88,9 +87,7 @@ class ArtifactTests(unittest.TestCase):
                 ],
             )
             write_atomic(request_path, request(root))
-            second = write_saved_prompt_goal(
-                root, output, request_path, goal_path, consume_request=True
-            )
+            second = write_saved_prompt_goal(root, output, request_path, consume_request=True)
             self.assertEqual(first, second)
 
     def test_unignored_output_is_rejected_before_writes(self):
@@ -101,12 +98,8 @@ class ArtifactTests(unittest.TestCase):
             output.mkdir(parents=True)
             request_path = output / REQUEST_NAME
             write_atomic(request_path, request(root))
-            goal_path = output / "06-goal-command.md"
-            goal_path.write_text(
-                f"/goal {request(root)['objective']}\n\n# Implementation Goal\n"
-            )
             with self.assertRaisesRegex(PolicyError, "not confirmed ignored"):
-                write_saved_prompt_goal(root, output, request_path, goal_path)
+                write_saved_prompt_goal(root, output, request_path)
             self.assertFalse((output / "06-goal-binding.json").exists())
 
     def test_invalid_request_cannot_write_sidecars(self):
@@ -116,15 +109,17 @@ class ArtifactTests(unittest.TestCase):
             invalid["route"] = "prompt-to-goal"
             write_atomic(request_path, invalid)
             with self.assertRaisesRegex(StateError, "schema validation failed"):
-                write_saved_prompt_goal(root, output, request_path, goal_path)
+                write_saved_prompt_goal(root, output, request_path)
             self.assertFalse((output / "06-goal-binding.json").exists())
 
-    def test_incomplete_goal_contract_cannot_write_sidecars(self):
+    def test_incomplete_objective_contract_cannot_write_artifacts(self):
         with tempfile.TemporaryDirectory() as directory:
             root, output, request_path, goal_path = self.make_ignored_run(directory)
-            goal_path.write_text(f"/goal {request(root)['objective']}\n")
-            with self.assertRaisesRegex(StateError, "Implementation Goal fallback"):
-                write_saved_prompt_goal(root, output, request_path, goal_path)
+            invalid = request(root)
+            invalid["objective"] = "Make divide by zero return None."
+            write_atomic(request_path, invalid)
+            with self.assertRaisesRegex(StateError, "missing required contract"):
+                write_saved_prompt_goal(root, output, request_path)
             self.assertFalse((output / "06-goal-binding.json").exists())
 
     def test_symlinked_output_run_is_rejected(self):
@@ -140,7 +135,6 @@ class ArtifactTests(unittest.TestCase):
                     root,
                     alias,
                     alias / request_path.name,
-                    alias / goal_path.name,
                 )
 
     def test_stale_base_commit_is_rejected(self):
@@ -150,8 +144,74 @@ class ArtifactTests(unittest.TestCase):
             stale["scope"]["base_commit"] = "b" * 40
             write_atomic(request_path, stale)
             with self.assertRaisesRegex(StateError, "base commit does not match HEAD"):
-                write_saved_prompt_goal(root, output, request_path, goal_path)
+                write_saved_prompt_goal(root, output, request_path)
             self.assertFalse((output / "06-goal-binding.json").exists())
+
+    def test_controller_generates_views_without_a_goal_input_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output, request_path, _goal_path = self.make_ignored_run(directory)
+            result = write_saved_prompt_goal(root, output, request_path)
+            goal_markdown = (output / "06-goal-command.md").read_text()
+            self.assertIn(f"/goal {request(root)['objective']}", goal_markdown)
+            self.assertIn(result["binding_id"], goal_markdown)
+
+    def test_tampered_views_are_repaired_without_changing_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output, request_path, _goal_path = self.make_ignored_run(directory)
+            write_saved_prompt_goal(root, output, request_path)
+            canonical_paths = [
+                output / "06-goal-binding.json",
+                output / "08-final-summary.json",
+            ]
+            before = {
+                path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in canonical_paths
+            }
+            for name in ("06-goal-command.md", "08-final-summary.md"):
+                path = output / name
+                path.chmod(0o600)
+                path.write_text("tampered view\n")
+            write_saved_prompt_goal(root, output, request_path)
+            after = {
+                path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in canonical_paths
+            }
+            self.assertEqual(before, after)
+            self.assertNotEqual((output / "06-goal-command.md").read_text(), "tampered view\n")
+            self.assertNotEqual((output / "08-final-summary.md").read_text(), "tampered view\n")
+
+    def test_cli_generates_views_without_goal_file_argument(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output, request_path, goal_path = self.make_ignored_run(directory)
+            stdout, stderr = StringIO(), StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = main([
+                    "artifacts", "goal-saved",
+                    "--repo-root", str(root),
+                    "--output-dir", str(output),
+                    "--request-file", str(request_path),
+                    "--json",
+                ])
+            self.assertEqual(code, 0, stderr.getvalue())
+            result = json.loads(stdout.getvalue())
+            self.assertEqual(Path(result["artifacts"][0]), goal_path.resolve())
+            self.assertTrue(goal_path.is_file())
+
+    def test_cli_rejects_deprecated_goal_file_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output, request_path, goal_path = self.make_ignored_run(directory)
+            with redirect_stderr(StringIO()):
+                with self.assertRaises(SystemExit) as raised:
+                    main([
+                        "artifacts", "goal-saved",
+                        "--repo-root", str(root),
+                        "--output-dir", str(output),
+                        "--request-file", str(request_path),
+                        "--goal-file", str(goal_path),
+                        "--json",
+                    ])
+            self.assertEqual(raised.exception.code, 2)
+            self.assertFalse(goal_path.exists())
 
 
 if __name__ == "__main__":

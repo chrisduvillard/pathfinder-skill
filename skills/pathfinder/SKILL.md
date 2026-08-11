@@ -247,24 +247,26 @@ identify future proof commands, and label those commands `not run`. The plugin c
 is allowed because it validates and writes only the already-ignored Pathfinder artifacts.
 
 **Full-plugin prompt controller gate (required even if a host under-loads route files):**
-never hand-author `06-goal-binding.json` or `08-final-summary.json`. Write the complete
-single-line `/goal` plus Implementation Goal fallback to `06-goal-command.md`; do not
-hand-author `08-final-summary.md`, because the controller must render it with the returned
-stable IDs. Create the
-`.prompt-goal-request.json` after loading
-`schemas/artifacts/prompt-goal-request.schema.json` from the plugin root, then run the
+never hand-author `06-goal-binding.json` or `08-final-summary.json`. Also never hand-author `06-goal-command.md` or `08-final-summary.md`: they are deterministic views of the validated canonical JSON. After loading
+`schemas/artifacts/prompt-goal-request.schema.json` from the plugin root, create
+`.prompt-goal-request.json` with the complete, approved, single-line Goal condition in
+`objective` (without the `/goal ` prefix). The objective itself must contain the proof,
+scope or constraints, bounded-stop, untrusted-data, `changed_files`, and
+`checks_run_with_exit_results` clauses required by the Goal contract. Then run the
 following command in Claude Code (other hosts must substitute the absolute plugin root
 surfaced with this skill). `${CLAUDE_PLUGIN_ROOT}` is the plugin installation, not the
 target repository; never search the target repository for this controller.
 
 ```text
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/pathfinder-controller.sh" artifacts goal-saved --repo-root <repo-root> --output-dir <run-dir> --request-file <run-dir>/.prompt-goal-request.json --goal-file <run-dir>/06-goal-command.md --consume-request --json
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/pathfinder-controller.sh" artifacts goal-saved --repo-root <repo-root> --output-dir <run-dir> --request-file <run-dir>/.prompt-goal-request.json --consume-request --json
 ```
 
 This controller call is the final filesystem write. The prompt route is incomplete unless
-it exits 0, returns stable IDs and the Goal/Binding/final-summary paths, consumes the
-request, and leaves all four controller-owned artifacts read-only. On failure, report the controller error and stop; do not
-substitute compact JSON or claim success.
+it exits 0, returns stable IDs and all four Goal/Binding/final-summary paths, consumes the
+request, and leaves all four controller-owned artifacts read-only. The controller validates
+the request and canonical documents before atomically rendering both Markdown views. On
+failure, report the controller error and stop; do not substitute compact JSON or claim
+success.
 
 If a phase expected on the selected route has not yet been reached, create a short
 placeholder in that route's corresponding artifact, for example "not answered yet,"

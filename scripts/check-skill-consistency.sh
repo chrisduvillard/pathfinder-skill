@@ -173,8 +173,15 @@ done
 check_skill_section "## Work folder" "### Intent files" "never create the run directory or any repository-local artifact until" "repository-local artifacts require a proven ignore rule before writes"
 check_pair "Never create the run directory or any repository-local artifact until" "$arts" "pre-write artifact ignore gate"
 check_pair 'never hand-author `06-goal-binding.json` or `08-final-summary.json`' "$arts" "controller-owned prompt sidecar gate"
+check_pair 'never hand-author `06-goal-command.md` or `08-final-summary.md`' "$arts" "controller-generated prompt view gate"
 check_pair '${CLAUDE_PLUGIN_ROOT}' "$route_prompt" "portable full-plugin root"
 check_pair "the prompt-to-goal route is static-inspection" "$route_prompt" "prompt route pre-approval execution boundary"
+legacy_goal_option='--goal'"-file"
+if grep -qF -- "$legacy_goal_option" "$skill" "$route_prompt" "$root/pathfinder_core/__main__.py"; then
+  err "prompt authority drift: deprecated Goal-file input returned"
+else
+  verbose_ok "prompt controller accepts structured request only"
+fi
 
 # Phase 5 funnel invariants (SKILL.md <-> question-funnel-template.md)
 check_pair "Default to option 2" "$funnel" "execution-mode default"

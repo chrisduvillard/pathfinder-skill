@@ -15,7 +15,7 @@ Write `08-final-summary.md` with:
 - Remaining risks.
 - Recommended next goal.
 
-Exception: on the full-plugin prompt-to-goal fast path, do not write this file manually. The final `artifacts goal-saved` controller call renders it from the validated request and returned stable IDs, then seals it read-only so the call can remain the final filesystem write.
+Exception: on the full-plugin prompt-to-goal fast path, do not write this file manually. The final `artifacts goal-saved` controller call validates and writes canonical JSON, renders this file and `06-goal-command.md` as deterministic views, then seals all four artifacts read-only so the call can remain the final filesystem write.
 
 Also write `08-final-summary.json` using only `schemas/artifacts/final-summary.schema.json` fields. Keep its `mission_id` and `goal_id` identical to `06-goal-binding.json`; a saved but unexecuted Goal uses `final_state`/`disposition: goal-saved`, `binding_status`/`verification: not-run`, an empty `commit_ids` array, and `pr_url: null`. Validate the JSON before reporting success when the shipped schema and validator are available.
 

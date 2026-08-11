@@ -29,7 +29,7 @@ Controller-owned JSON is the source of truth; Markdown is its human-readable run
 
 When a full plugin is installed, load the matching files under `schemas/artifacts/` before writing sidecars and validate each sidecar against its schema before reporting success. Never invent route-specific top-level JSON fields. A manual skill-only install without schemas must preserve the canonical field names documented here and disclose that validation was unavailable.
 
-For a full-plugin prompt Goal, never hand-author `06-goal-binding.json` or `08-final-summary.json`; do not hand-author `08-final-summary.md` either. The bundled controller's `artifacts goal-saved` command renders the Markdown with its stable IDs, writes and validates the sidecars, seals all three plus `06-goal-command.md`, and must be the final filesystem write before the route reports success.
+For a full-plugin prompt Goal, never hand-author `06-goal-binding.json` or `08-final-summary.json`; also never hand-author `06-goal-command.md` or `08-final-summary.md`. Put the complete approved single-line objective and structured inputs in `.prompt-goal-request.json`. The bundled controller's `artifacts goal-saved` command validates and writes the canonical JSON, deterministically renders both Markdown views from it, seals all four artifacts, and must be the final filesystem write before the route reports success.
 
 Structured sidecar purposes:
 

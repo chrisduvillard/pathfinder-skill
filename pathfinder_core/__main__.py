@@ -64,7 +64,6 @@ def _parser() -> argparse.ArgumentParser:
     goal_saved.add_argument("--repo-root", required=True)
     goal_saved.add_argument("--output-dir", required=True)
     goal_saved.add_argument("--request-file", required=True)
-    goal_saved.add_argument("--goal-file", required=True)
     goal_saved.add_argument("--consume-request", action="store_true")
     goal_saved.add_argument("--json", action="store_true", dest="as_json")
     return parser
@@ -171,7 +170,6 @@ def main(argv=None) -> int:
                 args.repo_root,
                 args.output_dir,
                 args.request_file,
-                args.goal_file,
                 consume_request=args.consume_request,
             )
             if args.as_json:
