@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "policy_id": "protected-policy-pathfinder-v1",
+  "mode": "baseline",
+  "base_policy_id": null,
+  "rules": [
+    {
+      "rule_id": "protected-rule-auth",
+      "category": "auth",
+      "description": "Authentication, session, SSO, and OAuth implementation.",
+      "patterns": ["auth/**", "authentication/**", "oauth/**", "sso/**", "auth.py"]
+    },
+    {
+      "rule_id": "protected-rule-payments",
+      "category": "payments",
+      "description": "Payment, billing, checkout, and payment-provider implementation.",
+      "patterns": ["payment/**", "payments/**", "billing/**", "checkout/**", "stripe/**", "paypal/**"]
+    },
+    {
+      "rule_id": "protected-rule-permissions",
+      "category": "permissions",
+      "description": "Authorization, permissions, role, and access-control implementation.",
+      "patterns": ["authorization/**", "permission/**", "permissions/**", "rbac/**", "iam/**", "acl/**"]
+    },
+    {
+      "rule_id": "protected-rule-deployment",
+      "category": "deployment",
+      "description": "Deployment and infrastructure configuration.",
+      "patterns": ["deploy/**", "deployment/**", "infra/**", "infrastructure/**", "terraform/**", "k8s/**", "kubernetes/**", "helm/**", "Dockerfile", "docker-compose*.yml"]
+    },
+    {
+      "rule_id": "protected-rule-ci-cd",
+      "category": "ci-cd",
+      "description": "Continuous integration and delivery configuration.",
+      "patterns": [".github/workflows/**", ".circleci/**", ".gitlab-ci.yml", "Jenkinsfile", "azure-pipelines.yml", "buildkite/**"]
+    },
+    {
+      "rule_id": "protected-rule-schema",
+      "category": "schema",
+      "description": "Database, API, GraphQL, and ORM schema definitions.",
+      "patterns": ["schema/**", "schemas/**", "*.graphql", "*.gql", "*.prisma", "openapi*.yaml", "openapi*.yml"]
+    },
+    {
+      "rule_id": "protected-rule-migration",
+      "category": "migration",
+      "description": "Database and data migration implementation.",
+      "patterns": ["migration/**", "migrations/**", "alembic/**", "db/migrate/**"]
+    },
+    {
+      "rule_id": "protected-rule-public-api",
+      "category": "public-api",
+      "description": "Public API routes and contracts.",
+      "patterns": ["api/public/**", "public-api/**", "routes/public/**", "openapi*.yaml", "openapi*.yml"]
+    },
+    {
+      "rule_id": "protected-rule-network-egress",
+      "category": "network-egress",
+      "description": "Outbound integrations, webhooks, and network clients.",
+      "patterns": ["egress/**", "outbound/**", "http-client/**", "integration/**", "integrations/**", "webhook/**", "webhooks/**"]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/policy/protected-surfaces.schema.json",
+  "title": "Pathfinder Protected Surface Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_id", "mode", "base_policy_id", "rules"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "policy_id": {"type": "string", "pattern": "^protected-policy-[a-z0-9][a-z0-9-]{2,63}$"},
+    "mode": {"enum": ["baseline", "additive"]},
+    "base_policy_id": {"type": ["string", "null"], "pattern": "^protected-policy-[a-z0-9][a-z0-9-]{2,63}$"},
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule_id", "category", "description", "patterns"],
+        "properties": {
+          "rule_id": {"type": "string", "pattern": "^protected-rule-[a-z0-9][a-z0-9-]{2,63}$"},
+          "category": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
+          "description": {"type": "string", "minLength": 1, "maxLength": 300},
+          "patterns": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1, "maxLength": 256}
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "baseline"}}, "required": ["mode"]},
+      "then": {"properties": {"base_policy_id": {"type": "null"}}}
+    },
+    {
+      "if": {"properties": {"mode": {"const": "additive"}}, "required": ["mode"]},
+      "then": {"properties": {"base_policy_id": {"type": "string"}}}
+    }
+  ]
+}
