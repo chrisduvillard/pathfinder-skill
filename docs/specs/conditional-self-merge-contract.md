@@ -1,8 +1,8 @@
 # Conditional self-merge security contract
 
-> Status: design ratified on 2026-08-11; inert evidence contracts, a fixture observer, and an
-> uncomposed GET-only REST transport exist. Live observation, eligibility, mutation, and
-> enablement are not authorized.
+> Status: design ratified on 2026-08-11; inert evidence contracts, a fixture observer, an
+> uncomposed GET-only REST transport, and an unused pure eligibility evaluator exist. Live
+> observation, mutation, and enablement are not authorized.
 
 ## Precedence and invariant
 
@@ -115,10 +115,10 @@ For GraphQL, persist the exact query hash; absent fields and unknown enum values
 | Exact PR | `GET /repos/{owner}/{repo}/pulls/{number}`: id/node id/number, state, draft/merged, author, head/base repo ids/refs/SHAs, mergeability, test/real `merge_commit_sha`, `merged_at`, `merged_by`, and changed-file totals. [Pull request endpoints](https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request) |
 | API diff | Fully paginate `GET /repos/{owner}/{repo}/pulls/{number}/files`: filename, previous filename, status, SHA, additions/deletions/changes. The endpoint's 3,000-file ceiling is above the hard policy ceiling; reaching any ceiling blocks. [PR files](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files) |
 | Classic protection | `GET /repos/{owner}/{repo}/branches/{base}/protection`: required checks and strict/app ids, `enforce_admins`, required review count, stale/code-owner/last-push rules, dismissal and bypass allowances, restrictions, linear history, signatures, and conversation resolution. [Protected branches](https://docs.github.com/en/rest/branches/branch-protection#get-branch-protection) |
-| Applicable rules | Fully paginate `GET /repos/{owner}/{repo}/rules/branches/{base}`: every active rule's type, parameters, ruleset id/source/source type. Disabled/evaluate-only rules do not satisfy a floor. [Rules for a branch](https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch) |
+| Applicable rules | Fully paginate `GET /repos/{owner}/{repo}/rules/branches/{base}`: every active rule's type, parameters, ruleset id/source/source type, allowed merge methods, review count, and pinned check identities. Disabled/evaluate-only rules do not satisfy a floor. Hash the normalized type/parameter set and require every fetched source ruleset to produce the same semantic hash. [Rules for a branch](https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch) |
 | Ruleset sources/bypass | Fully paginate `GET /repos/{owner}/{repo}/rulesets?includes_parents=true`, then each referenced ruleset: id/node id, source/source type, target, enforcement, conditions, rules, timestamps, and complete `bypass_actors` including actor id/type/mode. Omitted bypass actors are unknown, not empty. Cross-check GraphQL `RepositoryRuleset.bypassActors`, `conditions`, `rules`, `source`, and `updatedAt` when needed. [REST rulesets](https://docs.github.com/en/rest/repos/rules) · [GraphQL rulesets](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/repos#repositoryruleset) |
 | Review decision/threads/queue | One paginated GraphQL PR query: `id`, `state`, `isDraft`, head/base OIDs and repositories, `mergeable`, `mergeStateStatus`, `reviewDecision`, `mergeQueueEntry`, latest opinionated reviews, review requests including `asCodeOwner`, and every review thread's `isResolved`/`isOutdated`. [GraphQL pull requests](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/pulls#pullrequest) |
-| Review audit | Fully paginate `GET /repos/{owner}/{repo}/pulls/{number}/reviews` and `/requested_reviewers`: review id, actor id/login/type, state, `commit_id`, submission time, author association, requested users/teams. [Reviews](https://docs.github.com/en/rest/pulls/reviews#list-reviews-for-a-pull-request) · [Review requests](https://docs.github.com/en/rest/pulls/review-requests#get-all-requested-reviewers-for-a-pull-request) |
+| Review audit | Fully paginate `GET /repos/{owner}/{repo}/pulls/{number}/reviews` and `/requested_reviewers`: review id, actor id/login/type, state, `commit_id`, submission time, author association, requested users/teams. For every candidate human approval, read `GET /repos/{owner}/{repo}/collaborators/{username}/permission`, cross-check the returned user id, and require legacy `write` or `admin`; association alone is not permission evidence. [Reviews](https://docs.github.com/en/rest/pulls/reviews#list-reviews-for-a-pull-request) · [Review requests](https://docs.github.com/en/rest/pulls/review-requests#get-all-requested-reviewers-for-a-pull-request) · [Repository permission](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user) |
 | Check runs | Fully paginate check suites/runs for GitHub's required SHA: run id/name, `head_sha`, status, conclusion, started/completed times, App id/slug, suite id, and PR head/base identities. Do not rely on the endpoint's 1,000-suite shortcut. [Check runs](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference) |
 | Commit statuses | Fully paginate `GET /repos/{owner}/{repo}/commits/{sha}/status`: combined state plus each id/context/state/creator/time and exact SHA. A combined green value alone is insufficient. [Commit statuses](https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference) |
 | Deployments | If an active rule requires deployments, identify matching deployments by repository/environment/SHA and read their latest statuses through `GET /repos/{owner}/{repo}/deployments/{id}/statuses`; initial implementation still returns `unsupported-required-deployments`. [Deployment statuses](https://docs.github.com/en/rest/deployments/statuses#list-deployment-statuses) |
@@ -170,6 +170,30 @@ At minimum the observer/evaluator must distinguish:
   `reconcile-required`, `not-merged`, and `merged`.
 
 `eligible` is a dry-run verdict, not authority and not a merge result.
+
+### Implemented pure eligibility evaluator
+
+The unused evaluator accepts only a closed host policy, current-run authorization, normalized
+evidence snapshot, and an offset-aware evaluation time. It validates all three schemas and
+canonical hashes, authority/repository/mission bindings, validity windows, request audits,
+pagination counts, snapshot completeness, diff hashes and totals, controller branch shape,
+repository and PR state, path/protected-surface ceilings, the one classic layer plus all active
+rulesets, source-rule semantic hashes, allowed squash methods, bypass visibility, review decision,
+latest effective permission-qualified independent-human reviews, current threads/requests, and exact check
+context/App/SHA/status proof. Inputs are never mutated.
+
+Restrictions form one AND-only lattice: shipped floors, host policy, classic protection, and every
+active ruleset can add requirements but cannot cancel an earlier requirement. Required checks are
+unioned and the approval floor is the maximum. Typed outcome precedence is `unknown`, then
+`unsupported`, then `policy-blocked`, then `eligible`; all discovered blocks remain in the verdict
+even when a higher-precedence outcome wins. Blocks and proof summaries are deterministically
+ordered.
+
+The evaluator has no credential, network, filesystem mutation, merge method, or production caller.
+The complete fixture can produce `eligible`, but the live GET-only transport cannot collect the
+required GraphQL review-decision/thread/queue evidence. Live conditional merge therefore remains
+unsupported, and no ordinary `/goal`, mission, publication, or resume path evaluates or acts on a
+verdict.
 
 ## Future mutation and crash reconciliation
 

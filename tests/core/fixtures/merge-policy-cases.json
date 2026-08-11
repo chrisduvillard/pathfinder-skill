@@ -1,0 +1,20 @@
+{
+  "cases": [
+    {"name": "archived repository", "updates": [["repository", "archived", true]], "code": "repository-unavailable"},
+    {"name": "closed pull request", "updates": [["pull_request", "state", "closed"]], "code": "pull-request-not-open"},
+    {"name": "draft pull request", "updates": [["pull_request", "draft", true]], "code": "draft"},
+    {"name": "fork pull request", "updates": [["pull_request", "same_repository", false]], "code": "fork"},
+    {"name": "non-controller branch", "updates": [["pull_request", "head_ref", "feature/example"]], "code": "controller-branch-unproven"},
+    {"name": "administrator actor", "updates": [["actor", "administration_permission", "read"]], "code": "merge-actor-can-bypass"},
+    {"name": "matched bypass actor", "updates": [["actor", "bypass_assessment", "match"]], "code": "merge-actor-can-bypass"},
+    {"name": "merge queue entry", "updates": [["mergeability", "queue_entry", true]], "code": "merge-queue-required"},
+    {"name": "merge conflict", "updates": [["mergeability", "mergeable", "CONFLICTING"]], "code": "merge-conflict"},
+    {"name": "base behind", "updates": [["mergeability", "merge_state_status", "BEHIND"]], "code": "base-behind"},
+    {"name": "mergeability unknown", "updates": [["mergeability", "mergeable", "UNKNOWN"]], "code": "merge-state-unknown"},
+    {"name": "review required", "updates": [["mergeability", "review_decision", "REVIEW_REQUIRED"]], "code": "independent-review-missing"},
+    {"name": "review decision unknown", "updates": [["mergeability", "review_decision", "UNKNOWN"]], "code": "review-state-unknown"},
+    {"name": "classic protection unknown", "updates": [["classic_protection", "status", "unknown"]], "code": "classic-protection-unknown"},
+    {"name": "unsupported signatures", "updates": [["unsupported_reasons", ["unsupported-required-signatures"]]], "code": "unsupported-required-signatures"},
+    {"name": "unknown response field", "updates": [["unknown_reasons", ["field-unknown"]], ["observation", "collection_complete", false]], "code": "field-unknown"}
+  ]
+}

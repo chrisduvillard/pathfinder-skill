@@ -141,6 +141,13 @@ class GitHubGETClientTests(unittest.TestCase):
             with self.subTest(target=target), self.assertRaises(ValueError):
                 value.get_json("fixture", target)
 
+        transport = FixtureGETTransport(response(data={"permission": "write"}))
+        value = client(transport).get_endpoint(
+            "review-permission",
+            "/repos/owner/repo/collaborators/reviewer/permission",
+        )
+        self.assertEqual(value.data["permission"], "write")
+
     def test_statuses_map_without_leaking_body_or_credential(self):
         cases = (
             (401, {}, ObservationOutcome.AUTH_ERROR),

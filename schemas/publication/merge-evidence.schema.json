@@ -96,12 +96,13 @@
       "type": "array", "uniqueItems": true,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["ruleset_id", "source_type", "source_id", "rule_type", "parameters_sha256", "approval_count", "required_checks", "strict"],
+        "required": ["ruleset_id", "source_type", "source_id", "rule_type", "parameters_sha256", "approval_count", "allowed_merge_methods", "required_checks", "strict"],
         "properties": {
           "ruleset_id": {"type": "integer", "minimum": 1}, "source_type": {"enum": ["Repository", "Organization", "Enterprise"]},
           "source_id": {"type": "integer", "minimum": 1},
           "rule_type": {"enum": ["pull_request", "required_status_checks", "required_linear_history", "merge_queue", "required_deployments", "required_signatures", "code_scanning", "code_quality", "file_path_restriction", "max_file_size"]},
           "parameters_sha256": {"$ref": "#/$defs/sha256"}, "approval_count": {"type": ["integer", "null"], "minimum": 0},
+          "allowed_merge_methods": {"type": "array", "uniqueItems": true, "items": {"enum": ["merge", "squash", "rebase"]}},
           "required_checks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/checkIdentity"}},
           "strict": {"type": ["boolean", "null"]}
         }
@@ -111,11 +112,11 @@
       "type": "array", "uniqueItems": true,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["id", "source_type", "source_id", "enforcement", "conditions_sha256", "rules_sha256", "updated_at", "bypass_visibility", "bypass_actor_keys"],
+        "required": ["id", "source_type", "source_id", "enforcement", "conditions_sha256", "rules_sha256", "active_rules_sha256", "updated_at", "bypass_visibility", "bypass_actor_keys"],
         "properties": {
           "id": {"type": "integer", "minimum": 1}, "source_type": {"enum": ["Repository", "Organization", "Enterprise"]},
           "source_id": {"type": "integer", "minimum": 1}, "enforcement": {"enum": ["active", "evaluate", "disabled"]},
-          "conditions_sha256": {"$ref": "#/$defs/sha256"}, "rules_sha256": {"$ref": "#/$defs/sha256"},
+          "conditions_sha256": {"$ref": "#/$defs/sha256"}, "rules_sha256": {"$ref": "#/$defs/sha256"}, "active_rules_sha256": {"$ref": "#/$defs/sha256"},
           "updated_at": {"type": "string", "format": "date-time"},
           "bypass_visibility": {"enum": ["complete", "unknown"]},
           "bypass_actor_keys": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/actorKey"}}
@@ -128,10 +129,11 @@
     "checks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/check"}},
     "mergeability": {
       "type": "object", "additionalProperties": false,
-      "required": ["mergeable", "merge_state_status", "queue_entry", "required_sha"],
+      "required": ["mergeable", "merge_state_status", "review_decision", "queue_entry", "required_sha"],
       "properties": {
         "mergeable": {"enum": ["MERGEABLE", "CONFLICTING", "UNKNOWN"]},
         "merge_state_status": {"enum": ["BEHIND", "BLOCKED", "CLEAN", "DIRTY", "DRAFT", "HAS_HOOKS", "UNKNOWN", "UNSTABLE"]},
+        "review_decision": {"enum": ["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED", "UNKNOWN"]},
         "queue_entry": {"type": "boolean"}, "required_sha": {"$ref": "#/$defs/commit"}
       }
     },
@@ -152,7 +154,7 @@
     "repository": {"type": "object", "additionalProperties": false, "required": ["id", "node_id", "owner", "name", "base_branch", "archived", "disabled", "merge_methods"], "properties": {"id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"}, "owner": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"}, "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"}, "base_branch": {"$ref": "#/$defs/ref"}, "archived": {"type": "boolean"}, "disabled": {"type": "boolean"}, "merge_methods": {"type": "object", "additionalProperties": false, "required": ["squash", "merge_commit", "rebase"], "properties": {"squash": {"type": "boolean"}, "merge_commit": {"type": "boolean"}, "rebase": {"type": "boolean"}}}}},
     "actor": {"type": "object", "additionalProperties": false, "required": ["app_id", "app_node_id", "installation_id", "installation_account_id", "actor_id", "actor_node_id", "login", "administration_permission", "suspended", "bypass_assessment"], "properties": {"app_id": {"type": "integer", "minimum": 1}, "app_node_id": {"$ref": "#/$defs/nodeId"}, "installation_id": {"type": "integer", "minimum": 1}, "installation_account_id": {"type": "integer", "minimum": 1}, "actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}, "administration_permission": {"enum": ["none", "read", "write"]}, "suspended": {"type": "boolean"}, "bypass_assessment": {"enum": ["no-match", "match", "unknown"]}}},
     "page": {"type": "object", "additionalProperties": false, "required": ["complete", "pages", "items", "truncated", "last_cursor"], "properties": {"complete": {"type": "boolean"}, "pages": {"type": "integer", "minimum": 0}, "items": {"type": "integer", "minimum": 0}, "truncated": {"type": "boolean"}, "last_cursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
-    "review": {"type": "object", "additionalProperties": false, "required": ["id", "actor_id", "actor_type", "state", "commit_sha", "submitted_at", "author_association", "dismissed"], "properties": {"id": {"type": "integer", "minimum": 1}, "actor_id": {"type": "integer", "minimum": 1}, "actor_type": {"enum": ["User", "Bot"]}, "state": {"enum": ["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]}, "commit_sha": {"$ref": "#/$defs/commit"}, "submitted_at": {"type": "string", "format": "date-time"}, "author_association": {"enum": ["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "NONE"]}, "dismissed": {"type": "boolean"}}},
+    "review": {"type": "object", "additionalProperties": false, "required": ["id", "actor_id", "actor_login", "actor_type", "repository_permission", "state", "commit_sha", "submitted_at", "author_association", "dismissed"], "properties": {"id": {"type": "integer", "minimum": 1}, "actor_id": {"type": "integer", "minimum": 1}, "actor_login": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*(?:\\[bot\\])?$"}, "actor_type": {"enum": ["User", "Bot"]}, "repository_permission": {"enum": ["admin", "write", "read", "none"]}, "state": {"enum": ["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]}, "commit_sha": {"$ref": "#/$defs/commit"}, "submitted_at": {"type": "string", "format": "date-time"}, "author_association": {"enum": ["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "NONE"]}, "dismissed": {"type": "boolean"}}},
     "reviewRequest": {"type": "object", "additionalProperties": false, "required": ["actor_id", "actor_type", "as_code_owner"], "properties": {"actor_id": {"type": "integer", "minimum": 1}, "actor_type": {"enum": ["User", "Team"]}, "as_code_owner": {"type": "boolean"}}},
     "thread": {"type": "object", "additionalProperties": false, "required": ["node_id", "resolved", "outdated"], "properties": {"node_id": {"$ref": "#/$defs/nodeId"}, "resolved": {"type": "boolean"}, "outdated": {"type": "boolean"}}},
     "check": {"type": "object", "additionalProperties": false, "required": ["id", "source", "context", "app_id", "sha", "required", "status", "conclusion", "completed_at"], "properties": {"id": {"type": "integer", "minimum": 1}, "source": {"enum": ["check-run", "commit-status"]}, "context": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:/()@,+-]{0,99}$"}, "app_id": {"type": ["integer", "null"], "minimum": 1}, "sha": {"$ref": "#/$defs/commit"}, "required": {"type": "boolean"}, "status": {"enum": ["queued", "in_progress", "completed"]}, "conclusion": {"enum": ["success", "failure", "neutral", "cancelled", "skipped", "timed_out", "action_required", "stale", null]}, "completed_at": {"type": ["string", "null"], "format": "date-time"}}},

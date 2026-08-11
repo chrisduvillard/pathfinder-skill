@@ -1461,18 +1461,20 @@ Observable completion means:
 
 #### Sub-prompt K3.1 — policy lattice and hard floors
 
-- [ ] `[writes code]` Add only `pathfinder_core/merge_policy.py`, focused unit/property-style fixtures, and typed verdict documentation; present precedence and every deny code before editing.
-- [ ] Evaluate shipped hard floors, then host policy, then the most restrictive classic/ruleset combination. Repository settings may narrow but can never cancel a shipped floor or host-policy restriction.
-- [ ] Require exact identity/hash/time bindings, fully complete evidence, same-repository PR, open/non-draft/current branch, zero protected matches, diff ceilings, supported squash method, independent current human review, clean review decision/threads, required pinned checks, non-bypass actor, clean/up-to-date merge state, and an unexpired observation window.
-- [ ] Count the latest effective review per human only. Exclude author, implementation agent, last pusher, merge/check actors, bots, dismissed/stale reviews, and unknown associations. Require the greater of shipped, host-policy, classic, and ruleset approval counts.
-- [ ] Union required check identities across classic protection, all rulesets, and host policy. Require both a status and check run when GitHub reports both under a required name; validate expected app id and the exact GitHub-required SHA.
-- [ ] Block all unknown or initially unsupported active rule types, including merge queue, required deployments, required signatures, code scanning/quality/coverage, file restrictions, and metadata rules until dedicated semantics and fixtures are added.
-- [ ] Imitate `ExecutionPolicy` and `ProtectedSurfaceRegistry`: closed inputs, explicit errors, additive restrictions, no prose inference, and deterministic results.
-- [ ] Existing tests must pass unmodified. Add an adversarial matrix covering every fail-closed acceptance item above and pairwise classic/ruleset conflicts.
-- [ ] No deletion is expected. Show zero-caller evidence before consolidating existing publication states.
-- [ ] Expected diff: 300-450 lines, with data fixtures separate from decision logic. Split checks/reviews from rule layering if larger.
-- [ ] Append a `PROGRESS.md` line recording supported rules, all typed blockers, and zero merge capability.
-- [ ] Stop if eligibility needs a UI-only GitHub fact, repository prose, model judgment, or a permission/bypass inference; return an explicit unsupported/unknown verdict.
+- [x] `[writes code]` Add an unused `pathfinder_core/merge_policy.py`, focused unit/property-style fixtures, and typed verdict documentation; split typed results and check/review proofs when the decision module crosses the review threshold; present precedence and every deny code before editing.
+- [x] Evaluate shipped hard floors, then host policy, then the most restrictive classic/ruleset combination. Repository settings may narrow but can never cancel a shipped floor or host-policy restriction.
+- [x] Require exact identity/hash/time bindings, fully complete evidence, same-repository PR, open/non-draft/current branch, zero protected matches, diff ceilings, supported squash method, independent current human review, clean review decision/threads, required pinned checks, non-bypass actor, clean/up-to-date merge state, and an unexpired observation window.
+- [x] Count the latest effective review per human only. Exclude author, implementation agent/other bots, last pusher, merge/check actors, dismissed/stale reviews, and unknown associations. Require the greater of shipped, host-policy, classic, and ruleset approval counts.
+- [x] Union required check identities across classic protection, all rulesets, and host policy. Require both a status and check run when GitHub reports both under a required name; validate expected app id and the exact GitHub-required SHA.
+- [x] Block all unknown or initially unsupported active rule types, including merge queue, required deployments, required signatures, code scanning/quality/coverage, file restrictions, and metadata rules until dedicated semantics and fixtures are added.
+- [x] Imitate `ExecutionPolicy` and `ProtectedSurfaceRegistry`: closed inputs, explicit errors, additive restrictions, no prose inference, and deterministic results.
+- [x] Existing behavioral tests pass. Add an adversarial matrix covering every evaluator-relevant fail-closed acceptance item above and pairwise classic/ruleset conflicts; change the K2 evidence schema/fixture/observer only where semantic proof was missing.
+- [x] No deletion is expected. Show zero-caller evidence before consolidating existing publication states.
+- [x] Expected diff: 300-450 lines, with data fixtures separate from decision logic. Split checks/reviews from rule layering if larger.
+- [x] Append a `PROGRESS.md` line recording supported rules, all typed blockers, and zero merge capability.
+- [x] Stop if eligibility needs a UI-only GitHub fact, repository prose, model judgment, or a permission/bypass inference; return an explicit unsupported/unknown verdict.
+
+**Implementation note (2026-08-11):** added an unused pure evaluator split into policy/rule layering, review/check proofs, and immutable typed verdicts after the production decision exceeded the review threshold. The AND-only lattice validates closed schemas, canonical hashes, authority and repository bindings, validity windows, request audits and pagination, diff hashes/classifications/ceilings, same-repository controller PR state, classic plus all active rules, bypass actors, latest permission-qualified independent reviews, review decision/threads, and exact required check App/SHA/status evidence. Outcome precedence is `unknown > unsupported > policy-blocked > eligible`; the approval maximum and check union are deterministic and no input is mutated. A minimal K2 evidence correction now carries allowed merge methods, a source/aggregate rule-parameter semantic hash, the closed GitHub review decision, and exact reviewer write/admin permission instead of asking K3 to infer them from association. Thirty-five focused contract/observer/evaluator tests and all 277 repository tests pass. Repository search proves the evaluator has zero production callers, credentials, network primitives, mutation methods, or merge capability; GraphQL-only live facts remain unavailable under the GET-only boundary, so live eligibility and merge stay unsupported.
 
 #### Sub-prompt K3.2 — freshness and drift re-evaluation
 
@@ -1632,4 +1634,4 @@ Observable completion means:
 
 ### Recommended first implementation slice
 
-**K0.1, K1.1, and K1.2 are complete.** Execute **K2.1 only** next: build a deterministic fixture-driven read-only observer/normalizer with no HTTP client or mutation method. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
+**K0.1 through K3.1 are complete.** Execute **K3.2 only** next: add pure 60-second freshness and complete-reread drift comparison with a fake clock and no caller. Do not begin K4 or K5.2 without a new explicit security/enablement decision.

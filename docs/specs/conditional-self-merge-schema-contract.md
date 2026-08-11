@@ -1,6 +1,7 @@
 # Conditional self-merge policy and authorization schemas
 
-> Status: closed data contracts only. No reader, credential, network client, eligibility route, or merge writer is enabled.
+> Status: closed data contracts with unused read-only observation and pure evaluation helpers. No
+> credentialed reader, eligibility route, or merge writer is enabled.
 
 The Draft 2020-12 schemas under `schemas/publication/` represent the two independent keys required
 by the [conditional self-merge security contract](conditional-self-merge-contract.md). They are
@@ -60,7 +61,8 @@ block. Schema validity alone is never an eligibility verdict or authority to loa
 
 ## Current executable boundary
 
-These schemas have no production caller. The v1 mission authorization enum remains `none`,
-`local-branch`, or `github-awaiting-review`; enabled host transition maps still contain no remote
-publication or merge action. Later phases may add read-only observation and dry-run evaluation, but
-remote mutation requires the separate security and enablement gates in the security contract.
+These schemas and the pure evaluator have no production caller. The v1 mission authorization enum
+remains `none`, `local-branch`, or `github-awaiting-review`; enabled host transition maps still
+contain no remote publication or merge action. The fixture observer can supply a complete dry-run
+snapshot, while the GET-only live boundary cannot collect required GraphQL facts. Remote mutation
+still requires the separate security and enablement gates in the security contract.

@@ -104,7 +104,13 @@ class GitHubMergeObserverTests(unittest.TestCase):
         self.assertEqual(evidence["pull_request"]["head_repository_id"], 123456789)
         self.assertEqual(evidence["diff"]["changed_file_count"], 2)
         self.assertEqual(evidence["diff"]["patch_bytes"], 8192)
+        self.assertEqual(evidence["mergeability"]["review_decision"], "APPROVED")
         self.assertEqual(len(evidence["active_rules"]), 2)
+        self.assertEqual(evidence["active_rules"][0]["allowed_merge_methods"], ["squash"])
+        self.assertEqual(
+            evidence["source_rulesets"][0]["active_rules_sha256"],
+            "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365",
+        )
         self.assertEqual(len(evidence["reviews"]), 1)
         self.assertEqual(len(evidence["checks"]), 2)
         self.assertEqual(evidence["actor"]["bypass_assessment"], "no-match")
@@ -284,6 +290,26 @@ class GitHubMergeObserverTests(unittest.TestCase):
             "import requests", "import urllib", "import http.client", "import subprocess",
         ):
             self.assertNotIn(network_primitive, source)
+
+    def test_rule_parameter_cross_checks_fail_closed(self):
+        responses = copy.deepcopy(self.responses)
+        status = responses["active-rules"]["items"][1]
+        status["parameters"]["required_status_checks"][0]["integration_id"] = 1
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIn("field-unknown", result.evidence["unknown_reasons"])
+
+        responses = copy.deepcopy(self.responses)
+        responses["active-rules"]["items"][0]["parameters"]["future_setting"] = True
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIn("field-unknown", result.evidence["unknown_reasons"])
+
+        responses = copy.deepcopy(self.responses)
+        responses["reviews"]["items"][0]["repository_permission"]["user"]["id"] = 1
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIsNone(result.evidence)
 
 
 if __name__ == "__main__":

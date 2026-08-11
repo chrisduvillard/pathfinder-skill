@@ -419,7 +419,7 @@ class GitHubMergeObserver:
     ) -> tuple[dict, dict]:
         raw = _take(
             response.data,
-            required={"id", "node_id", "number", "state", "draft", "user", "last_pusher", "head", "base", "mergeable", "merge_state_status", "merge_queue_entry"},
+            required={"id", "node_id", "number", "state", "draft", "user", "last_pusher", "head", "base", "mergeable", "merge_state_status", "review_decision", "merge_queue_entry"},
             surface="pull-request", unknowns=unknowns,
         )
         user = _take(raw["user"], required={"id"}, surface="pull-request.user", unknowns=unknowns)
@@ -467,6 +467,7 @@ class GitHubMergeObserver:
         mergeability = {
             "mergeable": raw["mergeable"],
             "merge_state_status": raw["merge_state_status"],
+            "review_decision": raw["review_decision"],
             "queue_entry": raw["merge_queue_entry"],
             "required_sha": sides["head"]["sha"],
         }
@@ -518,11 +519,63 @@ class GitHubMergeObserver:
                 continue
             if rule_type in unsupported_codes:
                 unsupported.append(unsupported_codes[rule_type])
+            parameters = raw["parameters"]
+            if not isinstance(parameters, Mapping):
+                raise _Stop(
+                    ObservationOutcome.MALFORMED_RESPONSE,
+                    f"active-rules[{index}].parameters",
+                    "rule parameters must be an object",
+                )
+            allowed_merge_methods = []
+            if rule_type == "pull_request":
+                parsed = _take(
+                    parameters,
+                    required={
+                        "allowed_merge_methods", "dismiss_stale_reviews_on_push",
+                        "require_code_owner_review", "require_last_push_approval",
+                        "required_approving_review_count",
+                        "required_review_thread_resolution",
+                    },
+                    optional={"dismissal_restriction", "required_reviewers"},
+                    surface=f"active-rules[{index}].parameters", unknowns=unknowns,
+                )
+                allowed_merge_methods = sorted(parsed["allowed_merge_methods"])
+                if (
+                    raw["approval_count"] != parsed["required_approving_review_count"]
+                    or parsed.get("dismissal_restriction")
+                    or parsed.get("required_reviewers")
+                ):
+                    unsupported.append("unsupported-active-rule")
+            elif rule_type == "required_status_checks":
+                parsed = _take(
+                    parameters,
+                    required={
+                        "required_status_checks", "strict_required_status_checks_policy",
+                    },
+                    optional={"do_not_enforce_on_create"},
+                    surface=f"active-rules[{index}].parameters", unknowns=unknowns,
+                )
+                parameter_checks = sorted((
+                    {
+                        "context": item["context"],
+                        "app_id": item.get("integration_id"),
+                    }
+                    for item in parsed["required_status_checks"]
+                ), key=lambda item: (item["context"], item["app_id"] or 0))
+                if (
+                    parameter_checks != sorted(raw["required_checks"], key=lambda item: (item["context"], item["app_id"]))
+                    or raw["strict"] != parsed["strict_required_status_checks_policy"]
+                ):
+                    unknowns.append({
+                        "surface": f"active-rules[{index}].parameters",
+                        "fields": {"cross_check": "required status parameters differ"},
+                    })
             result.append({
                 "ruleset_id": raw["ruleset_id"], "source_type": raw["source_type"],
                 "source_id": raw["source_id"], "rule_type": rule_type,
                 "parameters_sha256": _sha256(raw["parameters"]),
                 "approval_count": raw["approval_count"],
+                "allowed_merge_methods": allowed_merge_methods,
                 "required_checks": _checks(raw["required_checks"], f"active-rules[{index}].required-checks", unknowns),
                 "strict": raw["strict"],
             })
@@ -568,7 +621,11 @@ class GitHubMergeObserver:
                 "id": raw["id"], "source_type": raw["source_type"],
                 "source_id": raw["source_id"], "enforcement": raw["enforcement"],
                 "conditions_sha256": _sha256(raw["conditions"]),
-                "rules_sha256": _sha256(raw["rules"]), "updated_at": raw["updated_at"],
+                "rules_sha256": _sha256(raw["rules"]),
+                "active_rules_sha256": GitHubMergeObserver._source_rule_signature(
+                    raw["rules"], f"source-rulesets[{index}].rules", unknowns
+                ),
+                "updated_at": raw["updated_at"],
                 "bypass_visibility": visibility,
                 "bypass_actor_keys": sorted(set(bypass_by_ruleset.get(raw["id"], []))),
             })
@@ -576,6 +633,32 @@ class GitHubMergeObserver:
         if set(bypass_by_ruleset) - known_ids:
             raise _Stop(ObservationOutcome.RULESET_EVIDENCE_INCOMPLETE, "bypass-actors", "bypass actor names an unattributed ruleset")
         return sorted(result, key=lambda item: int(item["id"]))
+
+    @staticmethod
+    def _source_rule_signature(rules, surface: str, unknowns: list[dict]) -> str:
+        if not isinstance(rules, list):
+            raise _Stop(
+                ObservationOutcome.MALFORMED_RESPONSE, surface,
+                "source rules must be a list",
+            )
+        signature = []
+        for index, value in enumerate(rules):
+            raw = _take(
+                value, required={"type"}, optional={"parameters"},
+                surface=f"{surface}[{index}]", unknowns=unknowns,
+            )
+            parameters = raw.get("parameters", {})
+            if not isinstance(parameters, Mapping):
+                raise _Stop(
+                    ObservationOutcome.MALFORMED_RESPONSE,
+                    f"{surface}[{index}].parameters",
+                    "source rule parameters must be an object",
+                )
+            signature.append({
+                "rule_type": raw["type"],
+                "parameters_sha256": _sha256(parameters),
+            })
+        return _sha256(sorted(signature, key=lambda item: item["rule_type"]))
 
     @staticmethod
     def _classic(
@@ -638,12 +721,31 @@ class GitHubMergeObserver:
     @staticmethod
     def _reviews(page: PageResponse, unknowns: list[dict]) -> list[dict]:
         result = []
-        required = {"id", "user", "state", "commit_id", "submitted_at", "author_association", "dismissed"}
+        required = {"id", "user", "repository_permission", "state", "commit_id", "submitted_at", "author_association", "dismissed"}
         for index, value in enumerate(page.items):
             raw = _take(value, required=required, surface=f"reviews[{index}]", unknowns=unknowns)
-            user = _take(raw["user"], required={"id", "type"}, surface=f"reviews[{index}].user", unknowns=unknowns)
+            user = _take(raw["user"], required={"id", "login", "type"}, surface=f"reviews[{index}].user", unknowns=unknowns)
+            permission = _take(
+                raw["repository_permission"], required={"permission", "user"},
+                surface=f"reviews[{index}].repository-permission", unknowns=unknowns,
+            )
+            permission_user = _take(
+                permission["user"], required={"id", "login"},
+                surface=f"reviews[{index}].repository-permission.user", unknowns=unknowns,
+            )
+            if (
+                permission_user["id"] != user["id"]
+                or permission_user["login"] != user["login"]
+            ):
+                raise _Stop(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    f"reviews[{index}].repository-permission",
+                    "reviewer permission identity differs from review actor",
+                )
             result.append({
-                "id": raw["id"], "actor_id": user["id"], "actor_type": user["type"],
+                "id": raw["id"], "actor_id": user["id"], "actor_login": user["login"],
+                "actor_type": user["type"],
+                "repository_permission": permission["permission"],
                 "state": raw["state"], "commit_sha": raw["commit_id"],
                 "submitted_at": raw["submitted_at"], "author_association": raw["author_association"],
                 "dismissed": raw["dismissed"],
