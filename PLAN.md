@@ -263,7 +263,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add negative fixtures where proof/constraints exist only in supporting notes and confirm they fail.
 - [x] Add cross-artifact referential checks: candidate IDs, binding IDs, grades, attempts, commands, and final dispositions must agree.
 - [x] Add controller unit tests for every allowed and forbidden state transition.
-- [ ] Add crash-point tests after worktree creation, command start, verification, commit, push, PR creation, and CI polling.
+- [x] Add crash-point tests after worktree creation, command start, verification, commit, push, PR creation, and CI polling. *(Every controller action is exercised across intent, side-effect, receipt, result, and transition boundaries with an explicit action-set guard; persistent publication fixtures cover ambiguous push, exact PR reuse after a lost response, and bounded/reconcile-required check polling.)*
 - [x] Add idempotency tests showing resume does not duplicate commits, branches, or PRs.
 - [x] Add dirty-tree, symlink, malicious filename, hook, credential-helper, and command-injection fixtures.
 - [x] Add prompt-injection fixtures covering source files, README/docs, tests, diffs, tool output, intent files, and prior artifacts.

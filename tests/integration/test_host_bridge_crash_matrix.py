@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pathfinder_core.mission_host import HostMissionController
+from pathfinder_core.mission_host import ACTION_BY_STATE, HostMissionController
 from tests.integration.test_one_goal_mission import (
     BOUNDARY,
     NOW,
@@ -15,7 +15,13 @@ from tests.integration.test_one_goal_mission import (
 )
 
 
-ACTIONS = tuple(RECEIPT_CODES)
+ACTIONS = (
+    "prepare-worktree",
+    "activate-goal",
+    "implement",
+    "verify",
+    "commit",
+)
 
 
 class PersistentHostBackend:
@@ -50,6 +56,13 @@ def ready_for(root, action_kind):
 
 
 class HostBridgeCrashMatrixTests(unittest.TestCase):
+    def test_matrix_covers_every_controller_action(self):
+        controller_actions = tuple(
+            action_kind for _, action_kind in ACTION_BY_STATE.values()
+        )
+        self.assertEqual(ACTIONS, controller_actions)
+        self.assertEqual(set(ACTIONS), set(RECEIPT_CODES))
+
     def test_before_intent_and_after_intent_do_not_run_host_action(self):
         for action_kind in ACTIONS:
             with self.subTest(action=action_kind), tempfile.TemporaryDirectory() as directory:
