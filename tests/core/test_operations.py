@@ -64,6 +64,13 @@ class OperationJournalTests(unittest.TestCase):
         with self.assertRaisesRegex(StateError, "does not match intent field"):
             self.journal.record_result(changed)
 
+    def test_protected_policy_binding_drift_fails(self):
+        self.journal.record_intent(self.intent)
+        changed = copy.deepcopy(self.result)
+        changed["protected_policy_sha256"] = "e" * 64
+        with self.assertRaisesRegex(StateError, "protected_policy_sha256"):
+            self.journal.record_result(changed)
+
     def test_intent_without_result_requires_reconciliation(self):
         self.journal.record_intent(self.intent)
         loaded = OperationJournal(self.root).load(self.intent["operation_id"])

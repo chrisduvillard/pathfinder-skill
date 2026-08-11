@@ -26,13 +26,13 @@
       "rule_id": "protected-rule-deployment",
       "category": "deployment",
       "description": "Deployment and infrastructure configuration.",
-      "patterns": ["deploy/**", "deployment/**", "infra/**", "infrastructure/**", "terraform/**", "k8s/**", "kubernetes/**", "helm/**", "Dockerfile", "docker-compose*.yml"]
+      "patterns": ["deploy/**", "deployment/**", "infra/**", "infrastructure/**", "terraform/**", "k8s/**", "kubernetes/**", "helm/**", "Dockerfile*", "docker-compose*.yml", "docker-compose*.yaml", "*.tf", "*.tfvars"]
     },
     {
       "rule_id": "protected-rule-ci-cd",
       "category": "ci-cd",
       "description": "Continuous integration and delivery configuration.",
-      "patterns": [".github/workflows/**", ".circleci/**", ".gitlab-ci.yml", "Jenkinsfile", "azure-pipelines.yml", "buildkite/**"]
+      "patterns": [".github/workflows/**", ".circleci/**", ".gitlab-ci.yml", "Jenkinsfile", "azure-pipelines.yml", ".buildkite/**", "buildkite/**"]
     },
     {
       "rule_id": "protected-rule-schema",

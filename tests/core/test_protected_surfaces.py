@@ -45,6 +45,8 @@ class ProtectedSurfaceRegistryTests(unittest.TestCase):
         self.assertIn("auth", registry.categories)
         self.assertIn("cryptography", registry.categories)
         self.assertEqual(registry.required_categories(["src/crypto/key.py"]), ("cryptography",))
+        self.assertEqual(registry.to_document()["mode"], "baseline")
+        self.assertTrue(registry.policy_id.startswith("protected-policy-effective-"))
 
     def test_override_cannot_replace_a_baseline_rule_or_name_another_base(self):
         additive = {

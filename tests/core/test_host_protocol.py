@@ -41,6 +41,7 @@ class HostProtocolTests(unittest.TestCase):
         )
         self.assertIs(request.action_kind, HostAction.ACTIVATE_GOAL)
         self.assertEqual(request.context["deadline_at"], "2026-08-10T13:00:00Z")
+        self.assertEqual(request.context["protected_policy_sha256"], "e" * 64)
         self.assertIs(receipt.outcome, HostOutcome.SUCCEEDED)
         self.assertEqual(receipt.evidence["stable_id"], "goal_native_12345678")
 
@@ -84,6 +85,16 @@ class HostProtocolTests(unittest.TestCase):
         widened["context"]["deadline_at"] = "2026-08-10T14:00:00Z"
         with self.assertRaisesRegex(StateError, "context"):
             self.request(widened)
+
+    def test_protected_policy_hash_is_required_and_trusted(self):
+        missing = copy.deepcopy(self.request_document)
+        missing["context"].pop("protected_policy_sha256")
+        with self.assertRaisesRegex(StateError, "protected_policy_sha256"):
+            self.request(missing)
+        forged = copy.deepcopy(self.request_document)
+        forged["context"]["protected_policy_sha256"] = "f" * 64
+        with self.assertRaisesRegex(StateError, "context"):
+            self.request(forged)
 
     def test_unknown_fields_and_raw_host_data_fail_schema(self):
         receipt = fixture("host-action-receipt.valid.json")

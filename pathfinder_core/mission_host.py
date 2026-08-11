@@ -10,6 +10,7 @@ from .errors import StateError
 from .host_protocol import HostAction, HostActionRequest, HostOutcome, HostProtocol
 from .operations import OperationJournal
 from .policy import ExecutionPolicy
+from .protected_surfaces import BASELINE_PATH, ProtectedSurfaceRegistry
 from .state import transition, utc_now
 from .storage import MissionLock, MissionStore, read_json, write_atomic
 
@@ -66,7 +67,8 @@ class HostMissionController:
         self.clock = clock
 
     def _validate_contracts(
-        self, binding: dict, authorization: dict, boundary: dict
+        self, binding: dict, authorization: dict, boundary: dict,
+        protected_registry: ProtectedSurfaceRegistry,
     ) -> None:
         self.store.validate("artifacts/goal-binding.schema.json", binding)
         self.store.validate("mission/authorization-snapshot.schema.json", authorization)
@@ -96,6 +98,13 @@ class HostMissionController:
                 raise StateError(
                     f"authorization {authorization_field} exceeds the Goal Binding budget"
                 )
+        unknown_surfaces = sorted(
+            set(binding["protected_surfaces"]) - set(protected_registry.categories)
+        )
+        if unknown_surfaces:
+            raise StateError(
+                f"Goal Binding names an unknown protected surface: {unknown_surfaces[0]}"
+            )
         ExecutionPolicy(self.root, ()).validate_boundary(boundary)
 
     def _deadline(self, state: dict, binding: dict, authorization: dict) -> datetime:
@@ -159,16 +168,23 @@ class HostMissionController:
                 raise StateError(f"persisted mission identity drift: {field}")
 
     def start(
-        self, *, binding: dict, authorization: dict, runtime_boundary: dict
+        self, *, binding: dict, authorization: dict, runtime_boundary: dict,
+        protected_policy: dict | None = None,
     ) -> dict:
         if self.root.is_symlink() or self.contracts_path.is_symlink():
             raise StateError("mission state and contracts directories cannot be symlinks")
-        self._validate_contracts(binding, authorization, runtime_boundary)
+        protected_registry = ProtectedSurfaceRegistry(
+            read_json(BASELINE_PATH), protected_policy
+        )
+        self._validate_contracts(
+            binding, authorization, runtime_boundary, protected_registry
+        )
         attempt_id = self._attempt_id(binding)
         with MissionLock(self.start_lock_path):
             self._write_contract("goal-binding", binding)
             self._write_contract("authorization", authorization)
             self._write_contract("runtime-boundary", runtime_boundary)
+            self._write_contract("protected-surfaces", protected_registry.to_document())
             if self.store.state_path.exists():
                 state = self.store.load()
             else:
@@ -185,12 +201,19 @@ class HostMissionController:
                 raise StateError("persisted mission authorization identity drift")
             return state
 
-    def _load_contracts(self) -> tuple[dict, dict, dict]:
+    def _load_contracts(
+        self,
+    ) -> tuple[dict, dict, dict, ProtectedSurfaceRegistry]:
         binding = read_json(self.contracts_path / "goal-binding.json")
         authorization = read_json(self.contracts_path / "authorization.json")
         boundary = read_json(self.contracts_path / "runtime-boundary.json")
-        self._validate_contracts(binding, authorization, boundary)
-        return binding, authorization, boundary
+        protected_registry = ProtectedSurfaceRegistry(
+            read_json(self.contracts_path / "protected-surfaces.json")
+        )
+        self._validate_contracts(
+            binding, authorization, boundary, protected_registry
+        )
+        return binding, authorization, boundary, protected_registry
 
     def _operation_id(self, state: dict, action_kind: str) -> str:
         seed = ":".join(
@@ -200,6 +223,7 @@ class HostMissionController:
 
     def _documents_for_action(
         self, state: dict, binding: dict, authorization: dict, boundary: dict,
+        protected_registry: ProtectedSurfaceRegistry,
         *, started_at: str,
     ) -> tuple[dict, dict]:
         stage, action_kind = ACTION_BY_STATE[state["state"]]
@@ -212,6 +236,7 @@ class HostMissionController:
             "deadline_at": _format_instant(
                 self._deadline(state, binding, authorization)
             ),
+            "protected_policy_sha256": protected_registry.sha256,
             "input_sha256": document_sha256(
                 {"binding": document_sha256(binding), "revision": state["revision"],
                  "action_kind": action_kind}
@@ -241,6 +266,7 @@ class HostMissionController:
                 "runtime_boundary_sha256",
             )},
             "stage": stage,
+            "protected_policy_sha256": protected_registry.sha256,
             "started_at": started_at,
         }
         self.protocol.validate_request(request, trusted_binding=trusted)
@@ -255,7 +281,7 @@ class HostMissionController:
             return {"status": "terminal", "state": state}
         if state["state"] not in ACTION_BY_STATE:
             raise StateError(f"mission state has no host action: {state['state']}")
-        binding, authorization, boundary = self._load_contracts()
+        binding, authorization, boundary, protected_registry = self._load_contracts()
         self._validate_state_identity(state, binding, self._attempt_id(binding))
         operation_id = self._operation_id(
             state, ACTION_BY_STATE[state["state"]][1]
@@ -287,7 +313,8 @@ class HostMissionController:
             )
             return {"status": "terminal", "state": state}
         request, intent = self._documents_for_action(
-            state, binding, authorization, boundary, started_at=requested_at
+            state, binding, authorization, boundary, protected_registry,
+            started_at=requested_at,
         )
         self.journal.record_intent(intent)
         return {"status": "action-required", "action": request}
@@ -328,7 +355,7 @@ class HostMissionController:
             **{field: intent[field] for field in (
                 "operation_id", "mission_id", "attempt_id", "stage", "action_kind",
                 "request_sha256", "authorization_snapshot_sha256",
-                "runtime_boundary_sha256", "started_at",
+                "runtime_boundary_sha256", "protected_policy_sha256", "started_at",
             )},
             "outcome": operation_outcome,
             "evidence": {
@@ -386,13 +413,26 @@ class HostMissionController:
         raise StateError("successful host receipt does not match current mission state")
 
     def _validate_receipt_for_state(self, state: dict, intent: dict, receipt: dict) -> None:
-        binding, authorization, boundary = self._load_contracts()
+        binding, authorization, boundary, protected_registry = self._load_contracts()
         self._validate_state_identity(state, binding, self._attempt_id(binding))
         if intent["authorization_snapshot_sha256"] != document_sha256(authorization):
             raise StateError("operation authorization hash no longer matches mission contract")
         if intent["runtime_boundary_sha256"] != document_sha256(boundary):
             raise StateError("operation runtime hash no longer matches mission contract")
+        if intent["protected_policy_sha256"] != protected_registry.sha256:
+            raise StateError("operation protected policy hash no longer matches mission contract")
         self.protocol.validate_receipt(receipt, request=self._request_from_intent(intent))
+        if receipt["outcome"] == HostOutcome.SUCCEEDED.value:
+            required = set(
+                protected_registry.required_categories(
+                    tuple(receipt["evidence"]["changed_files"])
+                )
+            )
+            undeclared = sorted(required - set(binding["protected_surfaces"]))
+            if undeclared:
+                raise StateError(
+                    f"host action touched undeclared protected surface: {undeclared[0]}"
+                )
         if (
             receipt["outcome"] == HostOutcome.SUCCEEDED.value
             and _parse_instant(receipt["completed_at"])

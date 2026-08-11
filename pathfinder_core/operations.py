@@ -20,6 +20,7 @@ BOUND_FIELDS = (
     "request_sha256",
     "authorization_snapshot_sha256",
     "runtime_boundary_sha256",
+    "protected_policy_sha256",
     "started_at",
 )
 

@@ -64,7 +64,7 @@ EVENT = {
 
 class MissionSchemaTests(unittest.TestCase):
     def test_all_schemas_are_valid_json_schema(self):
-        for folder in ("artifacts", "cache", "intent", "mission", "replays"):
+        for folder in ("artifacts", "cache", "intent", "mission", "policy", "replays"):
             for path in (ROOT / "schemas" / folder).glob("*.json"):
                 with self.subTest(path=path.name):
                     Draft202012Validator.check_schema(schema(f"{folder}/{path.name}"))

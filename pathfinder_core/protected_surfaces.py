@@ -49,22 +49,36 @@ class ProtectedSurfaceRegistry:
             if additive["base_policy_id"] != baseline["policy_id"]:
                 raise StateError("protected surface override names a different baseline")
             documents.append(additive)
+        combined_rules = [dict(rule) for document in documents for rule in document["rules"]]
+        seed = json.dumps(documents, sort_keys=True, separators=(",", ":")).encode()
+        effective_id = baseline["policy_id"]
+        if additive is not None:
+            effective_id = f"protected-policy-effective-{hashlib.sha256(seed).hexdigest()[:16]}"
+        self._document = {
+            "schema_version": 1,
+            "policy_id": effective_id,
+            "mode": "baseline",
+            "base_policy_id": None,
+            "rules": combined_rules,
+        }
         rules: list[ProtectedRule] = []
         seen: set[str] = set()
-        for document in documents:
-            for raw in document["rules"]:
-                if raw["rule_id"] in seen:
-                    raise StateError(f"duplicate protected surface rule: {raw['rule_id']}")
-                seen.add(raw["rule_id"])
-                rules.append(
-                    ProtectedRule(
-                        rule_id=raw["rule_id"], category=raw["category"],
-                        patterns=tuple(raw["patterns"]),
-                    )
+        for raw in combined_rules:
+            if raw["rule_id"] in seen:
+                raise StateError(f"duplicate protected surface rule: {raw['rule_id']}")
+            seen.add(raw["rule_id"])
+            rules.append(
+                ProtectedRule(
+                    rule_id=raw["rule_id"], category=raw["category"],
+                    patterns=tuple(raw["patterns"]),
                 )
-        self.policy_id = baseline["policy_id"]
+            )
+        _validate(self._document)
+        self.policy_id = effective_id
         self.rules = tuple(rules)
-        encoded = json.dumps(documents, sort_keys=True, separators=(",", ":")).encode()
+        encoded = json.dumps(
+            self._document, sort_keys=True, separators=(",", ":")
+        ).encode()
         self.sha256 = hashlib.sha256(encoded).hexdigest()
 
     @classmethod
@@ -80,6 +94,9 @@ class ProtectedSurfaceRegistry:
     @property
     def categories(self) -> tuple[str, ...]:
         return tuple(sorted({rule.category for rule in self.rules}))
+
+    def to_document(self) -> dict:
+        return json.loads(json.dumps(self._document))
 
     def classify(self, paths: list[str] | tuple[str, ...]) -> dict[str, tuple[str, ...]]:
         result: dict[str, tuple[str, ...]] = {}

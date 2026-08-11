@@ -11,6 +11,7 @@ from pathfinder_core.adapters.types import AdapterResult, GoalRecord, GoalStatus
 from pathfinder_core.errors import StateError
 from pathfinder_core.mission import MissionOrchestrator
 from pathfinder_core.mission_host import HostMissionController, document_sha256
+from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
 from pathfinder_core.storage import MissionStore
 from pathfinder_core.__main__ import main
 
@@ -67,6 +68,22 @@ def goal_binding():
         "budgets": {"max_goals": 1, "max_attempts_per_goal": 2,
                     "max_wall_seconds": 3600, "max_open_prs": 0, "max_total_prs": 0},
         "created_at": NOW,
+    }
+
+
+def additive_policy():
+    baseline = ProtectedSurfaceRegistry.load()
+    return {
+        "schema_version": 1,
+        "policy_id": "protected-policy-fixture-extra",
+        "mode": "additive",
+        "base_policy_id": baseline.policy_id,
+        "rules": [{
+            "rule_id": "protected-rule-cryptography",
+            "category": "cryptography",
+            "description": "Repository-specific cryptographic implementation.",
+            "patterns": ["crypto/**"],
+        }],
     }
 
 
@@ -236,7 +253,7 @@ class OneGoalMissionTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     controller.start(**arguments)
             self.assertFalse(controller.store.state_path.exists())
-            self.assertEqual(len(list(controller.contracts_path.glob("*.json"))), 3)
+            self.assertEqual(len(list(controller.contracts_path.glob("*.json"))), 4)
             first = HostMissionController(root, clock=lambda: NOW).start(**arguments)
             second = HostMissionController(root, clock=lambda: NOW).start(**arguments)
             self.assertEqual(first, second)
@@ -326,6 +343,36 @@ class OneGoalMissionTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(json.loads(output.getvalue())["state"], "authorized")
 
+    def test_cli_accepts_only_an_explicit_additive_protected_policy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binding_path, authorization_path, boundary_path, policy_path = (
+                root / "binding.json", root / "authorization.json",
+                root / "boundary.json", root / "protected-policy.json",
+            )
+            binding = goal_binding()
+            binding["protected_surfaces"] = ["cryptography"]
+            write_document(binding_path, binding)
+            write_document(authorization_path, local_authorization())
+            write_document(boundary_path, BOUNDARY)
+            write_document(policy_path, additive_policy())
+            output = StringIO()
+            with redirect_stdout(output), redirect_stderr(StringIO()):
+                exit_code = main([
+                    "mission", "start", "--state-dir", str(root / "mission"),
+                    "--goal-binding", str(binding_path),
+                    "--authorization", str(authorization_path),
+                    "--runtime-boundary", str(boundary_path),
+                    "--protected-policy", str(policy_path), "--json",
+                ])
+            self.assertEqual(exit_code, 0)
+            effective = ProtectedSurfaceRegistry(
+                json.loads(
+                    (root / "mission" / "contracts" / "protected-surfaces.json").read_text()
+                )
+            )
+            self.assertIn("cryptography", effective.categories)
+
     def test_next_journals_action_before_return_and_never_blindly_replays(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "mission"
@@ -346,6 +393,10 @@ class OneGoalMissionTests(unittest.TestCase):
                 action["runtime_boundary_sha256"], document_sha256(BOUNDARY)
             )
             self.assertEqual(action["context"]["deadline_at"], "2026-08-10T13:00:00Z")
+            self.assertEqual(
+                action["context"]["protected_policy_sha256"],
+                ProtectedSurfaceRegistry.load().sha256,
+            )
             intent_path = root / "operations" / f"{action['operation_id']}.intent.json"
             self.assertTrue(intent_path.exists())
             second = HostMissionController(root, clock=lambda: NOW).next()
@@ -406,6 +457,65 @@ class OneGoalMissionTests(unittest.TestCase):
                 controller.record(receipt)
             self.assertFalse(controller._receipt_path(action["operation_id"]).exists())
             self.assertEqual(controller.next()["status"], "reconcile-required")
+
+    def test_unknown_binding_surface_requires_an_explicit_additive_policy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binding = goal_binding()
+            binding["protected_surfaces"] = ["cryptography"]
+            controller = HostMissionController(Path(directory) / "mission")
+            with self.assertRaisesRegex(StateError, "unknown protected surface"):
+                controller.start(
+                    binding=binding, authorization=local_authorization(),
+                    runtime_boundary=BOUNDARY,
+                )
+            state = controller.start(
+                binding=binding, authorization=local_authorization(),
+                runtime_boundary=BOUNDARY, protected_policy=additive_policy(),
+            )
+            self.assertEqual(state["state"], "authorized")
+
+    def test_implementation_receipt_cannot_hide_undeclared_protected_drift(self):
+        for declared in (False, True):
+            with self.subTest(declared=declared), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory) / "mission"
+                binding = goal_binding()
+                if declared:
+                    binding["protected_surfaces"] = ["auth"]
+                controller = HostMissionController(root, clock=lambda: NOW)
+                controller.start(
+                    binding=binding, authorization=local_authorization(),
+                    runtime_boundary=BOUNDARY,
+                )
+                for _ in range(2):
+                    controller.record(host_receipt(controller.next()["action"]))
+                action = controller.next()["action"]
+                receipt = host_receipt(action)
+                receipt["evidence"]["changed_files"] = ["src/auth/login.py"]
+                if declared:
+                    result = controller.record(receipt)
+                    self.assertEqual(result["state"]["state"], "verifying")
+                else:
+                    with self.assertRaisesRegex(StateError, "undeclared protected surface: auth"):
+                        controller.record(receipt)
+                    self.assertFalse(controller._receipt_path(action["operation_id"]).exists())
+                    self.assertEqual(controller.next()["status"], "reconcile-required")
+
+    def test_persisted_policy_drift_invalidates_the_pending_operation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            controller.start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            action = controller.next()["action"]
+            policy_path = controller.contracts_path / "protected-surfaces.json"
+            policy = json.loads(policy_path.read_text())
+            policy["rules"][0]["description"] = "tampered after action issuance"
+            policy_path.chmod(0o600)
+            write_document(policy_path, policy)
+            with self.assertRaisesRegex(StateError, "protected policy hash"):
+                controller.record(host_receipt(action))
 
     def test_receipt_and_result_crash_boundaries_resume_without_replay(self):
         for boundary in ("after-receipt", "after-result"):

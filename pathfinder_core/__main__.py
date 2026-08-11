@@ -25,6 +25,10 @@ def _parser() -> argparse.ArgumentParser:
     start.add_argument("--goal-binding", required=True)
     start.add_argument("--authorization", required=True)
     start.add_argument("--runtime-boundary", required=True)
+    start.add_argument(
+        "--protected-policy",
+        help="explicit additive protected-surface policy JSON",
+    )
     start.add_argument("--json", action="store_true", dest="as_json")
     next_action = mission_commands.add_parser("next", help="return the next journaled host action")
     next_action.add_argument("--state-dir", required=True)
@@ -102,6 +106,10 @@ def main(argv=None) -> int:
                 binding=read_json(Path(args.goal_binding)),
                 authorization=read_json(Path(args.authorization)),
                 runtime_boundary=read_json(Path(args.runtime_boundary)),
+                protected_policy=(
+                    read_json(Path(args.protected_policy))
+                    if args.protected_policy else None
+                ),
             )
             if args.as_json:
                 print(json.dumps(state, indent=2, sort_keys=True))

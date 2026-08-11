@@ -8,6 +8,7 @@
   "request_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "authorization_snapshot_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "runtime_boundary_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "protected_policy_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "started_at": "2026-08-10T12:00:00+00:00",
   "outcome": "succeeded",
   "evidence": {"summary_code": "completed", "external_id": null, "exit_status": 0, "output_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
