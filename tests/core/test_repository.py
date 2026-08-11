@@ -56,6 +56,22 @@ class RepositoryTests(unittest.TestCase):
             self.assertEqual(probe_repository(root).kind, "git-dirty-blocked")
             self.assertEqual(probe_repository(root, committed_base=True).kind, "git")
 
+    def test_malicious_filename_remains_inert_git_status_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            make_repository(root)
+            filename = "--config=$(touch PATHFINDER_PWNED)"
+            malicious = root / filename
+            malicious.write_text("untrusted filename data\n")
+
+            capabilities = probe_repository(root, committed_base=True)
+            status = GitRunner(root).run(["status", "--porcelain=v1", "-z"]).stdout
+
+            self.assertTrue(capabilities.dirty)
+            self.assertIn(filename, status)
+            self.assertTrue(malicious.exists())
+            self.assertFalse((root / "PATHFINDER_PWNED").exists())
+
     def test_git_runner_neutralizes_hooks_and_credentials(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "repo"

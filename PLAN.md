@@ -265,7 +265,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add controller unit tests for every allowed and forbidden state transition.
 - [ ] Add crash-point tests after worktree creation, command start, verification, commit, push, PR creation, and CI polling.
 - [x] Add idempotency tests showing resume does not duplicate commits, branches, or PRs.
-- [ ] Add dirty-tree, symlink, malicious filename, hook, credential-helper, and command-injection fixtures. *(All listed concerns except a dedicated malicious-filename fixture are covered.)*
+- [x] Add dirty-tree, symlink, malicious filename, hook, credential-helper, and command-injection fixtures.
 - [ ] Add prompt-injection fixtures covering source files, README/docs, tests, diffs, tool output, intent files, and prior artifacts.
 - [ ] Add GitHub API fixtures for branch protection, rulesets, auth failure, rate limit, pending checks, failed checks, merge conflict, and existing PR.
 - [x] Add Linux/macOS/Windows controller tests.
