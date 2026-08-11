@@ -252,6 +252,18 @@ rewrite "$R/skills/pathfinder/references/routes/synthesis.md" \
   's/Do not create `03b-verification\.md` before Phase 4b starts\./Create `03b-verification.md` before Phase 4b starts./'
 assert_catch "$R" "lifecycle artifact invariant|unused lifecycle placeholder" "lifecycle guard catches pre-created verification artifact regression"
 
+echo "== parser 7d: progress updates stay semantic rather than per-file =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/SKILL.md" \
+  's/Do not send a progress update for each file, search, invariant, scout, verifier, controller call, or artifact write\./Send a progress update for each file, search, invariant, scout, verifier, controller call, or artifact write./'
+assert_catch "$R" "user-facing progress invariant|progress update for each file" "progress guard catches per-file narration regression"
+
+echo "== parser 7e: durable refresh stays separate from chat progress =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/SKILL.md" \
+  's/Durable state refresh and user-facing progress are separate concerns\./Durable state refresh and user-facing progress are the same concern./'
+assert_catch "$R" "user-facing progress invariant|Durable state refresh" "progress guard catches persistence/chat conflation"
+
 echo "== parser 8: intent/eligibility separation guard (C3) =="
 # Conflate item eligibility back into intent state in only the first definition;
 # the coherence guard must catch the missing execution_eligibility boundary.

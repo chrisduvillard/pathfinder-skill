@@ -619,6 +619,24 @@ for obsolete in \
   fi
 done
 
+# User-facing updates follow semantic route/controller transitions, not the
+# volume of internal work. Keep the update shape and the persistence/chat split
+# explicit in the always-loaded skill so every route inherits the same rule.
+progress_checkpoint_invariants=(
+  '## User-facing progress checkpoints'
+  'what changed, the strongest evidence, and the next gate'
+  'Do not send a progress update for each file, search, invariant, scout, verifier, controller call, or artifact write.'
+  'Durable state refresh and user-facing progress are separate concerns.'
+  'A controller call is not automatically a user-facing checkpoint.'
+)
+for inv in "${progress_checkpoint_invariants[@]}"; do
+  if grep -qF -- "$inv" "$skill"; then
+    verbose_ok "user-facing progress invariant present: \"$inv\""
+  else
+    err "user-facing progress invariant missing from SKILL.md: \"$inv\""
+  fi
+done
+
 # (4) Markdown fence nesting: the skill's value is dozens of hand-aligned fenced
 #     screens, and the goal-pack screens use 4-backtick wrappers around 3-backtick
 #     blocks. (TR-3) Parity-counting ^``` lines was blind to that nesting: downgrading

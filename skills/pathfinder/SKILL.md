@@ -320,6 +320,22 @@ The prompt-to-goal route is the recommended path when the user already supplied 
 A route may reference a later shared module by number. Load it before continuing. Preserve the applicable artifact names defined above. Use a short placeholder only for an expected phase that started but did not complete; omit phases the route does not run. A route never inherits authority from another route or an earlier run.
 
 After the selected route finishes, apply the stop conditions and style rules below.
+
+## User-facing progress checkpoints
+
+For every work-producing route, update the user at semantic transitions rather than narrating internal activity. A concise checkpoint states what changed, the strongest evidence, and the next gate. Use only the checkpoints the selected route actually reaches:
+
+1. **Route ready:** repository identity, write-safety boundary, route, and evidence budget are known.
+2. **Evidence ready:** targeted research is sufficient, or selected scouts plus candidate verification have produced a decision-ready result.
+3. **Goal ready:** clarification is required, the recognition contract is ready, or the Goal has been saved with its next approval/handoff step.
+4. **Execution changed:** implementation began, proof or review materially changed disposition, a safety/reconciliation boundary was reached, or the mission became terminal.
+
+Keep each checkpoint to one compact update unless the user asks for detail. Include only evidence that changes confidence, choice, safety, recovery, or the next action. Do not send a progress update for each file, search, invariant, scout, verifier, controller call, or artifact write. If a phase outlasts the host's normal update interval, one brief heartbeat may name the current phase and next gate without claiming a transition that has not happened.
+
+Durable state refresh and user-facing progress are separate concerns. Continue to refresh autonomous mission views after every surfaced controller checkpoint as required by the autonomous route. A controller call is not automatically a user-facing checkpoint. Send a chat update only when the mission state, action class, blocker, proof/review disposition, or required user input changes; otherwise continue silently to the next controller step.
+
+Questions that require an answer and the self-contained final report are not progress checkpoints. Do not delay a required question merely to bundle it with a later update, and do not rely on earlier progress prose to make the final report complete.
+
 ## Stop conditions
 
 Stop and ask before:

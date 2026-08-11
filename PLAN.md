@@ -254,7 +254,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add `--json`/structured status for automation and concise human status for interactive use.
 - [x] Keep artifacts useful but stop creating placeholders for every unused phase; represent lifecycle explicitly in the state snapshot and render placeholders only when a human view needs them. *(Prompt and full-exploration routes now omit intentionally skipped phases and unselected scout domains; autonomous mission views derive active/terminal lifecycle from controller state.)*
 - [x] Limit default run artifacts to evidence required for resume, audit, and evaluation; make verbose scout prose optional. *(Full exploration records its evidence budget once, writes compact briefs only for selected domains, and makes expanded narrative opt-in or evidence-justified.)*
-- [ ] Add progress updates at meaningful checkpoints rather than per invariant or per file.
+- [x] Add progress updates at meaningful checkpoints rather than per invariant or per file. *(The always-loaded route contract now reports route/evidence/Goal/execution transitions in a compact changed-evidence-next shape, while controller persistence remains independent from chat narration.)*
 
 ### P2 — Build evaluation that measures real behavior
 

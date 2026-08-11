@@ -189,6 +189,7 @@ The local autonomous bridge is the only path designed to commit without a per-st
 - **Pick the work your way.** Choose from ranked candidate cards, drill down *intent → domain → surface → target → boundaries*, or select several moves as a numbered **goal pack**.
 - **Proof bound to the goal.** Each goal records a Goal Binding plus capability profile; run logs and summaries record the Runtime Boundary and Binding Status, so "done" is checked against the original objective instead of drifting into looks-done prose.
 - **Optional cross-model review.** After a run, Pathfinder can hand the goal, diff, and checks to the best available reviewer capability profile for goal-bounded fixes — recorded in `07b-cross-model-review.md`, or a manual handoff packet if no safe launcher is available.
+- **Meaningful progress, not play-by-play.** Updates appear when the route, evidence, Goal, execution disposition, or required input changes; each says what changed, the strongest evidence, and the next gate instead of listing every file or internal check.
 
 </details>
 
