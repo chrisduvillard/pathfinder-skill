@@ -10,6 +10,25 @@ cases_dir="${2:-$root/evals/cases}"
 lib="$root/evals/harness/eval-lib.sh"
 fail=0
 
+if [ -n "${PATHFINDER_EVAL_PYTHON:-}" ]; then
+  eval_python="$PATHFINDER_EVAL_PYTHON"
+elif [ -x "$root/.venv/bin/python" ]; then
+  eval_python="$root/.venv/bin/python"
+elif [ -x "$root/.venv/Scripts/python.exe" ]; then
+  eval_python="$root/.venv/Scripts/python.exe"
+elif command -v python3 >/dev/null 2>&1; then
+  eval_python="$(command -v python3)"
+elif command -v python >/dev/null 2>&1; then
+  eval_python="$(command -v python)"
+else
+  echo "::error::Python 3.11 with requirements-controller.txt is required for artifact schema validation"
+  exit 1
+fi
+export PATHFINDER_EVAL_PYTHON="$eval_python"
+export PATHFINDER_SCHEMA_ROOT="$root/schemas"
+export PATHFINDER_EVAL_VALIDATOR="$root/evals/harness/validate-artifact.py"
+export PATHFINDER_BUNDLE_VALIDATOR="$root/evals/harness/validate-bundle.py"
+
 err() { echo "::error::$*"; fail=1; }
 ok() { echo "ok: $*"; }
 
@@ -60,7 +79,10 @@ run_case_file() {
   mkdir -p "$workspace"
   cp -R "$root/$fixture/." "$workspace/"
 
+  # These globals are consumed by functions loaded dynamically from eval-lib.sh.
+  # shellcheck disable=SC2034
   ARTIFACT_DIR="$workspace/artifacts"
+  # shellcheck disable=SC2034
   REPO_DIR="$workspace/repo"
   case_errors=""
 

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "roadmap_id": "roadmap_fixture01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "created_at": "2026-08-10T12:00:00Z",
+  "refreshed_at": "2026-08-10T12:00:00Z",
+  "source_basis": ["creator interview"],
+  "future_state": ["One safe runner"],
+  "items": [],
+  "open_questions": []
+}

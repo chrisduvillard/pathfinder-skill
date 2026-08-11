@@ -1,0 +1,50 @@
+{
+  "policy": {
+    "schema_version": 1,
+    "policy_id": "merge_policy_example1",
+    "merge_enabled": true,
+    "authority": {"source": "host-policy-store", "authenticated": true, "issuer": "host-admin@example"},
+    "repository": {"id": 123456789, "node_id": "R_kgDOExample1", "owner": "example-owner", "name": "example-repo", "base_branch": "main"},
+    "path_policy": {
+      "allowed_paths": ["docs/**", "src/**/*.py", "tests/**/*.py"],
+      "additional_denied_paths": [".github/**"],
+      "additional_denied_categories": ["secrets"],
+      "protected_policy_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "diff_limits": {"max_changed_files": 10, "max_total_line_changes": 400, "max_single_file_line_changes": 200, "max_patch_bytes": 131072},
+    "review_requirements": {
+      "independent_approval_floor": 1,
+      "required_checks": [{"context": "preflight (ubuntu-latest)", "app_id": 15368}]
+    },
+    "hard_floors": {"same_repository_pull_request": true, "max_pull_requests": 1, "max_protected_category_matches": 0, "max_merge_intents": 1, "goal_scope": "single-goal", "max_parallel_goals": 1},
+    "merge_method": "squash",
+    "workflow_side_effects": {"acknowledged": true, "acknowledgement_id": "ack_example123", "acknowledged_at": "2026-08-11T12:00:00+00:00"},
+    "issued_at": "2026-08-11T12:00:00+00:00",
+    "expires_at": "2026-09-10T12:00:00+00:00",
+    "policy_sha256": "228a5bdc8888355753b7a20f98f65afb59ea36c6d84403357d2e7b5c31132cbb"
+  },
+  "authorization": {
+    "schema_version": 1,
+    "merge_authorization_id": "merge_authorization_example1",
+    "authority": {"kind": "conditional-merge", "source": "current-user-turn", "authenticated": true, "issuer": "user:example"},
+    "explicit_request": true,
+    "mission": {"mission_id": "mission_example1", "binding_id": "binding_example1", "mission_authorization_id": "authorization_example1", "goal_scope": "single-goal"},
+    "policy": {"policy_id": "merge_policy_example1", "policy_sha256": "228a5bdc8888355753b7a20f98f65afb59ea36c6d84403357d2e7b5c31132cbb"},
+    "repository": {"id": 123456789, "node_id": "R_kgDOExample1", "owner": "example-owner", "name": "example-repo", "base_branch": "main"},
+    "budget": {"max_goals": 1, "max_parallel_goals": 1, "max_pull_requests": 1, "max_merge_intents": 1, "remaining_merge_intents": 1, "same_repository_pull_request": true},
+    "merge_method": "squash",
+    "issued_at": "2026-08-11T12:05:00+00:00",
+    "expires_at": "2026-08-11T12:15:00+00:00",
+    "authorization_sha256": "340a458fc8e30a3d0d8dc74cffee1e2898990e6764fd7938175572831d9edb29"
+  },
+  "negative_cases": [
+    {"name": "repo-local provenance", "document": "policy", "operation": "replace", "path": ["authority", "source"], "value": "repository-file"},
+    {"name": "widened merge floor", "document": "policy", "operation": "replace", "path": ["hard_floors", "max_merge_intents"], "value": 2},
+    {"name": "wildcard check identity", "document": "policy", "operation": "replace", "path": ["review_requirements", "required_checks", 0, "context"], "value": "*"},
+    {"name": "missing check app id", "document": "policy", "operation": "remove", "path": ["review_requirements", "required_checks", 0, "app_id"]},
+    {"name": "missing authorization expiry", "document": "authorization", "operation": "remove", "path": ["expires_at"]},
+    {"name": "pack authority", "document": "authorization", "operation": "replace", "path": ["mission", "goal_scope"], "value": "goal-pack"},
+    {"name": "policy hash drift", "document": "authorization", "operation": "replace", "path": ["policy", "policy_sha256"], "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},
+    {"name": "expired authorization", "document": "authorization", "operation": "replace", "path": ["expires_at"], "value": "2026-08-11T12:04:00+00:00"}
+  ]
+}

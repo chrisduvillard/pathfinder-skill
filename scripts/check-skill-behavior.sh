@@ -32,11 +32,31 @@ set -uo pipefail
 
 root="${1:-.}"
 skill="$root/skills/pathfinder/SKILL.md"
+route_dir="$root/skills/pathfinder/references/routes"
+skill_files=(
+  "$skill"
+  "$route_dir/prompt-to-goal.md"
+  "$route_dir/discovery.md"
+  "$route_dir/synthesis.md"
+  "$route_dir/intent-refresh.md"
+  "$route_dir/question-routing.md"
+  "$route_dir/candidate-selection.md"
+  "$route_dir/explore-drilldown.md"
+  "$route_dir/post-save.md"
+  "$route_dir/goal-generation.md"
+  "$route_dir/goal-contract.md"
+  "$route_dir/autonomous.md"
+  "$route_dir/execute-review.md"
+  "$route_dir/final-summary.md"
+)
 fail=0
 
 err() { echo "::error::$*"; fail=1; }
 
-[ -f "$skill" ] || { err "missing required file: $skill"; exit "$fail"; }
+for file in "${skill_files[@]}"; do
+  [ -f "$file" ] || err "missing required skill route: $file"
+done
+[ "$fail" -eq 0 ] || exit "$fail"
 
 # Family A: safety-direction. Within the autonomous-mode window, a controlled action must share its
 # line with a governing qualifier. Window boundaries are column-0 headings (index()==1) like
@@ -58,14 +78,14 @@ check_direction() {  # <action> <qualifier-regex, lowercase ERE> <label> [strip-
       if (index(probe, action) && line !~ quals) { bad = 1 }
     }
     END { exit bad ? 1 : 0 }
-  ' "$skill"; then
+  ' "${skill_files[@]}"; then
     echo "ok: $label"
   else
     err "$label: an autonomous-section line names \"$action\" without a governing qualifier (/$quals/) on the same line — a loosened gate with the token intact"
   fi
 }
 
-check_direction "self-merge" "never|conditional|default-deny|do not" "self-merge stays default-deny/conditional"
+check_direction "self-merge" "never|no|not authorized|prohibit|do not" "self-merge stays forbidden in v1"
 check_direction "unattended" "never|cannot|neither" "unattended stays negated"
 check_direction "irreversible/external hard stops" "blocked|remain|never|absolute" "irreversible/external hard stops stay blocked"
 check_direction "credential" "separation|separate|isolat|disabled|no-verify|hookspath|no shared|exclude|blocked|stop" "credentials stay isolated or blocked" "credential_exposure|credential boundary"
@@ -76,7 +96,7 @@ check_direction "credential" "separation|separate|isolat|disabled|no-verify|hook
 # self-guarding rather than silently relying on check-skill-consistency.sh's separate heading list.
 # Keep this list in sync with the start/stop args passed to check_direction above.
 for heading in "## Autonomous mode" "## Phase 7:"; do
-  if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "$skill"; then
+  if awk -v h="$heading" 'index($0, h) == 1 { f = 1 } END { exit f ? 0 : 1 }' "${skill_files[@]}"; then
     echo "ok: Family-A window boundary present: \"$heading\""
   else
     err "Family-A window boundary heading missing or renamed: \"$heading\" (check_direction keys on it; the window would fail open — update both together)"
@@ -87,7 +107,7 @@ done
 # autonomous authorization limits but sits OUTSIDE the '## Autonomous mode'..'## Phase 7:' window, so
 # the Family-A guards above never see it. That line is qualifier-saturated (many negations), so the
 # same-line check_direction discipline cannot catch a partial inversion of it. Guard its two
-# load-bearing commitments directly: self-merge must stay CONDITIONAL, and the trust-boundary /
+# load-bearing commitments directly: conditional self-merge must stay NOT AUTHORIZED, and the trust-boundary /
 # irreversible/external carve-out must stay "never waived". For this one sentence those phrases ARE the
 # direction — an inversion removes them. Fails CLOSED if '## Stop conditions' is renamed (insec never
 # sets -> token reads absent). Scope, stated honestly: a fluent reword preserving meaning with
@@ -100,14 +120,14 @@ check_carveout() {  # <token> <label>
     insec && index($0, stop) == 1 { exit }
     insec && index(tolower($0), token) { found = 1 }
     END { exit found ? 0 : 1 }
-  ' "$skill"; then
+  ' "${skill_files[@]}"; then
     echo "ok: carve-out keeps \"$token\""
   else
     err "Stop-conditions autonomous carve-out lost its safety direction: \"$token\" missing — the carve-out may have been inverted (self-merge no longer conditional, or the boundary no longer \"never waived\")"
   fi
 }
 
-check_carveout "conditional self-merge" "carve-out: self-merge stays conditional"
+check_carveout "conditional self-merge is not authorized in v1" "carve-out: self-merge stays forbidden in v1"
 check_carveout "irreversible/external hard-stop carve-out" "carve-out: irreversible/external floor stays never-waived"
 
 # (C2/TR-B1) The whole-line check_direction above passes a self-merge line as long as SOME qualifier
@@ -134,7 +154,7 @@ check_no_unconditional_selfmerge() {
       }
     }
     END { exit bad ? 1 : 0 }
-  ' "$skill"; then
+  ' "${skill_files[@]}"; then
     echo "ok: no unconditional self-merge grant in the autonomous window"
   else
     err "self-merge default-deny inverted: an autonomous-section line grants self-merge unconditionally (unconditional/always/auto/for-all/without-a-gate) — the default-deny guarantee has been loosened even though the whole-line qualifier check still passes"
@@ -150,7 +170,7 @@ check_autonomy_token() {  # <token> <label>
     insec && index($0, stop) == 1 { insec = 0 }
     insec && index(tolower($0), token) { found = 1 }
     END { exit found ? 0 : 1 }
-  ' "$skill"; then
+  ' "${skill_files[@]}"; then
     echo "ok: $label"
   else
     err "$label: autonomous-section token \"$token\" missing or inverted"
@@ -191,7 +211,7 @@ check_screens() {
       if (depth) block = block $0 "\n"
     }
     END { exit bad ? 1 : 0 }
-  ' "$skill"; then
+  ' "${skill_files[@]}"; then
     echo "ok: every non-exempt decision screen carries its \"None of these\" escape"
   else
     err "screen-escape drift: a fenced decision screen (contains \"Agent recommends:\") is missing its \"None of these\" escape and is not on the exempt allowlist"

@@ -1,1 +1,1 @@
-{"verification":"complete","candidates":[{"id":"C1","verdict":"keep","post_grade":"confirmed"}]}
+{"schema_version":1,"mission_id":"mission_fixture01","verified_at":"2026-08-10T12:01:00Z","verifier_depth":"standard","lenses":["fidelity","proof"],"results":[{"candidate_id":"C1","verdict":"accepted","final_grade":"strong","proof_gaps":[],"adjudication":"target and regression surface confirmed"}]}

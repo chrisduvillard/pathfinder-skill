@@ -1,1 +1,1 @@
-{"candidates":[{"id":"C2","evidence_grade":"confirmed","search_policy":"adaptive"}]}
+{"schema_version":1,"mission_id":"mission_fixture02","generated_at":"2026-08-10T12:00:00Z","search_stop_reason":"adaptive search found a bounded candidate","candidates":[{"candidate_id":"C2","title":"Focused short-path improvement","finding_ids":["F2"],"evidence_grade":"strong","expected_value":"medium","risk":"low","protected_surfaces":[],"proof_available":true,"uncertainty":[],"status":"ranked","ranking_basis":"adaptive short path retained complete proof"}]}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/artifacts/candidates.schema.json",
+  "title": "Pathfinder Candidates",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "mission_id", "generated_at", "search_stop_reason", "candidates"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "search_stop_reason": {"type": "string", "minLength": 1},
+    "candidates": {"type": "array", "items": {"$ref": "#/$defs/candidate"}, "uniqueItems": true}
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidate_id", "title", "finding_ids", "evidence_grade", "expected_value", "risk", "protected_surfaces", "proof_available", "uncertainty", "status", "ranking_basis"],
+      "properties": {
+        "candidate_id": {"type": "string", "pattern": "^C[1-9][0-9]*$"},
+        "title": {"type": "string", "minLength": 1},
+        "finding_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+        "evidence_grade": {"enum": ["verified", "strong", "partial", "weak", "rejected"]},
+        "expected_value": {"enum": ["high", "medium", "low"]},
+        "risk": {"enum": ["critical", "high", "medium", "low"]},
+        "protected_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "proof_available": {"type": "boolean"},
+        "uncertainty": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "status": {"enum": ["ranked", "rejected", "refill"]},
+        "ranking_basis": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

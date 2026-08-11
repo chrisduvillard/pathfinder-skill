@@ -1,6 +1,6 @@
 # Scout Brief Template
 
-One file per scout in `02-scout-briefs/`. The goal is located, evidence-backed, symptom-level findings that feed the Explore from scratch drill-down (surfaces feed L2, symptoms feed L3, candidate end states feed the goal).
+One file per selected scout in `02-scout-briefs/`; skipped domains have no file. Keep the default brief to compact structured bullets that add evidence beyond `01-blind-discovery.md`. Expanded narrative is optional and belongs in an appendix only when requested or needed to audit a material decision. The goal is located, evidence-backed, symptom-level findings that feed the Explore from scratch drill-down (surfaces feed L2, symptoms feed L3, candidate end states feed the goal).
 
 ## Scout role
 
@@ -27,7 +27,7 @@ Real surfaces in this domain, each with its path. This populates funnel level L2
 
 ## Findings
 
-Repeat this block per finding. Prefer 3 to 8 sharp, located findings.
+Repeat this block per finding. Prefer 1 to 3 sharp, located findings by default; expand up to 8 only when the recorded evidence budget justifies it.
 
 ### <id, e.g. BE-3>: <one-line title>
 

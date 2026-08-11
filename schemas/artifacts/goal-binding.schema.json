@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/artifacts/goal-binding.schema.json",
+  "title": "Pathfinder Goal Binding",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "binding_id", "mission_id", "goal_id", "objective", "objective_source", "selected_candidate_ids", "intent_snapshot", "capabilities", "scope", "proof_requirements", "protected_surfaces", "runtime_boundary_required", "budgets", "created_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "goal_id": {"type": "string", "pattern": "^goal_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "objective": {"type": "string", "minLength": 1, "maxLength": 3900},
+    "objective_source": {"enum": ["user-prompt", "selected-candidate", "roadmap-item"]},
+    "selected_candidate_ids": {"type": "array", "items": {"type": "string", "pattern": "^C[1-9][0-9]*$"}, "uniqueItems": true},
+    "intent_snapshot": {"$ref": "#/$defs/intent_snapshot"},
+    "capabilities": {"type": "object", "additionalProperties": {"enum": ["available", "unavailable", "unknown"]}, "minProperties": 1},
+    "scope": {"$ref": "#/$defs/scope"},
+    "proof_requirements": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "protected_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "runtime_boundary_required": {"type": "boolean"},
+    "budgets": {"$ref": "#/$defs/budgets"},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "intent_snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["charter", "roadmap", "doctrine"],
+      "properties": {
+        "charter": {"oneOf": [{"$ref": "#/$defs/version_hash"}, {"type": "null"}]},
+        "roadmap": {"oneOf": [{"$ref": "#/$defs/version_hash"}, {"type": "null"}]},
+        "doctrine": {"oneOf": [{"$ref": "#/$defs/version_hash"}, {"type": "null"}]}
+      }
+    },
+    "version_hash": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "sha256"],
+      "properties": {"version": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository_id", "scoped_root", "base_commit", "dirty_policy", "fingerprint"],
+      "properties": {
+        "repository_id": {"type": "string", "minLength": 1},
+        "scoped_root": {"type": "string", "minLength": 1},
+        "base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "dirty_policy": {"enum": ["block", "committed-base"]},
+        "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "budgets": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_goals", "max_attempts_per_goal", "max_wall_seconds", "max_open_prs", "max_total_prs"],
+      "properties": {
+        "max_goals": {"const": 1}, "max_attempts_per_goal": {"type": "integer", "minimum": 1, "maximum": 10},
+        "max_wall_seconds": {"type": "integer", "minimum": 1}, "max_open_prs": {"type": "integer", "minimum": 0},
+        "max_total_prs": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

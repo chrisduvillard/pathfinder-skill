@@ -1,0 +1,29 @@
+{
+  "schema_version": 0,
+  "doctrine_id": "doctrine_fixture01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "created_at": "2026-08-10T12:00:00Z",
+  "refreshed_at": "2026-08-10T12:00:00Z",
+  "source_basis": ["creator interview"],
+  "end_goal": "Safe useful goals",
+  "product_philosophy": ["Evidence first"],
+  "user_intent": ["Reduce steering"],
+  "quality_bars": ["Fail closed"],
+  "improvement_heuristics": ["Prefer verified value"],
+  "autonomous_mission_policy": {
+    "may_derive_and_edit": ["tests"],
+    "requires_extra_proof": ["protected code"],
+    "human_review_required": ["protected code"],
+    "never_unattended": ["releases"]
+  },
+  "hard_stops": [
+    "secrets-or-credentials",
+    "destructive-data-operations",
+    "releases",
+    "repository-administration",
+    "force-push",
+    "branch-or-tag-deletion",
+    "external-side-effects"
+  ]
+}

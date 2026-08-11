@@ -1,0 +1,1 @@
+{"schema_version":1,"mission_id":"mission_reject01","verified_at":"2026-08-10T12:01:00Z","verifier_depth":"standard","lenses":["grounding","proof"],"results":[{"candidate_id":"C9","verdict":"rejected","final_grade":"rejected","proof_gaps":["claimed symptom absent"],"adjudication":"candidate must not remain selectable"}]}

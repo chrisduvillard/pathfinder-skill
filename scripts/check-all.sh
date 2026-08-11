@@ -25,9 +25,13 @@ run_check "skill consistency" bash "$root/scripts/check-skill-consistency.sh" "$
 run_check "skill behavior invariants" bash "$root/scripts/check-skill-behavior.sh" "$root"
 run_check "manifest consistency" bash "$root/scripts/check-manifests.sh" "$root"
 run_check "portability" bash "$root/scripts/check-portability.sh" "$root"
+run_check "generated policy documentation" bash "$root/scripts/check-generated-docs.sh" "$root"
+run_check "Markdown authority" bash "$root/scripts/check-markdown-authority.sh" "$root"
+run_check "ShellCheck" bash "$root/scripts/check-shell.sh" "$root"
 run_check "artifact evals" bash "$root/scripts/check-evals.sh" "$root"
+run_check "recorded controller replays" bash "$root/scripts/check-replay-evals.sh" "$root"
 run_check "validator meta-tests" bash "$root/scripts/test-validators.sh" "$root"
-run_check "artifact evals" bash "$root/scripts/check-evals.sh" "$root"
+run_check "controller tests" bash "$root/scripts/check-controller.sh" "$root"
 run_check "unstaged diff whitespace/conflict markers" git -C "$root" diff --check
 run_check "staged diff whitespace/conflict markers" git -C "$root" diff --cached --check
 

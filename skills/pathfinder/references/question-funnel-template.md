@@ -4,7 +4,7 @@ Use after blind discovery, scout reports, synthesis, and the Top 5 candidate imp
 
 Pathfinder runs one of two user-selectable modes: Pick a move (candidate-first, default; alias "express") and Explore from scratch (drill-down; alias "deep dive"). Ask which mode to use first — leading with the strongest finding — then follow that mode. Pick a move can select one, select several, or select all Top moves before goal generation. Both obey the same universal rules.
 
-This template is the interactive funnel. In autonomous mode (see "Autonomous mode" in `SKILL.md`) the Deep Intent Gate and Doctrine Interview may ask first-run creator-model questions before hands-off execution continues; the work-selection screens below do not run. After the gate resolves clarity (`clarity: resolved`), autonomous mode selects or derives goals from the sanitized charter, roadmap, doctrine, and current repo evidence — by explicit invocation or by auto-escalation — and runs continuous execution until a stop condition, cap, or auto-resume boundary is reached.
+This template is the interactive funnel. In autonomous mode the Deep Intent Gate and Doctrine Interview may ask creator-model questions before execution; the work-selection screens below do not run. A fresh explicit autonomous request selects one existing Goal, then the controller separately evaluates item eligibility and runs it sequentially. Intent clarity never authorizes execution.
 
 ## Universal rules
 
@@ -23,7 +23,7 @@ This template is the interactive funnel. In autonomous mode (see "Autonomous mod
 
 ## Phase 4c: Deep Intent Gate (runs before entry-point continuation)
 
-When `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md` is missing, schema-invalid, incomplete, marked `clarity: unresolved` with a still-open blocking unknown, explicitly refreshed, or contradicted by a light re-inference of current evidence (a charter non-goal now has implementing code, a stable field the code now contradicts, or the Project Doctrine no longer matches the repo — a stale intent model, caught on every work-producing entry and re-opened as a blocking unknown), Phase 4c runs the Deep Intent Gate and Doctrine Interview before the requested entry point continues. The first-run gate asks by default. It is not a skippable offer. If the user chooses `continue later`, save partial answers, mark unanswered fields incomplete, and stop before continuing. The gate keeps an ambiguity ledger and loops the interview until zero blocking unknowns remain; a blocking unknown the user cannot resolve is converted to a roadmap Open Question and its item marked `blocked` on creator input (the anti-deadlock rule), so the loop always terminates. Clarity becomes `clarity: resolved` only when all three files are `completion: complete`, the ledger has no open blocking unknowns, and the model-depth proof gate passes.
+When an intent file is missing, schema-invalid, incomplete, marked `intent_clarity: unresolved`, explicitly refreshed, or contradicted by current evidence, Phase 4c runs the Deep Intent Gate and Doctrine Interview for routes that need creator context. The first-run gate is not a skippable offer. If the user chooses `continue later`, save partial answers and stop. Intent clarity becomes `resolved` only when all three files are complete and no blocking unknown remains; the item-level proof gate is recorded later as `execution_eligibility`.
 
 The gate opens with an evidence draft, then asks a recognition-first interview that usually spans 8 to 12 compact screens. Every screen shows inferred answers with evidence and confidence, offers 3 to 6 concrete options where possible, includes `Agent recommends:`, includes free text, and asks directly about future capabilities not started yet. The 8 to 12 compact screens are a maximum/default depth, not a quota: skip or merge any screen whose answer cannot change the run under the value-of-information rule, then record the skip reason.
 
@@ -122,8 +122,8 @@ The normal screens are below. Keep them compact: each screen mirrors the best in
 ### Screen 10 - Autonomy policy and manual-approval boundaries
 
 - Purpose: define what may run unattended, what needs approval, and what must never run unattended.
-- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, branch-protection/self-merge rules, and irreversible/external hard stops.
-- Options: 1) autonomous for doctrine-proven roadmap and opportunity-scout items, 2) awaiting-review PR for work without branch-protection self-merge authority, 3) never unattended for irreversible/external hard stops, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
+- Mirror evidence: autonomous-mode safety rules, roadmap safety classifications, CODEOWNERS, protected files, credential separation, zero-publication rules, and irreversible/external hard stops.
+- Options: 1) autonomous for doctrine-proven roadmap items on a local review branch, 2) human review before any external publication, 3) never unattended for irreversible/external hard stops, 4) stop on ambiguity or missing provenance, 5) creator-supplied autonomy policy.
 - Agent recommends: the strictest option that still permits safe low-risk work.
 - Escape: `None of these - describe autonomy policy yourself`, or `continue later`.
 
@@ -154,9 +154,9 @@ Escape: None of these - describe it yourself; continue later; or
 clarity resolves for the rest).
 ```
 
-Clarity resolves (`clarity: resolved`) only when every blocking unknown is resolved or converted.
+Intent clarity resolves (`intent_clarity: resolved`) only when every blocking unknown is resolved or converted.
 
-Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, evolving desired work in `.pathfinder/roadmap.md`, and the Project Doctrine in `.pathfinder/doctrine.md`. Also record the ambiguity ledger, each loop pass, the final `clarity` value on all three files, and any blocking-unknown conversions to roadmap Open Questions.
+Record the screens in `04-question-funnel.md` and the ratified answers in `05-user-answers.md`. After explicit creator confirmation, activate stable creator intent, evolving desired work, and Project Doctrine as canonical JSON in the selected intent namespace; their Markdown files are generated views only. Also record the ambiguity ledger, each loop pass, the final `intent_clarity` value on all three documents, and any blocking-unknown conversions to roadmap Open Questions.
 
 ## Mode selection (ask once)
 
@@ -383,7 +383,7 @@ Before saving, the Phase 6 recognition-first contract must show proof, protected
 
 ## Prompt-to-goal track (gap-driven clarifying funnel)
 
-This is the funnel for the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), used when the user supplies a prompt instead of asking Pathfinder to explore. It replaces the L0–L4 drill-down and does not run the five scouts or Top-5 ranking.
+This is the funnel for the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), used when the user supplies a prompt instead of asking Pathfinder to explore. It replaces the L0–L4 drill-down and does not run the full-exploration scout pass or Top-5 ranking.
 
 The `/goal` best-practices checklist (`goal-best-practices.md`) is the rubric. Targeted, prompt-anchored research fills every item it can; then ask only about the checklist items still missing or ambiguous: measurable end state, scope, proof/checks, constraints, non-goals, protected areas, stop bound. These are gap-driven questions — ask nothing the research already settled, and if the prompt is already well-formed, skip straight to the Phase 6 recognition-first contract.
 
@@ -414,6 +414,6 @@ Ask only after `06-goal-command.md` is saved:
 
 Default to option 2. Do not recommend option 3 or option 5 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run.
 
-For a goal pack, default remains save first and ask before running. If the user approves execution, run one numbered goal at a time unless the user explicitly asks to run all goals in the pack.
+For a goal pack, default remains save first and ask before running. Approval for one numbered item authorizes only that item. If the user explicitly approves `run all`, validate every ordered binding independently and use the persisted hash-bound sequential queue; a block stops the pack without skipping ahead.
 
 Option 5 enables Cross-Model Review for this run only. It writes `07b-cross-model-review.md`, then runs or hands off the optional Phase 7b review after a completed-claim or ordinary blocker. It does not authorize commits, pushes, PRs, merges, or protected-area changes.

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/merge-policy.schema.json",
+  "title": "Pathfinder Conditional Merge Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_id", "merge_enabled", "authority", "repository", "path_policy", "diff_limits", "review_requirements", "hard_floors", "merge_method", "workflow_side_effects", "issued_at", "expires_at", "policy_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "policy_id": {"type": "string", "pattern": "^merge_policy_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "merge_enabled": {"const": true},
+    "authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "authenticated", "issuer"],
+      "properties": {
+        "source": {"const": "host-policy-store"},
+        "authenticated": {"const": true},
+        "issuer": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]{2,127}$"}
+      }
+    },
+    "repository": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "owner", "name", "base_branch"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "owner": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"},
+        "base_branch": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"}
+      }
+    },
+    "path_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["allowed_paths", "additional_denied_paths", "additional_denied_categories", "protected_policy_sha256"],
+      "properties": {
+        "allowed_paths": {"type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true, "items": {"$ref": "#/$defs/pathPattern"}},
+        "additional_denied_paths": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"$ref": "#/$defs/pathPattern"}},
+        "additional_denied_categories": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"}},
+        "protected_policy_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "diff_limits": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_changed_files", "max_total_line_changes", "max_single_file_line_changes", "max_patch_bytes"],
+      "properties": {
+        "max_changed_files": {"type": "integer", "minimum": 1, "maximum": 25},
+        "max_total_line_changes": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "max_single_file_line_changes": {"type": "integer", "minimum": 1, "maximum": 500},
+        "max_patch_bytes": {"type": "integer", "minimum": 1, "maximum": 262144}
+      }
+    },
+    "review_requirements": {
+      "type": "object", "additionalProperties": false,
+      "required": ["independent_approval_floor", "required_checks"],
+      "properties": {
+        "independent_approval_floor": {"type": "integer", "minimum": 1, "maximum": 100},
+        "required_checks": {
+          "type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["context", "app_id"],
+            "properties": {
+              "context": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:/()@,+-]{0,99}$"},
+              "app_id": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "hard_floors": {
+      "type": "object", "additionalProperties": false,
+      "required": ["same_repository_pull_request", "max_pull_requests", "max_protected_category_matches", "max_merge_intents", "goal_scope", "max_parallel_goals"],
+      "properties": {
+        "same_repository_pull_request": {"const": true},
+        "max_pull_requests": {"const": 1},
+        "max_protected_category_matches": {"const": 0},
+        "max_merge_intents": {"const": 1},
+        "goal_scope": {"const": "single-goal"},
+        "max_parallel_goals": {"const": 1}
+      }
+    },
+    "merge_method": {"const": "squash"},
+    "workflow_side_effects": {
+      "type": "object", "additionalProperties": false,
+      "required": ["acknowledged", "acknowledgement_id", "acknowledged_at"],
+      "properties": {
+        "acknowledged": {"const": true},
+        "acknowledgement_id": {"type": "string", "pattern": "^ack_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "acknowledged_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "policy_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "pathPattern": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*\\.\\.)(?!.*\\\\)[A-Za-z0-9._*?\\[\\]{}!/-]+$"}
+  }
+}

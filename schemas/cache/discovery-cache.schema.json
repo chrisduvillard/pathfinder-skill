@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/cache/discovery-cache.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "cache_key", "identity_hash", "base_commit", "scope_hash", "route", "config_fingerprint", "content_fingerprint", "created_at", "payload"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "cache_key": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "identity_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "base_commit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+    "scope_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "route": {"enum": ["prompt-to-goal", "full-exploration"]},
+    "config_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "content_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object"}
+  }
+}

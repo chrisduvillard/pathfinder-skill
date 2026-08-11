@@ -1,0 +1,3 @@
+# Standards-compliant Draft 2020-12 validation for controller-owned state.
+jsonschema==4.25.1
+rfc3339-validator==0.1.4

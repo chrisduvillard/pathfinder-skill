@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/mission/operation-result.schema.json",
+  "title": "Pathfinder Operation Result",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "mission_id", "attempt_id", "stage", "action_kind", "request_sha256", "authorization_snapshot_sha256", "runtime_boundary_sha256", "protected_policy_sha256", "started_at", "outcome", "evidence", "completed_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "operation_id": {"type": "string", "pattern": "^operation_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "attempt_id": {"type": "string", "pattern": "^attempt_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "stage": {"enum": ["prepare", "goal-activation", "implementation", "verification", "commit", "goal-completion", "publication", "cleanup"]},
+    "action_kind": {"enum": ["prepare-worktree", "activate-goal", "implement", "verify", "commit", "complete-goal", "push", "open-pull-request", "poll-checks", "cleanup-worktree"]},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "authorization_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "runtime_boundary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "protected_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "outcome": {"enum": ["succeeded", "failed", "not-observed", "reconcile-required"]},
+    "evidence": {"$ref": "#/$defs/evidence"},
+    "completed_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["summary_code", "external_id", "exit_status", "output_sha256"],
+      "properties": {
+        "summary_code": {"enum": ["completed", "command-failed", "policy-blocked", "backend-unavailable", "not-found", "ambiguous"]},
+        "external_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$"},
+        "exit_status": {"type": ["integer", "null"]},
+        "output_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

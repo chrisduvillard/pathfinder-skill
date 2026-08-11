@@ -17,6 +17,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
 
 # (DX-3) Scope push to main and de-duplicate runs: a feature-branch push with an open
 # PR otherwise triggers both a push and a pull_request run, and rapid pushes stack
@@ -30,33 +33,115 @@ permissions:
 
 jobs:
   check:
-    name: version + JSON consistency
-    runs-on: ubuntu-latest
+    name: preflight (${{ matrix.os }})
+    env:
+      PATHFINDER_CONTROLLER_PYTHON: python
+      PATHFINDER_DOCS_PYTHON: python
+      PATHFINDER_EVAL_PYTHON: python
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install check dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes jq shellcheck
+
+      - name: Install check dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install jq shellcheck
+
+      - name: Install check dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install jq shellcheck --no-progress --yes
+
+      - name: Install controller dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
 
       # (DX-2) All four manifests + VERSION.md hygiene + version parity + marketplace
       # version-absence are checked by one script that CONTRIBUTING runs too, so a
       # contributor reproduces every failure locally before pushing (these checks used
       # to live only inline here).
       - name: Manifest + version consistency
+        shell: bash
         run: bash scripts/check-manifests.sh
 
       - name: Check SKILL.md <-> reference-template consistency
+        shell: bash
         run: bash scripts/check-skill-consistency.sh
 
       - name: Check SKILL.md behavioral invariants
+        shell: bash
         run: bash scripts/check-skill-behavior.sh
 
       - name: Check validation/release portability
+        shell: bash
         run: bash scripts/check-portability.sh
 
+      - name: Check generated policy documentation
+        shell: bash
+        run: bash scripts/check-generated-docs.sh
+
+      - name: Run ShellCheck
+        shell: bash
+        run: bash scripts/check-shell.sh
+
       - name: Run deterministic artifact evals
+        shell: bash
         run: bash scripts/check-evals.sh
 
+      - name: Run recorded controller replays
+        shell: bash
+        run: bash scripts/check-replay-evals.sh
+
       - name: Meta-test the validator parsers
+        shell: bash
         run: bash scripts/test-validators.sh
 
+      - name: Run controller contracts and integration tests
+        shell: bash
+        run: bash scripts/check-controller.sh
+
       - name: Check diff cleanliness
+        shell: bash
         run: git diff --check
+
+  required-preflight:
+    name: version + JSON consistency
+    needs: check
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require the complete preflight matrix
+        env:
+          PREFLIGHT_RESULT: ${{ needs.check.result }}
+        run: test "$PREFLIGHT_RESULT" = success
+
+  host-install:
+    name: host install/load (credential-free)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install pinned host CLIs
+        shell: bash
+        run: |
+          host_tools="${RUNNER_TEMP}/pathfinder-host-tools"
+          npm install --prefix "$host_tools" --no-audit --no-fund --no-package-lock \
+            @openai/codex@0.146.0 \
+            @anthropic-ai/claude-code@2.1.226
+          printf '%s\n' "$host_tools/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Install host-probe dependencies
+        run: sudo apt-get update && sudo apt-get install --yes jq
+
+      - name: Install and load the exact local plugin without credentials
+        shell: bash
+        run: bash scripts/check-host-installs.sh .

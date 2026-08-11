@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "charter_id": "charter_fixture01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "established_at": "2026-08-10T12:00:00Z",
+  "refreshed_at": "2026-08-10T12:00:00Z",
+  "source_basis": ["creator interview"],
+  "purpose": {
+    "north_star": "Keep autonomous work safe",
+    "primary_promise": "Produce evidence-backed goals"
+  },
+  "users": {
+    "primary": ["maintainers"],
+    "secondary": [],
+    "excluded": [],
+    "key_journeys": ["prepare one bounded goal"]
+  },
+  "success": {
+    "durable_metrics": [],
+    "quality_bars": ["fail closed"],
+    "tradeoffs": []
+  },
+  "constraints": {
+    "technical": [],
+    "product": [],
+    "protected_surfaces": ["releases"]
+  },
+  "non_goals": ["self merge"],
+  "finished_state": "One safe sequential controller",
+  "autonomy_policy": {
+    "may_derive": ["tests"],
+    "human_review_required": ["protected code"],
+    "never_unattended": ["releases"]
+  }
+}

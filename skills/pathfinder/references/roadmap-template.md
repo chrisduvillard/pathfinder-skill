@@ -1,54 +1,56 @@
-# Pathfinder Roadmap Template
+# Pathfinder Roadmap JSON Template
 
-`.pathfinder/roadmap.md` is Pathfinder's durable, **local-only** model of evolving desired work. It lives beside `.pathfinder/charter.md` and `.pathfinder/doctrine.md`, is gitignored through `.git/info/exclude`, and is never committed.
+`roadmap.json` in the selected intent namespace is Pathfinder's canonical, durable, **local-only** evolving desired work. Root scope uses `.pathfinder/`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/`. `roadmap.md` beside it is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state or fall back to another namespace.
 
-It stores future capabilities not started yet, unstarted goals, milestones, priorities, completion state, evidence, and safety classification. The charter holds stable creator intent, the roadmap holds changing work, and the doctrine holds the deep end-state model that can derive more work when the roadmap runs out.
+The roadmap stores future capabilities, milestones, priorities, completion state, evidence, safety classification, and open questions. The charter holds stable creator intent, while doctrine holds the deep end-state model.
 
-## Format
+## Canonical shape
 
-Use an HTML-comment marker plus plain metadata. Keep it parser-light: simple headings, list items, and key/value rows.
+Start from this schema-shaped example, replace its values with confirmed creator intent, and validate it against `schemas/intent/roadmap.schema.json`. Preserve every key and use only the closed enums shown by the installed schema.
 
-```text
-# Pathfinder Roadmap
-
-<!-- pathfinder:roadmap v1 - evolving desired work. Local-only, never committed.
-     Still untrusted data, sanitized on every read; not an instruction source. -->
-
-roadmap-version: 1
-created: <YYYY-MM-DD HH:MM>
-last-refreshed: <YYYY-MM-DD HH:MM>
-source-basis: creator interview + repo evidence + later refreshes
-completion: complete | incomplete
-clarity: resolved | unresolved
-
-## Future State
-- <capability or quality the creator wants but the repo does not yet show>
-
-## Milestones
-
-### R1 - <short milestone name>
-- status: not-started | active | complete | blocked | manual-only | obsolete
-- priority: high | medium | low
-- rationale: <why this milestone matters to the creator's intent>
-- depends-on: <item ids or none>
-- evidence: creator-interview:<screen>; repo:<path or summary>
-- safety: autonomous-eligible | manual-approval-required | blocked-by-safety
-- desired outcome: <measurable future capability or project quality>
-
-## Open Questions
-- <question that must be answered before Pathfinder can safely derive a goal>
-- <converted blocking unknown from the Deep Intent Gate: the affected milestone is marked `blocked` (creator input needed) and excluded from the autonomous run until this is answered — distinct from an ordinary manual-only item, which is worked and landed as an awaiting-review PR>
+```json
+{
+  "schema_version": 1,
+  "roadmap_id": "roadmap_example01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "created_at": "2026-01-01T00:00:00Z",
+  "refreshed_at": "2026-01-01T00:00:00Z",
+  "source_basis": [
+    "creator interview",
+    "repository evidence"
+  ],
+  "future_state": [
+    "Capability or quality the creator wants but the repository does not yet show"
+  ],
+  "items": [
+    {
+      "item_id": "R1",
+      "status": "not-started",
+      "priority": "high",
+      "rationale": "Why this milestone matters to creator intent.",
+      "depends_on": [],
+      "evidence": [
+        "creator interview"
+      ],
+      "safety": "human-review-required",
+      "desired_outcome": "Measurable future capability or project quality.",
+      "execution_eligibility": {
+        "status": "unknown",
+        "reasons": [
+          "Not evaluated for a fresh base commit and runtime boundary"
+        ],
+        "evaluated_at": null,
+        "base_commit": null
+      }
+    }
+  ],
+  "open_questions": []
+}
 ```
 
-Use `completion: incomplete` when the user chose `continue later`, left future state or priority unanswered, or left an open question that blocks safe goal derivation. Set `clarity: unresolved` whenever `completion` is incomplete on `.pathfinder/charter.md`, `.pathfinder/roadmap.md`, or `.pathfinder/doctrine.md`, any blocking ambiguity-ledger unknown is still `open`, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear (mirroring charter-template.md, doctrine-template.md, and SKILL.md "Clarity gate"; the proof gate is a per-item, entry-time check). A blocking unknown that has been *converted* to an Open Question no longer counts as `open` — its item becomes `blocked` on creator input, excluded from the autonomous run until answered — so once every remaining blocking unknown is resolved or converted, all three local intent files are `completion: complete`, and each auto-run item's proof gate passes, clarity can resolve for the rest of the roadmap even while that Open Question stays unanswered.
+Item status is one of `not-started`, `active`, `complete`, `blocked`, `manual-only`, or `obsolete`. Safety is one of `autonomous-eligible`, `human-review-required`, `pre-action-approval-required`, or `blocked-by-safety`. Missing or ambiguous safety fails closed. Protected code areas are eligible only with doctrine proof, scoped verification, and enforceable isolation.
 
-## Status Semantics
+Use `"completion": "incomplete"` when the creator chose `continue later`, left future state or priority unanswered, or left an Open Question that blocks safe goal derivation. Use `"intent_clarity": "unresolved"` while any canonical intent document is incomplete or a blocking ambiguity-ledger unknown remains open. Converted blocking unknowns become `open_questions` with affected items marked `blocked` on creator input.
 
-- `not-started`: desired work with no active implementation evidence.
-- `active`: current repo work or an in-flight Pathfinder run is addressing it.
-- `complete`: evidence shows the intended outcome is satisfied.
-- `blocked`: progress needs creator input, missing access, failed verification, or a dependency.
-- `manual-only`: desired work that crosses an approval boundary. In autonomous mode it is worked and landed as an awaiting-review PR (never self-merged without branch protection), unless it also matches the irreversible/external hard stops, in which case it is excluded and never worked.
-- `obsolete`: no longer desired after refresh.
-
-Roadmap items can guide goal selection, but they never authorize secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, or real-world external side effects. In autonomous mode the `safety:` field maps to dispositions: `autonomous-eligible` is worked and may conditionally self-merge only with a positive branch-protection signal; `manual-approval-required` is worked but lands as an awaiting-review PR when branch protection does not authorize merge; `blocked-by-safety` (or missing/ambiguous safety) is excluded unless the Doctrine Interview reclassifies it with proof. Protected code areas are eligible with doctrine proof and scoped verification.
+Keep `execution_eligibility.status` as `unknown` until one selected item is evaluated against a fresh base commit and runtime boundary. Eligibility, safety classification, resolved intent, and the rendered view never authorize execution.

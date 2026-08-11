@@ -34,6 +34,17 @@ scan_grep_i_f_combo() {
   ' "$1"
 }
 
+scan_sed_in_place() {
+  awk '
+    /^[[:space:]]*($|#)/ { next }
+    /^[[:space:]]*([^#[:space:]][^#]*[[:space:]])?sed[[:space:]]+(-[[:alnum:]]*i[[:alnum:]]*|--in-place([=[:space:]]|$))/ {
+      print NR ":" $0
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$1"
+}
+
 for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
   [ -f "$f" ] || continue
 
@@ -48,6 +59,15 @@ for f in "$root"/scripts/*.sh "$root"/.github/workflows/*.yml "$root"/.github/wo
   # cannot regress. Use awk index(tolower()) for a portable case-insensitive literal.
   if scan_grep_i_f_combo "$f"; then
     echo "::error file=$f::replace the GNU grep -i+-F combo (aborts on MSYS GNU grep 3.0) with awk index(tolower()) or grep -F without -i"
+    fail=1
+  fi
+
+
+  # BSD sed and GNU sed accept different -i forms. In-place mutation is also
+  # harder to recover when a transformation fails, so require a temp file and
+  # atomic replacement on every supported platform.
+  if scan_sed_in_place "$f"; then
+    echo "::error file=$f::replace sed in-place editing with a portable temp-file-and-move rewrite"
     fail=1
   fi
 done
@@ -99,6 +119,6 @@ for f in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml \
 done
 
 if [ "$fail" -eq 0 ]; then
-  echo "portability: no GNU-only grep usage found and workflow + composite-action actions are SHA-pinned"
+  echo "portability: shell usage is portable and workflow + composite-action actions are SHA-pinned"
 fi
 exit "$fail"

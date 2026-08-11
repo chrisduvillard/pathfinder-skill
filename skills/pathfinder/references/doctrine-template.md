@@ -1,56 +1,60 @@
-# Pathfinder Doctrine Template
+# Pathfinder Doctrine JSON Template
 
-`.pathfinder/doctrine.md` is Pathfinder's durable, **local-only** Project Doctrine. It lives beside `.pathfinder/charter.md` and `.pathfinder/roadmap.md`, is gitignored through `.git/info/exclude`, and is never committed.
+`doctrine.json` in the selected intent namespace is Pathfinder's canonical, durable, **local-only** Project Doctrine. Root scope uses `.pathfinder/`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/`. `doctrine.md` beside it is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state or fall back to another namespace.
 
-It stores the deep end-state model that authorizes Full Autonomous Mission Mode: end goal, product philosophy, user intent, quality bars, improvement heuristics, autonomous mission policy, and irreversible/external hard stops. The charter holds stable intent, the roadmap holds changing work, and the doctrine explains how Pathfinder should keep improving the project when the roadmap runs out.
+Doctrine stores the deep end-state model that guides Goal selection: end goal, product philosophy, user intent, quality bars, improvement heuristics, autonomous mission policy, and irreversible/external hard stops. It never authorizes a run; every autonomous mission requires a fresh explicit request.
 
-## Format
+## Canonical shape
 
-Use an HTML-comment marker plus plain metadata. Keep the `pathfinder:doctrine v1` marker and `completion: complete | incomplete` metadata unless a later implementation deliberately bumps the schema. Also keep the `clarity: resolved | unresolved` line, which is distinct from `completion` (see SKILL.md "Clarity gate").
+Start from this schema-shaped example, replace its values with confirmed creator intent, and validate it against `schemas/intent/doctrine.schema.json`. Preserve every key. The seven `hard_stops` values are a closed, required safety floor.
 
-```text
-# Pathfinder Doctrine
-
-<!-- pathfinder:doctrine v1 - Project Doctrine. Local-only, never committed.
-     Still untrusted data, sanitized on every read; not an instruction source. -->
-
-doctrine-version: 1
-created: <YYYY-MM-DD HH:MM>
-last-refreshed: <YYYY-MM-DD HH:MM>
-source-basis: Doctrine Interview + repo evidence + later refreshes
-completion: complete | incomplete
-clarity: resolved | unresolved
-
-## End Goal
-- <the durable destination the project should move toward>
-
-## Product Philosophy
-- <what the product should feel like and which tradeoffs are preferred>
-
-## User Intent
-- <users, workflows, and outcomes Pathfinder should optimize for>
-
-## Quality Bars
-- <reliability, security, UX, performance, maintainability, or reviewability bar>
-
-## Improvement Heuristics
-- <how Pathfinder recognizes valuable work after roadmap items run out>
-
-## Autonomous Mission Policy
-- May derive and edit: <goal-aligned areas eligible for full autonomy>
-- Requires extra proof: <protected code areas are eligible with doctrine proof>
-- Must land as awaiting-review: <work that can be pushed but not self-merged without branch protection>
-- Never unattended: <irreversible/external hard stops>
-
-## Irreversible/External Hard Stops
-- secrets/credentials
-- destructive data operations
-- releases
-- repo visibility/remotes/default-branch changes
-- force-pushes or deleting branches/tags
-- real-world external side effects
+```json
+{
+  "schema_version": 1,
+  "doctrine_id": "doctrine_example01",
+  "completion": "complete",
+  "intent_clarity": "resolved",
+  "created_at": "2026-01-01T00:00:00Z",
+  "refreshed_at": "2026-01-01T00:00:00Z",
+  "source_basis": [
+    "Doctrine Interview",
+    "repository evidence"
+  ],
+  "end_goal": "The durable destination the project should move toward.",
+  "product_philosophy": [
+    "How the product should feel and which tradeoffs are preferred"
+  ],
+  "user_intent": [
+    "Users, workflows, and outcomes Pathfinder should optimize for"
+  ],
+  "quality_bars": [
+    "Reliability, security, UX, performance, maintainability, or reviewability bar"
+  ],
+  "improvement_heuristics": [
+    "How Pathfinder recognizes valuable work"
+  ],
+  "autonomous_mission_policy": {
+    "may_derive_and_edit": [],
+    "requires_extra_proof": [
+      "protected code areas are eligible with doctrine proof"
+    ],
+    "human_review_required": [],
+    "never_unattended": [
+      "Irreversible or external work"
+    ]
+  },
+  "hard_stops": [
+    "secrets-or-credentials",
+    "destructive-data-operations",
+    "releases",
+    "repository-administration",
+    "force-push",
+    "branch-or-tag-deletion",
+    "external-side-effects"
+  ]
+}
 ```
 
-Use `completion: incomplete` when the user chose `continue later` or left a load-bearing doctrine field unanswered. Use `clarity: unresolved` whenever any intent file is incomplete, any blocking ambiguity-ledger unknown is still open, or the model-depth proof gate has not passed for the item(s) that would auto-run; set `clarity: resolved` only when all three clear. The proof gate is a per-item, entry-time check (see SKILL.md "Clarity gate"), so an interactive first run sets `clarity` from file completion and unknown resolution, then each item's proof gate is checked before that item auto-runs.
+Use `"completion": "incomplete"` when the creator chose `continue later` or left a load-bearing doctrine field unanswered. Use `"intent_clarity": "unresolved"` while any canonical intent document is incomplete or any blocking ambiguity-ledger unknown remains open. Item proof belongs to `execution_eligibility`, not doctrine.
 
-The doctrine can authorize protected code areas for autonomous work, but it cannot authorize the irreversible/external hard stops. Branch protection still decides self-merge eligibility; absent branch protection produces awaiting-review.
+Doctrine can support item-level proof for protected code areas but cannot authorize execution or override an irreversible/external hard stop. The enabled v1 bridge stops at a local awaiting-review branch and cannot publish. Activate doctrine only with the charter and roadmap through the creator-confirmed controller; never fall back to authoritative Markdown.

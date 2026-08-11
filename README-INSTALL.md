@@ -24,9 +24,16 @@ codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
 ```
 
-Then invoke it in Codex with `$pathfinder`, or run `/skills` to pick it.
+Then invoke it in Codex with `$pathfinder:pathfinder`, or run `/skills` to pick it.
+
+Codex namespaces plugin skills as `$plugin-name:skill-name`. The shorter
+`$pathfinder` form below is for a manual skill install. Codex's native `/goal`
+command is a separate lifecycle control for the durable Goal that Pathfinder
+prepares.
 
 Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
+
+The marketplace entry is the stable channel and resolves to an immutable `v<version>` tag. Repository `main` is the edge channel for manual/development installs; use it only when you intentionally want unreleased changes.
 
 ## Manual Claude Code install
 
@@ -53,13 +60,18 @@ No separate slash-command wrapper is required.
 
 ## Manual Codex install
 
-If your Codex setup supports Agent Skills, copy this repo's `skills/pathfinder/` directory (its `SKILL.md` and `references/`) to your Codex skills folder, commonly:
+Copy this repo's `skills/pathfinder/` directory (its `SKILL.md` and `references/`) to either the repository or user Codex skill location:
 
 ```text
-~/.codex/skills/pathfinder/
+<repo>/.agents/skills/pathfinder/
+~/.agents/skills/pathfinder/
 ```
 
-Invoke it in Codex with `$pathfinder` or by running `/skills`. If your Codex runtime does not auto-discover skills, include `SKILL.md` as context and invoke it the same way.
+Codex scans `.agents/skills` from the current working directory through the
+repository root and also reads the user location. Invoke this manual install
+with `$pathfinder` or by running `/skills`. See OpenAI's official
+[Build skills](https://learn.chatgpt.com/docs/build-skills) guide for the current
+discovery locations and invocation behavior.
 
 ## Claude Code `/goal` compatibility
 
@@ -68,3 +80,32 @@ Invoke it in Codex with `$pathfinder` or by running `/skills`. If your Codex run
 Pathfinder saves both a ready-to-copy `/goal <condition>` command and an equivalent `Implementation Goal` Markdown fallback for Codex, older Claude Code versions, or environments where slash commands cannot be executed directly.
 
 The generated `/goal` condition is bounded, measurable, under the character budget, and requires the implementation agent to surface proof in the transcript because the `/goal` evaluator does not independently run tools or read files.
+
+## Autonomous controller requirements
+
+Goal generation does not require the controller. Python 3.11+ and the pinned validator packages enable controller validation and inspection:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-controller.txt
+.venv/bin/python -m pathfinder_core doctor --json
+```
+
+On Windows use `.venv/Scripts/python.exe`. `runner_available` is the compatibility name for those controller dependencies. `mission_runner_available` separately reports the callable local start/next/record/resume protocol. It does not grant unattended eligibility: an actual run still requires a clean Git repository, a trusted authorization snapshot, host-proven filesystem/process/network/credential isolation, a stable native Goal identity, and typed receipts. Missing evidence degrades to saved-Goal/manual-handoff behavior; publication is disabled.
+
+Full plugin installs include `scripts/pathfinder-controller.sh`, which resolves the plugin root even while Pathfinder operates on another repository. A manual copy of only `skills/pathfinder/` is Goal-generation-only unless the controller is separately installed.
+
+See [`docs/compatibility.md`](docs/compatibility.md) and [`docs/operator-guide.md`](docs/operator-guide.md).
+
+## Codex `/goal` compatibility
+
+If `/goal` is absent from Codex's slash-command list, enable it in `config.toml`:
+
+```toml
+[features]
+goals = true
+```
+
+Or run `codex features enable goals`. See OpenAI's official
+[Follow a goal](https://learn.chatgpt.com/use-cases/follow-goals) guide for the
+current setup and lifecycle controls.

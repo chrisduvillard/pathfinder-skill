@@ -8,6 +8,8 @@ search, evaluation, and value-of-information decisions.
 
 - Treat the five scout domains and Top 5 list as defaults. A run may inspect fewer, more, or different
   domains when repo evidence supports that choice.
+- Record selected and skipped domains once in the discovery map. Persist compact briefs only for
+  selected domains; expanded scout narrative is optional and must earn its artifact cost.
 - Candidate count is variable. Continue search while expected useful information is high; stop when
   additional candidates are low value, repetitive, unsafe, or outside the user's scope.
 - Rank candidates by structured evidence, expected value, risk, proof availability, model uncertainty,

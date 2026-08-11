@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation_id": "operation_12345678",
+  "mission_id": "mission_12345678",
+  "attempt_id": "attempt_12345678",
+  "stage": "implementation",
+  "action_kind": "implement",
+  "request_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "authorization_snapshot_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "runtime_boundary_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "protected_policy_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "started_at": "2026-08-10T12:00:00+00:00"
+}

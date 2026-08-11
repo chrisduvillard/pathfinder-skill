@@ -1,0 +1,5 @@
+canonical-state-present: yes
+first-refresh: interrupted-after-json
+host-action-replayed: no
+second-refresh: repaired-from-canonical-state
+final-views-present: yes

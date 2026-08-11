@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/artifacts/prompt-goal-request.schema.json",
+  "title": "Pathfinder Prompt Goal Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "objective", "capabilities", "scope", "proof_requirements", "protected_surfaces", "runtime_boundary_required", "recorded_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "objective": {"type": "string", "minLength": 1, "maxLength": 3900},
+    "capabilities": {"type": "object", "additionalProperties": {"enum": ["available", "unavailable", "unknown"]}, "minProperties": 1},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "scoped_root", "base_commit", "dirty_policy", "fingerprint"],
+      "properties": {
+        "repository_id": {"type": "string", "minLength": 1},
+        "scoped_root": {"type": "string", "minLength": 1},
+        "base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "dirty_policy": {"enum": ["block", "committed-base"]},
+        "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "proof_requirements": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "protected_surfaces": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "runtime_boundary_required": {"const": true},
+    "residual_risks": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "next_input_needed": {"type": ["string", "null"], "default": "explicit approval to run the saved Goal"},
+    "recorded_at": {"type": "string", "format": "date-time"}
+  }
+}
