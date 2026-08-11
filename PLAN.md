@@ -885,3 +885,339 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 ## Recommended first implementation slice
 
 Start with **P0.1 and P0.2 only**. They are confirmed, small, reversible defects that restore trust in the project’s own preflight. Then ratify P1.1 before changing any autonomy semantics or building runtime code.
+
+## Next execution batch — make JSON authority real
+
+Date: 2026-08-11
+Repository baseline: `codex/v3-controller` at `08818fe`
+Plan size: **Large** — this crosses prompt artifacts, autonomous mission projections, durable creator intent, schemas, migrations, route instructions, and deterministic evals.
+
+### Investigation findings
+
+1. `skills/pathfinder/references/artifact-structure.md` already states the intended rule: controller-owned JSON is authoritative, Markdown is a human-readable view, and Markdown must never be parsed back into mission state.
+2. The prompt fast path only partially implements that rule. `pathfinder_core/artifacts.py` builds `06-goal-binding.json` and `08-final-summary.json`, but it first parses the hand-authored `06-goal-command.md` and renders `08-final-summary.md` from request fields rather than from the validated summary document.
+3. `tests/core/test_artifacts.py` checks that stable IDs appear in Markdown, but it has no byte-for-byte golden renderer, tampered-view repair test, or proof that changing Markdown cannot change JSON.
+4. The host mission controller already has strong canonical JSON inputs: `state.json`, append-only events, sealed contracts, operation intents/results, and typed receipts under the mission state directory.
+5. The host mission controller never projects that bundle into `07-run-log.json`, `07-run-log.md`, `08-final-summary.json`, or `08-final-summary.md`, despite the autonomous route promising those views.
+6. The existing v1 run-log and final-summary schemas can express the required compatibility summaries. Rich Markdown can be derived from the validated bundle without making one sidecar duplicate every sealed contract or receipt field.
+7. Candidate and verification JSON are schema-valid canonical records, while their structured Markdown representations remain model-authored inside `03-synthesis.md` and `03b-verification.md`.
+8. The three intent schemas exist, but production intent is still stored only as `.pathfinder/charter.md`, `roadmap.md`, and `doctrine.md`; `pathfinder_core/migrations.py` parses and mutates those Markdown files directly.
+9. Existing legacy intent Markdown is intentionally flexible prose. Automatically converting it into security-relevant autonomy JSON would be lossy and could silently invent policy; migration must require creator-confirmed structured input.
+10. `evals/harness/eval-lib.sh` parses Markdown for UX and safety assertions. That is acceptable only when testing rendered output; it must not use Markdown to establish canonical state when a JSON document exists.
+
+### Goal restated
+
+Pathfinder is done with this batch when every state-bearing Markdown artifact is deterministically reproducible from validated JSON, no runtime path parses a generated Markdown view back into authority, a crash or manual Markdown edit cannot change canonical state, and existing users receive an explicit safe migration path for local intent.
+
+Observable completion criteria:
+
+- `artifacts goal-saved` accepts structured input and creates `06-goal-command.md` plus `08-final-summary.md`; it does not require or parse a pre-authored Goal Markdown file.
+- Rendering the same validated JSON bundle twice produces identical bytes.
+- Editing or deleting a generated Markdown view and rerendering restores it without changing any JSON hash.
+- A terminal host-driven mission can produce schema-valid `07-run-log.json` and `08-final-summary.json` plus matching Markdown from its persisted mission bundle.
+- Structured candidate and verification sections are generated from `03-candidates.json` and `03b-verification.json`, not separately authored facts.
+- `.pathfinder/charter.json`, `roadmap.json`, and `doctrine.json` become canonical; their `.md` counterparts are replaceable views.
+- Unknown or legacy-only intent never becomes autonomy-eligible through an automatic prose parser.
+- A repository search finds no production reader that derives state from `06-goal-command.md`, `07-run-log.md`, `08-final-summary.md`, or `.pathfinder/*.md`.
+
+### Blast radius and reversibility
+
+- Prompt and mission artifacts live in ignored local work areas and contain no live application data. Renderer changes are reversible by reverting the controller commit and regenerating views from preserved JSON.
+- Mission state is security-sensitive but already JSON. This batch must not change transition authority, authorization, host action selection, receipt validation, budgets, or publication scope.
+- Durable intent affects autonomous goal eligibility. Its cutover is the highest-risk phase because a bad conversion could widen autonomy. Preserve the original Markdown in an explicit backup and default ambiguous conversions to unresolved and goal-only.
+- Generated Markdown is expendable. Canonical JSON, event logs, receipts, and migration backups are not; rollback must preserve them.
+
+### Ambiguities and recommended decisions
+
+- **What counts as a view?** Recommendation: `06-goal-command.md`, structured candidate/verification sections, `07-run-log.md`, `08-final-summary.md`, and `.pathfinder/*.md` are generated views. Discovery prose (`00`, `01`, scout briefs, question/answer narrative, and cross-model review narrative) remains evidence, not controller state, until it receives a schema.
+- **Does one Markdown file need one JSON twin?** Recommendation: no. A view may render from a validated bundle such as mission state + binding + runtime boundary + receipts. Do not inflate `run-log.schema.json` merely to duplicate already-sealed JSON.
+- **Should a view mismatch block state progress?** Recommendation: no. Canonical transitions commit first; a failed view refresh is reported as stale and is safely repairable. It must never roll back or reinterpret mission state.
+- **How should prompt Goal compatibility work?** Recommendation: because v3 is still an unreleased draft, remove the input role of `--goal-file`. The controller owns the fixed `06-goal-command.md` path and renders it from the validated binding/request.
+- **How should legacy intent migrate?** Recommendation: never infer full policy from prose. Back up legacy Markdown, require creator-confirmed schema-valid JSON produced by the intent interview, then render the new Markdown view. Legacy-only intent remains readable evidence but cannot authorize autonomy.
+- **When are views sealed?** Recommendation: seal prompt Goal views immediately; keep active mission views atomically replaceable; seal final mission views only at a terminal state. Canonical JSON contracts retain their existing sealing rules.
+
+### Missing pieces that must be added
+
+- Pure renderers with no filesystem, clock, Git, or host access.
+- Golden Markdown fixtures and bundle-level identity validation before rendering.
+- An atomic view writer that can replace stale views without treating them as input.
+- A mission projection builder from existing state/contracts/journals/receipts.
+- A controller command for explicit mission-view refresh and repair.
+- Structured generated-block markers for the candidate and verification portions of narrative artifacts.
+- Canonical intent JSON storage, safe backup/activation, and Markdown renderers.
+- A guard documenting and testing the remaining allowed Markdown reads.
+- Crash fixtures for JSON-written/view-missing and view-tampered recovery.
+
+### Scope split
+
+1. **First project:** pure renderers and prompt-to-Goal authority reversal. This is the smallest place where the current implementation contradicts its documented rule.
+2. **Second project:** host mission projections and crash-safe view refresh from already-canonical controller state.
+3. **Third project:** generated candidate/verification sections and eval assertions that compare views with JSON.
+4. **Fourth project:** creator-confirmed canonical intent JSON plus legacy backup and goal-only degradation.
+5. **Deferred:** schemas for free-form discovery, question transcripts, and cross-model review narrative; rich UI renderers; HTML output; template customization.
+
+### Phase J0 — lock down the authority boundary
+
+**Goal:** add breakage detection before reversing any writer, so a later refactor cannot silently restore Markdown authority.
+
+**Preconditions:** clean worktree; commit `08818fe`; all 146 tests and `bash scripts/check-all.sh .` green.
+
+#### Sub-prompt J0.1 — authority inventory and characterization tests
+
+- [ ] `[read-only]` Inspect only `pathfinder_core/artifacts.py`, `pathfinder_core/migrations.py`, `pathfinder_core/mission_host.py`, `evals/harness/`, `tests/core/test_artifacts.py`, and the three intent templates. Run Codex in a read-only sandbox.
+- [ ] Confirm every production `read_text`/Markdown parser and classify it as generated-view input, legacy migration input, narrative evidence, or instruction validation.
+- [ ] Imitate the concise evidence table in `PLAN.md`; do not change code or tests.
+- [ ] Existing tests must pass unmodified; report a pre-existing failure and stop rather than edit it.
+- [ ] No deletion is allowed. If a later removal is proposed, record `rg` callers now.
+- [ ] Expected diff: zero code lines; only append the required finding to `PROGRESS.md`.
+- [ ] Verify with `rg -n "read_text|06-goal-command.md|07-run-log.md|08-final-summary.md|charter.md|roadmap.md|doctrine.md" pathfinder_core evals tests` and record the exact production readers.
+- [ ] Append a line to `PROGRESS.md` recording the inventory, verification, and any premise that contradicts this plan.
+- [ ] Stop if another runtime package or host writes these artifacts outside `pathfinder_core`; revise the ownership map before implementation.
+
+#### Sub-prompt J0.2 — golden authority tests
+
+- [ ] `[writes code]` Change only `tests/core/test_artifacts.py` and new fixtures under `tests/core/fixtures/rendering/`; first present a short test plan.
+- [ ] Characterize the current valid prompt bundle, then add failing expectations for deterministic rerender, view tamper repair, and JSON hashes remaining unchanged after Markdown edits.
+- [ ] Imitate `tests/core/test_artifacts.py` setup and stable clock/hash fixtures.
+- [ ] Existing tests must pass unmodified; new tests may fail only for the missing renderer behavior.
+- [ ] No production deletion is allowed.
+- [ ] Expected diff: 80-120 test/fixture lines; split prompt and mission goldens if larger.
+- [ ] Verify with `python3 -m unittest tests.core.test_artifacts`; record which new tests fail before implementation.
+- [ ] Append a line to `PROGRESS.md` recording the characterization, expected failures, and contradictions.
+- [ ] Stop if the existing JSON documents cannot fully determine the promised prompt Markdown; identify the smallest missing schema field instead of embedding request-only state in the renderer.
+
+**Phase verification:** the authority inventory is complete and focused tests distinguish JSON mutation from Markdown mutation.
+
+### Phase J1 — reverse prompt-to-Goal authority
+
+**Goal:** make the validated prompt request/binding/summary bundle produce both Markdown views without parsing either view.
+
+**Preconditions:** J0 complete; clean worktree; prompt golden failures captured.
+
+#### Sub-prompt J1.1 — pure prompt renderers
+
+- [ ] `[writes code]` Add only `pathfinder_core/rendering.py` and focused renderer tests/fixtures; first present a short function/input/output plan.
+- [ ] Implement pure deterministic renderers for `06-goal-command.md` from validated Goal Binding and `08-final-summary.md` from validated Goal Binding + Final Summary.
+- [ ] Imitate `_render_final_summary` formatting in `pathfinder_core/artifacts.py` and schema fixtures under `evals/fixtures/good-goal/`; do not introduce a template engine.
+- [ ] Escape or normalize untrusted text so values cannot create fake generated headings or generated-block markers; preserve the exact `/goal` objective as one line.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] Show `rg` evidence of all `_render_final_summary` callers before removing it in a later sub-prompt.
+- [ ] Expected diff: 100-150 production/test lines; split Goal and summary renderers if larger.
+- [ ] Verify with `python3 -m unittest tests.core.test_rendering`; expected output is byte-identical golden Markdown on two runs.
+- [ ] Append a line to `PROGRESS.md` recording renderer coverage and verification.
+- [ ] Stop if the current schemas cannot determine required output; propose one explicit schema addition and do not read the request or Markdown inside the renderer.
+
+#### Sub-prompt J1.2 — controller-owned prompt writes
+
+- [ ] `[writes code]` Change only `pathfinder_core/artifacts.py`, `pathfinder_core/__main__.py`, `tests/core/test_artifacts.py`, and focused CLI tests; first present the compatibility change.
+- [ ] Construct and schema-validate binding/summary JSON first, render both Markdown files from those documents, and atomically write the complete bundle. Remove the input role of `--goal-file`; the fixed output remains `06-goal-command.md`.
+- [ ] Imitate `_write_idempotent`, path/symlink guards, and sealing behavior already in `pathfinder_core/artifacts.py`.
+- [ ] A different Markdown view must be repaired from JSON, not accepted as authority and not used to alter JSON.
+- [ ] Existing tests must pass unmodified except tests explicitly characterizing the unreleased `--goal-file` input; replace those only after showing all CLI/route callers with `rg`.
+- [ ] Expected diff: 100-150 lines; split atomic bundle writing into a follow-up if larger.
+- [ ] Verify with `python3 -m unittest tests.core.test_artifacts tests.core.test_rendering` and a CLI run where a tampered view is restored.
+- [ ] Append a line to `PROGRESS.md` recording the authority reversal and verification.
+- [ ] Stop if canonical JSON would be written while another canonical document is invalid; validate the complete in-memory bundle before the first filesystem write.
+
+#### Sub-prompt J1.3 — prompt route and replay cutover
+
+- [ ] `[writes code]` Change only `skills/pathfinder/SKILL.md`, `skills/pathfinder/references/artifact-structure.md`, `skills/pathfinder/references/routes/prompt-to-goal.md`, `evals/replays/cases/prompt-fast-path.md`, its replay fixture, and matching consistency guards; first present a route-diff plan.
+- [ ] Instruct hosts to create only the structured request, then let the controller generate and seal `06-goal-command.md`, both JSON sidecars, and `08-final-summary.md`.
+- [ ] Imitate the existing absolute-plugin-root and final-filesystem-write gate; keep static-inspection-only behavior and exact ignore checks unchanged.
+- [ ] Existing tests must pass unmodified in safety meaning; update replay expectations rather than weakening them.
+- [ ] Show zero-caller evidence for the old pre-authored `--goal-file` form before deleting it.
+- [ ] Expected diff: 80-140 lines across route/docs/replay; split mirror updates if larger.
+- [ ] Verify with `bash scripts/check-skill-consistency.sh .`, `bash scripts/check-replay-evals.sh .`, and `python3 -m unittest tests.core.test_artifacts`.
+- [ ] Append a line to `PROGRESS.md` recording the route cutover and verification.
+- [ ] Stop if any supported host requires the Goal file before the controller can run; retain a conversation-only preview, never a filesystem input presented as canonical.
+
+**Phase verification:** `rg` finds no production read of `06-goal-command.md`; prompt JSON hashes remain stable after view tampering; full preflight passes.
+
+**Rollback:** revert the route and writer together. Preserve request/binding/summary JSON and regenerate the prior view; never restore Markdown-to-state parsing as a partial rollback.
+
+### Phase J2 — render host mission views from the persisted bundle
+
+**Goal:** produce honest run-log and final-summary projections without changing mission transitions or side-effect authority.
+
+**Preconditions:** J1 green; host mission crash matrix green; a clean state bundle reaches `awaiting-review`, `blocked`, and `abandoned` in fixtures.
+
+#### Sub-prompt J2.1 — mission projection builder
+
+- [ ] `[writes code]` Add only `pathfinder_core/projections.py` and `tests/core/test_projections.py`; first present a field-mapping table from canonical source to projection field.
+- [ ] Read and validate existing `state.json`, binding, runtime boundary, operation intents/results, and typed receipts; construct schema-v1 run-log/final-summary documents without reading Markdown.
+- [ ] Imitate `OperationJournal.load`, `MissionStore.load`, and `evals/harness/validate-bundle.py` identity checks.
+- [ ] Use only redacted receipt fields; do not expose argv, output, environment, credentials, or raw repository content.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] No deletion is expected; show callers before replacing any bundle loader.
+- [ ] Expected diff: 100-150 lines per projection; split run-log and final-summary builders if larger.
+- [ ] Verify with `python3 -m unittest tests.core.test_projections` for authorized, verifying, awaiting-review, blocked, abandoned, and reconcile-required bundles.
+- [ ] Append a line to `PROGRESS.md` recording mappings, verification, and any schema insufficiency.
+- [ ] Stop if schema v1 cannot represent an honest required status; add a versioned schema/migration plan rather than overloading an enum or prose field.
+
+#### Sub-prompt J2.2 — atomic mission view writer and CLI
+
+- [ ] `[writes code]` Change only `pathfinder_core/rendering.py`, one new view-writer module if needed, `pathfinder_core/__main__.py`, and focused tests; first present the write/crash model.
+- [ ] Add `artifacts mission-view --repo-root --state-dir --output-dir --json` that validates the ignored output path, loads canonical mission state, writes JSON projections atomically, then writes Markdown views derived from those in-memory documents.
+- [ ] Imitate `_validated_output_dir`, `write_atomic`, and the prompt renderer; do not couple canonical state transitions to view writes.
+- [ ] Active views remain replaceable; terminal views may be sealed after every document is present and validated.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] Show zero-caller evidence before sharing or moving `_validated_output_dir`.
+- [ ] Expected diff: 100-150 lines; split CLI wiring from crash tests if larger.
+- [ ] Verify with focused tests for missing view, tampered view, crash after JSON projection, repeated refresh, symlink path, and unignored output.
+- [ ] Append a line to `PROGRESS.md` recording view repair and verification.
+- [ ] Stop if a view failure mutates or rolls back mission state; views must remain downstream projections only.
+
+#### Sub-prompt J2.3 — autonomous route and crash replay
+
+- [ ] `[writes code]` Change only the autonomous/final-summary route modules, artifact contract, one recorded replay, and matching eval assertions; first present the exact controller call points.
+- [ ] Require a mission-view refresh after each surfaced checkpoint and before final reporting, while stating that JSON state remains authoritative if rendering is interrupted.
+- [ ] Imitate the current `mission next/record/resume` sequence and fail-closed reconciliation language.
+- [ ] Existing safety tests must pass unmodified; report failures.
+- [ ] Show callers before replacing any direct `07-run-log.md` or `08-final-summary.md` writing instruction.
+- [ ] Expected diff: 80-140 lines; split route mirrors if larger.
+- [ ] Verify with `bash scripts/check-replay-evals.sh .`, the host bridge crash matrix, and a replay where canonical state exists but Markdown is missing and is repaired once.
+- [ ] Append a line to `PROGRESS.md` recording route enforcement and verification.
+- [ ] Stop if refresh requires credentials, repository code execution, or a state transition; it must be a local read/projection operation only.
+
+**Phase verification:** a complete host mission produces schema-valid JSON views and matching Markdown; all crash boundaries retain one canonical transition history and repairable views.
+
+**Rollback:** disable the mission-view route call and retain canonical state. Generated views may be deleted and regenerated; never delete the mission directory or event log.
+
+### Phase J3 — generate structured exploration views
+
+**Goal:** eliminate independently authored candidate and verification facts while preserving narrative discovery prose.
+
+**Preconditions:** J2 green; candidate and verification schemas remain v1; golden rich fixtures selected.
+
+#### Sub-prompt J3.1 — generated candidate/verification blocks
+
+- [ ] `[writes code]` Change only `pathfinder_core/rendering.py`, focused rendering tests, and golden fixtures; first present generated-block markers and escaping rules.
+- [ ] Render the candidate section of `03-synthesis.md` from `03-candidates.json` and the structured result section of `03b-verification.md` from `03b-verification.json` between versioned generated markers.
+- [ ] Imitate candidate cards in `skills/pathfinder/references/routes/candidate-selection.md` and current verification fixture vocabulary.
+- [ ] Preserve narrative text outside generated markers byte-for-byte; reject malformed, nested, or duplicate marker regions.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] Show all candidate/verification Markdown consumers before replacing their authored fields.
+- [ ] Expected diff: 100-150 lines per renderer; split candidates and verification if larger.
+- [ ] Verify with golden rendering, special-character escaping, duplicate-marker rejection, and rerender idempotency tests.
+- [ ] Append a line to `PROGRESS.md` recording generated sections and verification.
+- [ ] Stop if a displayed field is not present in schema JSON; either label it explicitly narrative/noncanonical or propose a versioned schema field.
+
+#### Sub-prompt J3.2 — eval authority cleanup
+
+- [ ] `[writes code]` Change only `evals/harness/eval-lib.sh`, `evals/harness/validate-bundle.py`, relevant eval fixtures/cases, and contract tests; first map each assertion to its canonical JSON input and rendered-output check.
+- [ ] Use JSON for candidate identity, grades, binding status, verification, and final state. Parse Markdown only to test renderer/UX output, never to establish those facts.
+- [ ] Imitate the duplicate-safe JSON validator and existing cross-artifact bundle checks.
+- [ ] Existing bad fixtures must still fail for their named reason; report any reason drift rather than weakening a case.
+- [ ] Show zero-caller evidence before removing assertion aliases.
+- [ ] Expected diff: under 150 lines per assertion family.
+- [ ] Verify with `bash scripts/check-evals.sh .` and `python3 -m unittest tests.contracts.test_artifact_validator`.
+- [ ] Append a line to `PROGRESS.md` recording which Markdown authority reads were removed.
+- [ ] Stop if a case has no canonical JSON evidence; add a schema-backed fixture or keep the case explicitly UX-only.
+
+**Phase verification:** changing candidate/verification JSON changes generated Markdown; editing the generated block is repaired; narrative content remains unchanged.
+
+### Phase J4 — cut durable intent over to canonical JSON
+
+**Goal:** make creator intent schema-valid and machine-readable without silently converting prose into autonomy policy.
+
+**Preconditions:** J1-J3 green; creator-model route has a safe goal-only degradation; migration backups are tested.
+
+#### Sub-prompt J4.1 — intent JSON store and pure renderers
+
+- [ ] `[writes code]` Add only an intent storage module, intent renderers, and focused tests; first present a file/lock/atomicity plan.
+- [ ] Validate `charter.json`, `roadmap.json`, and `doctrine.json` against existing schemas before writing; render corresponding `.md` views deterministically.
+- [ ] Imitate `MissionStore` duplicate-safe JSON loading and atomic writes, plus current charter/roadmap/doctrine template headings.
+- [ ] Never derive authorization, clarity, safety, or hard stops from the Markdown view.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] No deletion is allowed in this slice.
+- [ ] Expected diff: 100-150 lines per intent kind; split common storage from renderers if larger.
+- [ ] Verify with round-trip-independent tests: JSON -> Markdown, tamper Markdown, rerender, unchanged JSON hash.
+- [ ] Append a line to `PROGRESS.md` recording intent authority behavior and verification.
+- [ ] Stop if the three schemas need semantic changes; version and migrate one schema at a time rather than accepting extra properties.
+
+#### Sub-prompt J4.2 — creator-confirmed activation and legacy backup
+
+- [ ] `[writes code]` Change only `pathfinder_core/migrations.py`, `pathfinder_core/__main__.py`, `tests/core/test_migrations.py`, and golden migration fixtures; first present rollback and partial-failure behavior.
+- [ ] Add a command that backs up legacy `.md`, accepts creator-confirmed schema-valid JSON from the intent interview, writes canonical JSON atomically, renders views, and reports that no authorization was granted.
+- [ ] Imitate the current backup-before-write and rollback-on-exception behavior.
+- [ ] Unknown, incomplete, or legacy-only intent remains `intent_clarity: unresolved` for autonomy and is never automatically parsed into policy.
+- [ ] Existing migration tests must pass unmodified; report failures.
+- [ ] Show all `_migrate_intent_text` callers before deprecating it; do not delete the legacy reader until one full release can consume backups.
+- [ ] Expected diff: 100-150 lines; split activation from deprecation if larger.
+- [ ] Verify with legacy backup, creator-confirmed activation, invalid JSON, unknown schema, crash rollback, CRLF, symlink, and view-repair tests.
+- [ ] Append a line to `PROGRESS.md` recording migration safety and verification.
+- [ ] Stop if the input lacks explicit creator confirmation or all three policy-bearing documents required for autonomy; preserve legacy files and remain goal-only.
+
+#### Sub-prompt J4.3 — skill, templates, and intent eval cutover
+
+- [ ] `[writes code]` Change only the intent-refresh/autonomous route modules, `SKILL.md`, the three intent templates, artifact structure, relevant eval fixtures, and consistency guards; first present the mirror/caller list.
+- [ ] Make route behavior write canonical JSON through the controller and treat `.md` only as a human view. Require JSON schema validation and creator confirmation before intent becomes resolved.
+- [ ] Imitate existing ignore-ladder, tracked-file distrust, doctrine proof, and explicit authorization boundaries exactly.
+- [ ] Existing behavior tests must pass unmodified in meaning; add JSON fixtures instead of relaxing migration assertions.
+- [ ] Show zero-caller evidence before removing Markdown marker reads from runtime instructions.
+- [ ] Expected diff: under 150 lines per intent kind/route; split charter, roadmap, doctrine, and autonomous references if larger.
+- [ ] Verify with `bash scripts/check-skill-consistency.sh .`, `bash scripts/check-skill-behavior.sh .`, `bash scripts/check-evals.sh .`, and focused migration tests.
+- [ ] Append a line to `PROGRESS.md` recording the route cutover and verification.
+- [ ] Stop if a supported manual skill-only install cannot invoke the controller; degrade that install to conversation-only draft intent rather than writing authoritative Markdown.
+
+**Phase verification:** only `.pathfinder/*.json` influences machine intent, rendered Markdown is replaceable, legacy-only state cannot authorize autonomy, and migration backups restore the exact original bytes.
+
+**Rollback:** restore the backed-up legacy Markdown and disable intent-based autonomy. Preserve new JSON for manual recovery; do not synthesize a downgrade from generated Markdown.
+
+### Phase J5 — enforce, document, package, and dogfood
+
+**Goal:** make the authority rule mechanically visible and prove it from the exact shipped archive.
+
+**Preconditions:** J1-J4 green; no canonical schema or route drift; clean worktree.
+
+#### Sub-prompt J5.1 — authority guard and operator docs
+
+- [ ] `[writes code]` Change only one new validation script, `scripts/check-all.sh`, `CONTRIBUTING.md`, operator/artifact docs, and focused validator meta-tests; first present the allowlist of legitimate Markdown readers.
+- [ ] Fail when production code introduces a new state-bearing Markdown parser outside explicitly documented legacy migration/renderer tests.
+- [ ] Imitate `scripts/check-portability.sh` plus its adversarial parser fixtures; keep the guard structural and narrow, not a broad ban on `read_text`.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] No deletion is expected.
+- [ ] Expected diff: 80-140 lines.
+- [ ] Verify with a seeded forbidden-reader fixture, a renderer read allowed only for view replacement, ShellCheck, and full preflight.
+- [ ] Append a line to `PROGRESS.md` recording enforcement and verification.
+- [ ] Stop if the guard false-flags instruction validation or golden output tests; narrow by production module/path and exact artifact classes.
+
+#### Sub-prompt J5.2 — exact archive and host dogfood
+
+- [ ] `[writes code]` Change only replay fixtures and documentation if dogfood exposes a real contradiction; first run without editing.
+- [ ] Exercise prompt Goal generation, view tamper repair, mission-view refresh after a seeded crash, and legacy intent goal-only degradation from an isolated packaged install.
+- [ ] Imitate `scripts/package-smoke.sh` and existing sanitized replay format; never use a live repository, credentials, publication, or merge.
+- [ ] Existing tests must pass unmodified; report failures.
+- [ ] Show zero-caller evidence before removing any compatibility route exposed by dogfood.
+- [ ] Expected diff: zero unless a focused replay/doc correction is required; any correction stays under 150 lines.
+- [ ] Verify with `bash scripts/check-all.sh .`, `bash scripts/package-smoke.sh . "" git`, hosted Linux/macOS/Windows preflight, CodeQL, and Dependency Review.
+- [ ] Append a line to `PROGRESS.md` recording exact commit, package result, host results, and non-guarantees.
+- [ ] Stop if dogfood changes canonical JSON after Markdown tampering or requires parsing a view; return to the owning phase.
+
+**Phase verification:** full local and hosted checks pass, the exact archive repairs views from JSON, and the checklist item “Make JSON the source of truth and render Markdown views from it” can be checked without qualification.
+
+### What could go wrong
+
+1. **The renderer becomes a second state model.** Prevent this by accepting only validated JSON documents, keeping renderers pure, and refusing request-only or Markdown-derived fallback fields.
+2. **A view-writing crash is mistaken for mission failure.** Canonical state must commit independently; rerender repairs the view and never replays a host action or transition.
+3. **Legacy intent conversion silently widens autonomy.** Never parse flexible prose into policy. Require creator-confirmed JSON, preserve exact backups, and default unresolved/legacy-only state to goal-only.
+
+### Where confidence is lowest
+
+- The current intent schemas may not capture every nuance users have placed in flexible Markdown; creator-confirmed regeneration is safer than claiming lossless automatic migration.
+- Candidate data may not contain every field required by the current rich candidate cards. Missing display-only fields should remain labeled narrative until a deliberately versioned schema addition.
+- Manual skill-only installations without the controller cannot honestly maintain canonical JSON + rendered views. The safest degradation is conversation-only output, but host UX needs dogfood.
+
+### What not to do
+
+- [ ] Do not add a general template engine or user-editable rendering templates.
+- [ ] Do not make Markdown mismatch block or rewrite canonical mission state.
+- [ ] Do not expand mission transitions, publication, budgets, or host authority in this batch.
+- [ ] Do not duplicate every receipt and contract field into `run-log.schema.json` merely for rendering convenience.
+- [ ] Do not auto-parse legacy intent prose into autonomy policy.
+- [ ] Do not schema-encode all free-form discovery narrative in the same migration.
+- [ ] Do not check the master checklist item after prompt rendering alone; mission and intent authority must also be real.
+
+### Recommended first implementation slice
+
+Execute **J0.2, J1.1, and J1.2 only** after this plan. They close the existing prompt-path authority inversion with no mission-state schema migration and create the renderer primitive the later phases reuse.
