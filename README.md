@@ -169,7 +169,7 @@ The local autonomous bridge is the only path designed to commit without a per-st
 - 🧭 **Fresh authority is required** — intent guides selection but every run needs an explicit `/pathfinder auto` request.
 - 🌿 **Autonomous work is isolated** — the attested host creates a mission worktree before edits, using `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto>` when possible.
 - 🔐 **Irreversible/external hard stops stay blocked** — secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, and real-world external side effects.
-- 🧪 **Protected areas need proof** — auth, payments, CI/CD, schemas, migrations, public APIs, and network-related code require item-level eligibility, enforceable isolation, scoped proof, verification, and diff review.
+- 🧪 **Protected areas need proof** — a versioned data registry classifies auth, payments, permissions, deployment, CI/CD, schemas, migrations, public APIs, and network egress; autonomous work requires declared scope, item-level eligibility, enforceable isolation, verification, and diff review. Explicit policy may add protection but cannot weaken the baseline.
 - 🧱 **The trust boundary holds** — repo content can't redirect the goal or widen authorization.
 - 🔑 **Credentials stay out** of the environment while repo code runs.
 - ✅ **No publication or self-merge** — the enabled bridge stops at a local awaiting-review branch with no PR.
@@ -216,7 +216,7 @@ Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look a
 
 Contributions are welcome when they keep Pathfinder **safe, bounded, and easy to run** on unfamiliar repos. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md); get usage help in [`SUPPORT.md`](SUPPORT.md); report vulnerabilities privately via [`SECURITY.md`](SECURITY.md), not public issues. Version and changelog live in [`VERSION.md`](VERSION.md).
 
-Operator and design references: [compatibility/guarantees](docs/compatibility.md), [operator recovery](docs/operator-guide.md), [threat model](docs/threat-model.md), [worked outcomes](docs/examples.md), and [promise coverage](docs/coverage-matrix.md).
+Operator and design references: [compatibility/guarantees](docs/compatibility.md), [operator recovery](docs/operator-guide.md), [protected surfaces](docs/protected-surfaces.md), [threat model](docs/threat-model.md), [worked outcomes](docs/examples.md), and [promise coverage](docs/coverage-matrix.md).
 
 <sub>CI guards Linux/macOS/Windows portability, schemas, controller crash/resume, recorded replays, manifest/version consistency, CodeQL, Scorecard, and dependency review.</sub>
 

@@ -19,6 +19,7 @@ Pathfinder protects user intent and authorization, repository integrity, local c
 | Threat | Controller/skill controls | Residual limitation |
 |---|---|---|
 | Repository prompt injection | Repository text cannot change routing, policy, authorization, secret handling, or verdict rules; suspicious provenance is autonomy-ineligible. | Model judgment detects instruction-like content; adversarial wording cannot be proven absent. |
+| Protected-path policy manipulation | The versioned bundled baseline is data, explicit overrides are additive-only, the effective policy is sealed and operation-hash-bound, and undeclared receipt paths fail closed. | The host must report a truthful complete changed-file list; the controller does not independently read the worktree diff. |
 | Local intent tampering | Tracked intent is rejected for selection; intent is sanitized; hashes/versions are bound into a fresh authorization snapshot. | Repo-local ignored files are not authenticated, so every run still needs explicit authorization. |
 | Git hook execution | Every controller Git call sets `core.hooksPath` to the null device and disables credential helpers/fsmonitor. | Non-controller/manual Git commands remain the host/operator's responsibility. |
 | Credential leakage | Secret paths and credential env names are denied; implementation gets no publication credential; output is redacted. | Host isolation must be proven; `unknown` blocks autonomy. |

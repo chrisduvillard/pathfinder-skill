@@ -177,7 +177,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Define a deterministic status/safety enum and reject unknown values instead of inferring their meaning from prose.
 - [x] Store creator approvals outside the repository trust boundary, or require explicit per-run authorization when secure host storage is unavailable.
 - [x] Version and migrate every intent schema; never treat presence of a marker string as schema validity.
-- [ ] Add a protected-surface registry that is data-driven, versioned, and overridable only through explicit policy—not repository prose.
+- [x] Add a protected-surface registry that is data-driven, versioned, and overridable only through explicit additive policy—not repository prose. Seal and hash-bind the effective policy per mission, and reject undeclared protected paths before state advances.
 
 ### P1 — Add canonical schemas and state
 

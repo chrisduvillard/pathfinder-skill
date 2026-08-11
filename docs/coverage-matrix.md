@@ -7,6 +7,7 @@
 | Explicit authority only | authorization schema/mission tests; `authorization-denied` replay |
 | Unknown enforcement blocks work | execution-policy tests; `sandbox-blocked` replay |
 | Repository injection cannot authorize | trust-route policy; `injection-blocked` replay |
+| Protected policy cannot come from prose | versioned baseline schema; additive-only explicit override tests; policy-hash drift and undeclared-path receipt rejection |
 | Local action crash recovery | intent/receipt/result/transition crash matrix for all five host actions; `host-bridge-local` replay; ambiguous missing receipts require reconciliation |
 | Fixed local mission budgets | widening-limit rejection; narrower-limit deadline fixture; restart-expiry and late-success tests; one Goal/attempt and zero-PR construction |
 | One local commit and zero PRs in the enabled bridge | mission idempotency tests; `host-bridge-local` replay maxima; separate GitHub primitive fixtures |
