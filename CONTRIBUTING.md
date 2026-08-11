@@ -44,6 +44,7 @@ bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-escape invariants
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
+bash scripts/check-markdown-authority.sh  # production Markdown-to-state reader allowlist
 bash scripts/check-shell.sh               # warning-or-higher ShellCheck over every Bash file
 bash scripts/check-evals.sh               # deterministic artifact-contract eval fixtures
 bash scripts/check-replay-evals.sh        # required recorded controller/route replays
@@ -93,6 +94,11 @@ before you push, not after.
   Required CI must stay local and no-live-model by default. `bash scripts/check-replay-evals.sh`
   runs the required recorded replay corpus. `bash scripts/check-live-evals.sh`
   is disabled unless `PATHFINDER_LIVE_EVALS=1` and a local live runner are provided.
+- Production state must come from validated JSON, controller contracts, or typed host receipts—not
+  Markdown. `scripts/check-markdown-authority.sh` permits only the legacy intent migration reader and
+  the three generated-block replacement functions. Tests, eval assertions, golden comparisons, and
+  instruction validators may read Markdown because they do not own runtime state. If a new canonical
+  fact is needed, add it to a versioned schema instead of expanding the allowlist.
 - Do not commit `.agent-work/`, `.agent-workspace/`, secrets, local caches, or
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the

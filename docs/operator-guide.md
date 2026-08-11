@@ -50,7 +50,19 @@ bash scripts/pathfinder-controller.sh mission abandon --state-dir <mission-state
 
 Abandon is terminal. It preserves the state, event log, branch, and worktree for inspection. It does not delete files, branches, commits, or PRs.
 
-## Migrate local state
+## Activate or migrate local intent
+
+Canonical creator intent is `.pathfinder/charter.json`, `.pathfinder/roadmap.json`, and `.pathfinder/doctrine.json`. Their matching Markdown files are generated, replaceable views and are never read back into selection or authority. Confirm all six concrete paths are locally ignored and keep activation inputs plus backups in an ignored run folder or outside the repository.
+
+After the creator explicitly confirms the complete three-document proposal, activate it with:
+
+```bash
+bash scripts/pathfinder-controller.sh migrate intent-activate --root <repo-root> --backup-dir <new-backup-dir> --charter-json <draft-charter.json> --roadmap-json <draft-roadmap.json> --doctrine-json <draft-doctrine.json> --creator-confirmed --json
+```
+
+The command validates all three documents before creating the backup, preserves exact bytes for every existing JSON/view target, writes canonical JSON before deterministic views, and restores the original file set after a write failure. Its result always reports `authorization_granted: false` and `autonomy_authorized: false`. Do not pass `--creator-confirmed` on the creator's behalf or use a prior autonomous request as confirmation.
+
+The older command below is compatibility-only: it reads legacy v1 Markdown metadata, backs up exact bytes, and forces migrated clarity to unresolved. Runtime selection does not read that legacy Markdown.
 
 Choose a new backup directory outside the repository, then run:
 
@@ -60,6 +72,8 @@ bash scripts/pathfinder-controller.sh migrate mission --state-dir <mission-state
 ```
 
 V1 intent migration changes legacy `clarity:` metadata to `intent_clarity: unresolved`; it never grants clarity or authorization. Current v1 mission state is validated and backed up. An unknown version, missing file, symlinked intent file, existing backup destination, or failed write stops the migration; failed intent writes are restored from the in-memory originals and the backup remains available.
+
+Production Markdown reads are intentionally limited to that legacy migration and generated-region replacement used to repair candidate/verification views. Tests and evals may inspect rendered Markdown, but no operator should treat a view, marker, or prose assertion as controller state.
 
 ## Recover common outcomes
 
@@ -75,7 +89,7 @@ V1 intent migration changes legacy `clarity:` metadata to `intent_clarity: unres
 
 ## Cleanup and retention
 
-- `.pathfinder/*.md`: retain while the creator model is useful; migrate with a backup before format changes. Never commit it.
+- `.pathfinder/{charter,roadmap,doctrine}.json`: retain as the canonical creator model. Keep matching `.md` views only for humans; either set is local-only and must never be committed.
 - `.agent-work/pathfinder/...`: retain until the Goal/PR is reviewed; it is the human/replay evidence packet. Never publish it by default.
 - Mission state and authorization: retain at least through review/abandon and any audit window. Authorization belongs outside the repository trust boundary.
 - Mission worktrees: remove only after the controller proves no dirty files, unmerged commits, or active mission references. Never force-remove a worktree Pathfinder refuses to clean.

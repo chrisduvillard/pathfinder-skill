@@ -267,6 +267,46 @@ R="$(newroot)"
 rewrite "$R/skills/pathfinder/references/routes/intent-refresh.md" 's/Never write authoritative Markdown as a fallback/Write authoritative Markdown as a fallback/'
 assert_catch "$R" "intent-refresh controller invariant|authoritative Markdown" "manual-install fallback guard catches authoritative Markdown writes"
 
+# ---- Production Markdown-authority guard ----
+markdownsrc="$here/scripts/check-markdown-authority.sh"
+new_markdown_root() {
+  local d
+  d="$(mktemp -d "$tmp/markdown.XXXXXX")"
+  mkdir -p "$d/scripts"
+  cp -r "$here/pathfinder_core" "$d/pathfinder_core"
+  cp "$markdownsrc" "$d/scripts/check-markdown-authority.sh"
+  printf '%s' "$d"
+}
+markdown_check() { bash "$markdownsrc" "$1" 2>&1; }
+
+echo "== parser 10: current renderer replacement and legacy migration allowlist =="
+R="$(new_markdown_root)"
+if markdown_check "$R" >/dev/null; then
+  ok "exact legacy-migration and generated-view replacement readers are allowed"
+else
+  bad "clean production Markdown-reader allowlist was rejected"
+fi
+
+echo "== parser 10b: seeded production Markdown state reader =="
+R="$(new_markdown_root)"
+printf '%s\n' 'def load_state():' '    with open("07-run-log.md", "r", encoding="utf-8") as stream:' '        return stream.read()' > "$R/pathfinder_core/forbidden_reader.py"
+out="$(markdown_check "$R")"; ec=$?
+if [ "$ec" -ne 0 ] && printf '%s' "$out" | grep -Eq 'Markdown parser allowlist drift|forbidden_reader'; then
+  ok "Markdown-authority guard catches a new production view reader"
+else
+  bad "Markdown-authority guard missed a new production view reader (exit=$ec)"
+fi
+
+echo "== parser 10c: renderer allowlist is function-scoped =="
+R="$(new_markdown_root)"
+printf '%s\n' '' 'def parse_rendered_status(markdown: str):' '    return markdown.split("state:", 1)' >> "$R/pathfinder_core/rendering.py"
+out="$(markdown_check "$R")"; ec=$?
+if [ "$ec" -ne 0 ] && printf '%s' "$out" | grep -Eq 'Markdown parser allowlist drift|parse_rendered_status'; then
+  ok "renderer module cannot add a second Markdown state parser"
+else
+  bad "renderer function allowlist accepted a new Markdown state parser (exit=$ec)"
+fi
+
 # ---- Behavioral invariant harness (check-skill-behavior.sh) ----
 skillbeh="$here/scripts/check-skill-behavior.sh"
 csb() { MSYS_NO_PATHCONV=1 bash "$skillbeh" "$1" 2>&1; }

@@ -1176,15 +1176,15 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 
 #### Sub-prompt J5.1 — authority guard and operator docs
 
-- [ ] `[writes code]` Change only one new validation script, `scripts/check-all.sh`, `CONTRIBUTING.md`, operator/artifact docs, and focused validator meta-tests; first present the allowlist of legitimate Markdown readers.
-- [ ] Fail when production code introduces a new state-bearing Markdown parser outside explicitly documented legacy migration/renderer tests.
-- [ ] Imitate `scripts/check-portability.sh` plus its adversarial parser fixtures; keep the guard structural and narrow, not a broad ban on `read_text`.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] No deletion is expected.
-- [ ] Expected diff: 80-140 lines.
-- [ ] Verify with a seeded forbidden-reader fixture, a renderer read allowed only for view replacement, ShellCheck, and full preflight.
-- [ ] Append a line to `PROGRESS.md` recording enforcement and verification.
-- [ ] Stop if the guard false-flags instruction validation or golden output tests; narrow by production module/path and exact artifact classes.
+- [x] `[writes code]` Change only one new validation script, `scripts/check-all.sh`, `CONTRIBUTING.md`, operator/artifact docs, and focused validator meta-tests; first present the allowlist of legitimate Markdown readers.
+- [x] Fail when production code introduces a new state-bearing Markdown parser outside explicitly documented legacy migration/renderer tests.
+- [x] Imitate `scripts/check-portability.sh` plus its adversarial parser fixtures; keep the guard structural and narrow, not a broad ban on `read_text`.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] No deletion is expected.
+- [x] Expected diff: 80-140 lines.
+- [x] Verify with a seeded forbidden-reader fixture, a renderer read allowed only for view replacement, ShellCheck, and full preflight.
+- [x] Append a line to `PROGRESS.md` recording enforcement and verification.
+- [x] Stop if the guard false-flags instruction validation or golden output tests; narrow by production module/path and exact artifact classes.
 
 #### Sub-prompt J5.2 — exact archive and host dogfood
 
