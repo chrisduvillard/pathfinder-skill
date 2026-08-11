@@ -97,7 +97,7 @@ def render_candidates_block(document: dict) -> str:
     for position, candidate in enumerate(document["candidates"], start=1):
         lines.extend([
             "",
-            f"### {position}. {_markdown_inline(candidate['candidate_id'])} — "
+            f"### {position}. {_markdown_inline(candidate['candidate_id'])} - "
             f"{_markdown_inline(candidate['title'])}",
             "",
             f"- finding_ids: {_markdown_joined(candidate['finding_ids'])}",

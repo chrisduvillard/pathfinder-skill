@@ -9,7 +9,7 @@ Narrative architecture notes stay authored here.
 - generated_at: 2026-08-10T12:00:00Z
 - search_stop_reason: one strong bounded candidate
 
-### 1. C1 — Dashboard empty state
+### 1. C1 - Dashboard empty state
 
 - finding_ids: F1
 - evidence_grade: strong
