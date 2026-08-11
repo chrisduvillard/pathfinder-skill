@@ -42,7 +42,7 @@ Use practical language. Do not produce a generic audit. Separate facts found in 
 
 After Phase 4 writes the Top 5 into `03-synthesis.md`, verify those candidates before the Phase 5 funnel shows them. Phase 4b is the one sanctioned re-read of repository code after discovery: it inherits Phase 2's code-reading authority and the scout trust rules, not Phase 4's "do not re-discover" rule. It only checks, downgrades, re-ranks, or quarantines the existing candidates; it never invents new ones, and every verdict traces back to the scout finding ids the candidate already cites.
 
-Gate: run Phase 4b only if `03-synthesis.md` is complete (not a placeholder) with a populated Top 5. If `03-synthesis.md` is still a placeholder, leave `03b-verification.md` a placeholder and resume at Phase 4 first. Write all verification work to `03b-verification.md`.
+Gate: run Phase 4b only if `03-synthesis.md` is complete with a populated Top 5. If synthesis is absent or incomplete, do not create `03b-verification.md`; resume at Phase 4 first. Write all verification work to `03b-verification.md` only after this gate passes.
 
 Use adaptive verifier depth. The three-lens panel below is the default for full exploration, autonomy-bound work, protected areas, high-risk changes, contested findings, and low-confidence candidates; low-risk interactive work may use cheaper checks only when the structured verification artifact still records the depth chosen, the reason, any skipped lenses, proof gaps, and why the shortcut does not weaken the operating kernel.
 
@@ -123,10 +123,10 @@ If subagents are unavailable, run one careful pass per candidate covering all th
 
 ### `03b-verification.md` lifecycle
 
-Write append-only as verdicts return. Head the file with `verification: not-run | in-progress | complete` and give each candidate a `panel: complete | partial(k/3)` status.
+Write append-only as verdicts return. Do not create `03b-verification.md` before Phase 4b starts. On Phase 4b start, create it with `verification: in-progress` and give each candidate a `panel: complete | partial(k/3)` status; set `verification: complete` only after the selected verification depth finishes.
 
-- Before Phase 4b runs, `03b-verification.md` is the placeholder "verification not run yet; Phase 5 uses Phase 4 grades unchanged."
-- Phase 5 reads the header: only `complete` grants post-verification grades and `Verified:` lines; `not-run` or `in-progress` means fall back to Phase 4 grades and present nothing as verified.
+- Before Phase 4b runs, absence means not reached. Phase 5 uses Phase 4 grades unchanged if verification is absent, and a resumed legacy `verification: not-run` artifact has the same meaning.
+- Phase 5 reads the header when present: only `complete` grants post-verification grades and `Verified:` lines; legacy `not-run` or current `in-progress` means fall back to Phase 4 grades and present nothing as verified.
 - On resume, reuse recorded verdicts; spawn verifiers only for candidates or lenses with no recorded verdict; recompute aggregation from the full recorded set.
 
 Carry the synthesis-level candidate id (traceable to finding ids) as the stable identity through re-rank and refill; the displayed 1–5 position is presentation-only. Every `03b` log line, every `Verified:` field, and every Phase 6 selected-candidate id references the stable id.

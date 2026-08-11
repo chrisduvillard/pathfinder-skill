@@ -2,7 +2,7 @@
 
 Run a guided drill-down. Ask exactly one question per level. Hard cap of five levels (L0 through L4) before Phase 6 goal confirmation and the post-save execution choice. Each level's options are conditioned on the previous answer and generated from the scout briefs, not from a fixed list.
 
-The five scouts are the branching backbone:
+The selected scout domains form the branching backbone. Choose them from the five-domain reservoir:
 
 - Architecture Scout
 - Frontend/Product Scout
@@ -10,7 +10,7 @@ The five scouts are the branching backbone:
 - Testing/Reliability Scout
 - Developer Experience/Security Scout
 
-Intent supplies the lens; the scout that owns the chosen domain supplies the menu content for the next level.
+Show only selected domains with real candidates. Intent supplies the lens; the scout that owns the chosen domain supplies the menu content for the next level.
 
 Before each question, show a compact narrowing trail and a confidence signal:
 

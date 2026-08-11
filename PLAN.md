@@ -252,8 +252,8 @@ The first autonomous release should be deliberately narrower than the current pr
 - [ ] Add monorepo namespaces so charter/roadmap/doctrine can be scoped to a subproject without conflating unrelated products.
 - [x] Render a compact status summary from controller state instead of rereading every Markdown artifact.
 - [x] Add `--json`/structured status for automation and concise human status for interactive use.
-- [ ] Keep artifacts useful but stop creating placeholders for every unused phase; represent lifecycle explicitly in the state snapshot and render placeholders only when a human view needs them. *(The zero-clarification prompt route now omits never-run phases; broader lifecycle rendering remains open.)*
-- [ ] Limit default run artifacts to evidence required for resume, audit, and evaluation; make verbose scout prose optional. *(The zero-clarification prompt route is now fixed at six evidence artifacts; optional full-exploration scout prose remains open.)*
+- [x] Keep artifacts useful but stop creating placeholders for every unused phase; represent lifecycle explicitly in the state snapshot and render placeholders only when a human view needs them. *(Prompt and full-exploration routes now omit intentionally skipped phases and unselected scout domains; autonomous mission views derive active/terminal lifecycle from controller state.)*
+- [x] Limit default run artifacts to evidence required for resume, audit, and evaluation; make verbose scout prose optional. *(Full exploration records its evidence budget once, writes compact briefs only for selected domains, and makes expanded narrative opt-in or evidence-justified.)*
 - [ ] Add progress updates at meaningful checkpoints rather than per invariant or per file.
 
 ### P2 — Build evaluation that measures real behavior

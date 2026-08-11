@@ -202,18 +202,20 @@ Keep `.pathfinder/` local-only with the same ignore ladder as the work folder:
 
 Never commit or push `.pathfinder/{charter,roadmap,doctrine}.{json,md}`; canonical intent and its views are excluded from publish-after-review by default.
 
-Create artifacts progressively for the selected route. Full exploration and autonomous
-missions use the complete evidence contract:
+Create artifacts progressively for the selected route. Emit only evidence needed to
+resume, audit, or evaluate the selected route. Full exploration may use these artifacts;
+autonomous mission views are emitted from controller state only when their lifecycle
+state calls for them:
 
 ```text
 00-session.md
 01-blind-discovery.md
-02-scout-briefs/
-  architecture-scout.md
-  frontend-product-scout.md
-  backend-data-scout.md
-  testing-reliability-scout.md
-  dx-security-scout.md
+02-scout-briefs/               selected domains only
+  architecture-scout.md        only if selected
+  frontend-product-scout.md    only if selected
+  backend-data-scout.md        only if selected
+  testing-reliability-scout.md only if selected
+  dx-security-scout.md         only if selected
 03-synthesis.md
 03b-verification.md
 04-question-funnel.md
@@ -268,12 +270,14 @@ the request and canonical documents before atomically rendering both Markdown vi
 failure, report the controller error and stop; do not substitute compact JSON or claim
 success.
 
-If a phase expected on the selected route has not yet been reached, create a short
-placeholder in that route's corresponding artifact, for example "not answered yet,"
-"verification not run yet," "goal not generated yet," "goal not run," or
-"cross-model review not run." Never pre-create placeholders for phases the selected
-route intentionally skips. This keeps interrupted runs honest without making the fast
-path pay for unused phases.
+If a phase expected on the selected route has started but has not completed, create a short
+in-progress marker in that route's corresponding human artifact, for example "interview
+started; no answer recorded yet," "verification started; no verdict recorded yet," or
+"review started; no disposition recorded yet." Never pre-create placeholders for phases the selected
+route intentionally skips, for unselected scout domains, or for future lifecycle states.
+Their absence means not applicable or not reached; controller state distinguishes active
+from terminal autonomous missions. This keeps interrupted runs honest without making any
+route pay for unused phases.
 
 ## Phase 0: Session setup
 
@@ -313,7 +317,7 @@ The prompt-to-goal route is the recommended path when the user already supplied 
 
 ## Route completion rule
 
-A route may reference a later shared module by number. Load it before continuing. Preserve the artifact slots defined above, using explicit placeholders for phases the selected route does not run. A route never inherits authority from another route or an earlier run.
+A route may reference a later shared module by number. Load it before continuing. Preserve the applicable artifact names defined above. Use a short placeholder only for an expected phase that started but did not complete; omit phases the route does not run. A route never inherits authority from another route or an earlier run.
 
 After the selected route finishes, apply the stop conditions and style rules below.
 ## Stop conditions

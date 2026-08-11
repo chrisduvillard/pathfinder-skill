@@ -4,12 +4,12 @@
 .agent-work/pathfinder/YYYYMMDD-HHMM-<short-task-slug>/
   00-session.md
   01-blind-discovery.md
-  02-scout-briefs/
-    architecture-scout.md
-    frontend-product-scout.md
-    backend-data-scout.md
-    testing-reliability-scout.md
-    dx-security-scout.md
+  02-scout-briefs/                 # selected domains only
+    architecture-scout.md          # only if selected
+    frontend-product-scout.md      # only if selected
+    backend-data-scout.md          # only if selected
+    testing-reliability-scout.md   # only if selected
+    dx-security-scout.md           # only if selected
   03-synthesis.md
   03b-verification.md
   04-question-funnel.md
@@ -41,7 +41,7 @@ Structured sidecar purposes:
 - `07-run-log.json`: Runtime Boundary, commands/results, structured completion claim, Binding Status, verifier/reviewer disposition, and publication gates.
 - `08-final-summary.json`: final shipped/blocked/excluded ledger, residual risks, next input needed, and replay pointers to the artifacts above.
 
-Create the complete tree above progressively for full exploration and autonomous missions. If a phase expected on the selected route has not been reached yet, create a short placeholder rather than implying completion. `03b-verification.md` follows the same rule (placeholder text: "verification not run yet"). `07b-cross-model-review.md` also follows the placeholder rule (placeholder text: "cross-model review not run"). Never create a placeholder for a phase the selected route intentionally skips.
+Create only the applicable parts of the tree above, progressively. In full exploration, `01-blind-discovery.md` records the selected and skipped scout domains plus reasons; `02-scout-briefs/` contains compact briefs only for selected domains, and expanded narrative is optional. If an expected phase has started but not completed, its human artifact carries a short in-progress marker rather than implying completion. `03b-verification.md` is absent before Phase 4b, starts with `verification: in-progress`, and becomes `complete` only after the selected verification depth finishes. `07b-cross-model-review.md` is absent unless review is enabled and started, then records that it is in progress until a disposition exists. Never create a placeholder for a phase the selected route intentionally skips, an unselected scout domain, or a future lifecycle state.
 
 `04-question-funnel.md` records the chosen interview mode (Pick a move or Explore from scratch) and, for Explore from scratch, the full narrowing path (L0 intent through L4 boundaries) with the options offered at each level. For Pick a move multi-select, it records the raw selection input and grouping review options shown.
 

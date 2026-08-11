@@ -28,6 +28,8 @@ skill="$root/skills/pathfinder/SKILL.md"
 route_dir="$root/skills/pathfinder/references/routes"
 route_prompt="$route_dir/prompt-to-goal.md"
 route_autonomous="$route_dir/autonomous.md"
+route_discovery="$route_dir/discovery.md"
+route_synthesis="$route_dir/synthesis.md"
 route_files=(
   "$route_prompt"
   "$route_dir/discovery.md"
@@ -575,6 +577,47 @@ else
   echo "  only in SKILL.md:            $(comm -23 <(printf '%s\n' "$skill_arts") <(printf '%s\n' "$struct_arts") | tr '\n' ' ')"
   echo "  only in artifact-structure:  $(comm -13 <(printf '%s\n' "$skill_arts") <(printf '%s\n' "$struct_arts") | tr '\n' ' ')"
 fi
+
+# Default full-exploration artifacts follow the adaptive evidence budget. Skipped
+# scout domains are recorded once in the discovery map; they must not create five
+# near-empty placeholder files that add no resume, audit, or evaluation evidence.
+scout_budget_invariants=(
+  'Record the selected and skipped domains, with one-line reasons, in `01-blind-discovery.md` under `Scout evidence budget`.'
+  'Create briefs only for selected domains; do not create files for skipped domains.'
+  'Expanded scout prose is optional'
+)
+for inv in "${scout_budget_invariants[@]}"; do
+  if grep -qF -- "$inv" "$route_discovery"; then
+    verbose_ok "adaptive scout-artifact invariant present: \"$inv\""
+  else
+    err "adaptive scout-artifact invariant missing from discovery route: \"$inv\""
+  fi
+done
+if grep -qF -- 'Write a short `not selected: <reason>` placeholder for skipped domains' "$route_discovery"; then
+  err "discovery route still requires placeholder files for skipped scout domains"
+else
+  verbose_ok "discovery route omits skipped-domain placeholder files"
+fi
+lifecycle_artifact_invariants=(
+  'Do not create `03b-verification.md` before Phase 4b starts.'
+  'On Phase 4b start, create it with `verification: in-progress`'
+)
+for inv in "${lifecycle_artifact_invariants[@]}"; do
+  if grep -qF -- "$inv" "$route_synthesis"; then
+    verbose_ok "lifecycle artifact invariant present: \"$inv\""
+  else
+    err "lifecycle artifact invariant missing from synthesis route: \"$inv\""
+  fi
+done
+for obsolete in \
+  'a placeholder for it already exists from session setup' \
+  'Before Phase 4b runs, `03b-verification.md` is the placeholder'; do
+  if grep -qF -- "$obsolete" "$route_discovery" "$route_synthesis"; then
+    err "runtime route still pre-creates an unused lifecycle placeholder: \"$obsolete\""
+  else
+    verbose_ok "runtime routes omit obsolete lifecycle placeholder: \"$obsolete\""
+  fi
+done
 
 # (4) Markdown fence nesting: the skill's value is dozens of hand-aligned fenced
 #     screens, and the goal-pack screens use 4-backtick wrappers around 3-backtick

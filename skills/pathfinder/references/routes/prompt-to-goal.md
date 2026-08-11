@@ -29,7 +29,7 @@ Reply 1 or 2, or paste the prompt you want turned into a goal.
 
 ### Targeted, prompt-anchored research
 
-Record the verbatim prompt and the routing decision in `00-session.md`. Then research only what the prompt implicates — do not run blind-discovery breadth, the five scouts, or Top-5 ranking:
+Record the verbatim prompt and the routing decision in `00-session.md`. Then research only what the prompt implicates — do not run blind-discovery breadth, the full-exploration scout pass, or Top-5 ranking:
 
 Before explicit Phase 7 execution approval, the prompt-to-goal route is static-inspection only. Do not import, compile, or execute repository code; run tests, builds, linters, package managers, or dependency probes; or invoke anything that can create caches or other non-Pathfinder files. Read tracked source, tests, manifests, and CI configuration to identify future proof commands, and label those commands `not run`. The full-plugin controller is the sole exception because it validates and writes only the already-ignored Pathfinder artifacts. A request to create a Goal is not consent to execute the future Goal's proof commands.
 

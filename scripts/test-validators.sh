@@ -240,6 +240,18 @@ R="$(newroot)"
 rewrite "$R/skills/pathfinder/references/routes/explore-drilldown.md" 's/None of these: describe your own [^ ]* the area you care about/None of these: the area you care about/'
 assert_catch "$R" "Explore level|universal escape|describe your own" "Explore-escape guard catches a level that dropped 'describe your own'"
 
+echo "== parser 7b: skipped scout domains do not create placeholder artifacts =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/references/routes/discovery.md" \
+  's/Create briefs only for selected domains; do not create files for skipped domains\./Write a short `not selected: <reason>` placeholder for skipped domains./'
+assert_catch "$R" "scout-artifact invariant|placeholder files for skipped scout" "scout-artifact guard catches skipped-domain placeholder regression"
+
+echo "== parser 7c: verification artifacts follow lifecycle state =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/references/routes/synthesis.md" \
+  's/Do not create `03b-verification\.md` before Phase 4b starts\./Create `03b-verification.md` before Phase 4b starts./'
+assert_catch "$R" "lifecycle artifact invariant|unused lifecycle placeholder" "lifecycle guard catches pre-created verification artifact regression"
+
 echo "== parser 8: intent/eligibility separation guard (C3) =="
 # Conflate item eligibility back into intent state in only the first definition;
 # the coherence guard must catch the missing execution_eligibility boundary.

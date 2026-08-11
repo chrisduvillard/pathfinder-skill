@@ -132,13 +132,13 @@ That `/goal` is **bounded, measurable, and self-proving** — paste it into Clau
 
 ## 📦 What you get
 
-Every work-producing run leaves a clean, resumable trail; routes that skip a phase write an explicit placeholder:
+Every work-producing run leaves a clean, resumable trail. Only phases the route actually uses are emitted; a short placeholder is reserved for an expected phase that started but was interrupted:
 
 ```text
 .agent-work/pathfinder/<date>-<task>/
 ├─ 00-session.md              repo root, branch, tooling, objective
 ├─ 01-blind-discovery.md      what the repo actually is
-├─ 02-scout-briefs/           located, evidence-graded findings per domain
+├─ 02-scout-briefs/           compact findings for selected domains only
 ├─ 03-synthesis.md            ranked next moves + risks
 ├─ 03b-verification.md        adversarial check of the Top 5 (grades, rejects, re-rank)
 ├─ 04-question-funnel.md      the choices put to you

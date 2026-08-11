@@ -383,7 +383,7 @@ Before saving, the Phase 6 recognition-first contract must show proof, protected
 
 ## Prompt-to-goal track (gap-driven clarifying funnel)
 
-This is the funnel for the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), used when the user supplies a prompt instead of asking Pathfinder to explore. It replaces the L0–L4 drill-down and does not run the five scouts or Top-5 ranking.
+This is the funnel for the prompt-to-goal track (see "Track B: Prompt-to-goal" in `SKILL.md`), used when the user supplies a prompt instead of asking Pathfinder to explore. It replaces the L0–L4 drill-down and does not run the full-exploration scout pass or Top-5 ranking.
 
 The `/goal` best-practices checklist (`goal-best-practices.md`) is the rubric. Targeted, prompt-anchored research fills every item it can; then ask only about the checklist items still missing or ambiguous: measurable end state, scope, proof/checks, constraints, non-goals, protected areas, stop bound. These are gap-driven questions — ask nothing the research already settled, and if the prompt is already well-formed, skip straight to the Phase 6 recognition-first contract.
 
