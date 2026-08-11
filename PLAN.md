@@ -1430,16 +1430,18 @@ Observable completion means:
 
 #### Sub-prompt K2.2 — GET-only API client boundary
 
-- [ ] `[writes code]` Add only the minimal versioned GitHub HTTP client/backend, credential-boundary policy, redaction tests, and operator configuration needed by K2.1; present the exact hostname, methods, endpoints, headers, and permission scopes before editing.
-- [ ] Enforce `api.github.com`, TLS, GET-only requests, fixed API version/Accept headers, bounded response sizes, bounded pagination, timeouts, retry limits for safe reads only, and redaction of authorization headers and response bodies from logs.
-- [ ] Keep the elevated evidence token in a process that cannot issue POST/PATCH/PUT/DELETE. Never pass it to implementation, tests, repository commands, publisher callbacks, or the later merge writer.
+- [x] `[writes code]` Add only the minimal versioned GitHub HTTP client/backend, credential-boundary policy, redaction tests, and operator configuration needed by K2.1; present the exact hostname, methods, endpoints, headers, and permission scopes before editing.
+- [x] Enforce `api.github.com`, TLS, GET-only requests, fixed API version/Accept headers, bounded response sizes, bounded pagination, timeouts, retry limits for safe reads only, and redaction of authorization headers and response bodies from logs.
+- [x] Keep the elevated evidence token in a process that cannot issue POST/PATCH/PUT/DELETE. Never pass it to implementation, tests, repository commands, publisher callbacks, or the later merge writer.
 - [ ] Positively record token/actor identity and whether bypass lists were visible. Elevated permission is not positive evidence by itself.
-- [ ] Imitate existing structured command/network boundary reporting and capability degradation; do not add a general-purpose GitHub client or shell out to repository-provided code.
-- [ ] Existing tests must pass unmodified. Use a local fake HTTP server or transport fixture; required CI must not contact GitHub.
-- [ ] No deletion is expected. Show zero callers before replacing a backend seam.
-- [ ] Expected diff: 220-340 lines. Split transport from credential policy if larger.
-- [ ] Append a `PROGRESS.md` line recording zero mutating HTTP methods and credential non-guarantees.
-- [ ] Stop if bypass visibility requires granting the observer mutation capability that the runtime cannot mechanically constrain to GET; keep merge unsupported for that host.
+- [x] Imitate existing structured command/network boundary reporting and capability degradation; do not add a general-purpose GitHub client or shell out to repository-provided code.
+- [x] Existing tests must pass unmodified. Use a local fake HTTP server or transport fixture; required CI must not contact GitHub.
+- [x] No deletion is expected. Show zero callers before replacing a backend seam.
+- [x] Expected diff: 220-340 lines. Split transport from credential policy if larger.
+- [x] Append a `PROGRESS.md` line recording zero mutating HTTP methods and credential non-guarantees.
+- [x] Stop if bypass visibility requires granting the observer mutation capability that the runtime cannot mechanically constrain to GET; keep merge unsupported for that host.
+
+**Implementation note (2026-08-11):** implemented an uncomposed standard-library REST boundary split into a 48-line read-only credential policy, 42-line fixed-host TLS transport, 80-line endpoint/query policy, and 311-line client. It fixes `api.github.com:443`, `GET`, media type, REST `2026-03-10`, user agent, 8 MiB responses, 30 pages, 10-second timeouts, one safe transient retry, two same-host redirects, duplicate-safe JSON, request-id/ETag audits, and typed auth/permission/404/rate/timeout/availability/malformed outcomes. Eleven fake-transport tests prove endpoint/query/redirect/size/page/retry bounds, response and credential redaction, exact version probing, zero mutating transport methods, no secret loader, and zero enabled production caller; full preflight passes with 258 tests. The operator contract requires direct secret injection into this dedicated process, an App JWT with no repository permissions, and an installation token declaring only the seven required read permissions; declarations do not prove actual token scope or identity. Official GitHub documentation confirms ordinary GraphQL queries require `POST`, so the GET-only runtime rejects `/graphql` and returns typed `api-unavailable` for review-thread/queue/cross-check evidence. Positive token/actor identity and complete bypass visibility therefore remain unchecked above, the K2.1 fixture observer remains the only complete backend, and live eligibility/merge stays unsupported.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 

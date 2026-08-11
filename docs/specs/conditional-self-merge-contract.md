@@ -1,6 +1,8 @@
 # Conditional self-merge security contract
 
-> Status: design ratified on 2026-08-11; implementation and enablement are not authorized.
+> Status: design ratified on 2026-08-11; inert evidence contracts, a fixture observer, and an
+> uncomposed GET-only REST transport exist. Live observation, eligibility, mutation, and
+> enablement are not authorized.
 
 ## Precedence and invariant
 
@@ -66,7 +68,7 @@ do not authenticate themselves and add no executable route.
 | Host-owned repository policy and current-run authorization | Trusted only after authentication, schema validation, identity/hash binding, and expiry checks. |
 | Existing mission, Goal Binding, authorization, diff, and PR identity | Canonical inputs to bind; they do not independently authorize merge. |
 | GitHub REST/GraphQL responses | Untrusted external data until complete, versioned where possible, normalized, cross-checked, and fresh. |
-| Evidence credential | Separate elevated reader whose runtime must mechanically allow only the required GET/GraphQL reads. |
+| Evidence credential | Separate elevated reader whose implemented runtime mechanically allows only allowlisted REST GETs. GitHub GraphQL evidence requires POST and therefore remains unavailable; missing GraphQL-only facts block. |
 | Merge credential | A repository-scoped GitHub App installation identity; user/PAT merge actors are unsupported initially. It cannot be an admin or bypass actor. |
 | Implementation/verification environment | Receives neither evidence nor merge credentials. |
 
@@ -125,6 +127,30 @@ For GraphQL, persist the exact query hash; absent fields and unknown enum values
 All list/connection evidence must prove pagination completion. `401`, `403`, ambiguous `404`,
 rate limit, timeout, `410`, malformed data, response truncation, or a missing permission/field returns
 a typed blocker; none is evidence of absence.
+
+### Implemented GET-only REST boundary
+
+The uncomposed evidence transport has one fixed network destination: TLS port 443 on
+`api.github.com`. It exposes only `GET`, rejects `/graphql` and non-evidence endpoint paths, and
+follows at most two redirects only when they remain HTTPS on that exact host. Every request fixes
+the media type, REST version, and Pathfinder user agent. Responses are limited to 8 MiB each and
+30 pages; duplicate JSON keys, unsafe pagination links, missing request ids, total-count drift,
+and byte/page ceilings fail closed. One retry is allowed only for timeout or transient server
+failure. Rate limits are never retried inside the freshness window.
+
+The dedicated host process must inject a credential directly into the GET-only boundary; there is
+no repository config, environment loader, CLI flag, logging hook, or general-purpose URL method.
+An installation credential must declare `read` for repository `administration`, `checks`,
+`contents`, `deployments`, `metadata`, `pull_requests`, and `statuses`; any declared write
+permission is rejected. A separately injected App JWT may read only App/installation identity and
+declares no repository permissions. Credential and response-body representations are redacted.
+
+These declarations do not authenticate the token's actual scope or prove its App/installation
+identity. A trusted issuance receipt plus positive App, installation, repository, actor, and bypass
+observations are still required before composition. GitHub's ordinary GraphQL queries use HTTP
+`POST`, so review threads, queue state, and any required GraphQL cross-check remain typed
+`api-unavailable` under this boundary. The system must not substitute UI text, omit those facts, or
+widen the transport to POST; conditional merge consequently remains unsupported for live use.
 
 ## Typed block and result contract
 
