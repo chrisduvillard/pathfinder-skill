@@ -1390,16 +1390,18 @@ Observable completion means:
 
 #### Sub-prompt K1.2 — evidence, intent, and result schemas
 
-- [ ] `[writes code]` Add only closed merge-evidence, merge-intent, and merge-result schemas plus focused fixtures/tests; present the identity-binding and replay invariants before editing.
-- [ ] Evidence must carry completeness/pagination markers, API version, observation window, repository/actor/PR identities, exact head/base SHAs, diff and policy hashes, classic protection, aggregate active rules, source rulesets, bypass visibility, effective reviews/threads, required checks/statuses, mergeability, and typed unsupported/unknown fields.
-- [ ] Intent must bind the evidence hash, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
-- [ ] Result must distinguish `merged`, `not-merged`, `reconcile-required`, `policy-blocked`, `auth-error`, `rate-limited`, `permission-missing`, and `api-unavailable`; `merged` requires exact result evidence rather than a message string.
-- [ ] Imitate `OperationJournal` write-once binding, but do not widen its existing action enums yet. A dedicated merge journal keeps an unreachable future writer separate from the local host action machine.
-- [ ] Existing contract tests must pass unmodified. Add result-without-intent, changed-head, changed-policy, changed-actor, expired-evidence, missing-page, unknown-enum, and fabricated-merged negatives.
-- [ ] No deletion is expected. Show zero-caller evidence before replacing any existing publication or operation schema.
-- [ ] Expected diff: 280-420 lines, split across evidence and journal commits if reviewability suffers.
-- [ ] Append a `PROGRESS.md` line recording schema ids/versions and zero remote writers.
-- [ ] Stop if a result cannot prove the exact intended PR/head/base and actor after response loss; retain `reconcile-required` as terminal human handoff.
+- [x] `[writes code]` Add only closed merge-evidence, merge-intent, and merge-result schemas plus focused fixtures/tests; present the identity-binding and replay invariants before editing.
+- [x] Evidence must carry completeness/pagination markers, API version, observation window, repository/actor/PR identities, exact head/base SHAs, diff and policy hashes, classic protection, aggregate active rules, source rulesets, bypass visibility, effective reviews/threads, required checks/statuses, mergeability, and typed unsupported/unknown fields.
+- [x] Intent must bind the evidence hash, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
+- [x] Result must distinguish `merged`, `not-merged`, `reconcile-required`, `policy-blocked`, `auth-error`, `rate-limited`, `permission-missing`, and `api-unavailable`; `merged` requires exact result evidence rather than a message string.
+- [x] Imitate `OperationJournal` write-once binding, but do not widen its existing action enums yet. A dedicated merge journal keeps an unreachable future writer separate from the local host action machine.
+- [x] Existing contract tests must pass unmodified. Add result-without-intent, changed-head, changed-policy, changed-actor, expired-evidence, missing-page, unknown-enum, and fabricated-merged negatives.
+- [x] No deletion is expected. Show zero-caller evidence before replacing any existing publication or operation schema.
+- [x] Expected diff: 280-420 lines, split across evidence and journal commits if reviewability suffers.
+- [x] Append a `PROGRESS.md` line recording schema ids/versions and zero remote writers.
+- [x] Stop if a result cannot prove the exact intended PR/head/base and actor after response loss; retain `reconcile-required` as terminal human handoff.
+
+**Implementation note (2026-08-11):** added closed v1 evidence, one-use intent, and terminal result schemas; a complete paired fixture with eight adversarial mutations; and seven focused shape/hash/freshness/replay tests. The 547-line schema/fixture/test slice exceeds the estimate because all ten paged surfaces, layered protection/rules/reviews/checks, exact actor/PR bindings, and structured merged proof remain explicit; it is split into evidence and journal commits for reviewability. Existing operation/publication schemas and action enums are byte-identical, production contains no caller or merge method, pending intent is terminal `reconcile-required`, and full preflight passes with 237 tests.
 
 **Phase verification:** invalid or incomplete authority/evidence cannot be represented as eligible, while all current local/publication schemas and callers are unchanged.
 
@@ -1620,4 +1622,4 @@ Observable completion means:
 
 ### Recommended first implementation slice
 
-**K0.1 and K1.1 are complete.** Execute **K1.2 only** next: define closed evidence, one-use intent, and result/reconciliation schemas without adding a network observer or writer. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
+**K0.1, K1.1, and K1.2 are complete.** Execute **K2.1 only** next: build a deterministic fixture-driven read-only observer/normalizer with no HTTP client or mutation method. Do not begin K4 or K5.2 without a new explicit security/enablement decision.

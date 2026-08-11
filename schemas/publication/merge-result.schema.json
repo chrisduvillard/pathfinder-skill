@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/merge-result.schema.json",
+  "title": "Pathfinder Terminal Merge Result",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "result_id", "operation_id", "intent_sha256", "outcome", "binding", "merge_proof", "completed_at", "result_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "result_id": {"type": "string", "pattern": "^merge_result_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "operation_id": {"type": "string", "pattern": "^merge_operation_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "intent_sha256": {"$ref": "#/$defs/sha256"},
+    "outcome": {"enum": ["merged", "not-merged", "reconcile-required", "policy-blocked", "auth-error", "rate-limited", "permission-missing", "api-unavailable"]},
+    "binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_sha256", "policy_sha256", "authorization_sha256", "repository", "pull_request", "actor", "merge_method"],
+      "properties": {
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}, "policy_sha256": {"$ref": "#/$defs/sha256"},
+        "authorization_sha256": {"$ref": "#/$defs/sha256"}, "repository": {"$ref": "#/$defs/repository"},
+        "pull_request": {"$ref": "#/$defs/pullRequest"}, "actor": {"$ref": "#/$defs/actor"},
+        "merge_method": {"const": "squash"}
+      }
+    },
+    "merge_proof": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/mergeProof"}]},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "result_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {"if": {"properties": {"outcome": {"const": "merged"}}, "required": ["outcome"]}, "then": {"properties": {"merge_proof": {"$ref": "#/$defs/mergeProof"}}}},
+    {"if": {"not": {"properties": {"outcome": {"const": "merged"}}, "required": ["outcome"]}}, "then": {"properties": {"merge_proof": {"type": "null"}}}}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "nodeId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+    "repository": {"type": "object", "additionalProperties": false, "required": ["id", "node_id"], "properties": {"id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"}}},
+    "pullRequest": {"type": "object", "additionalProperties": false, "required": ["id", "node_id", "number", "head_sha", "base_sha"], "properties": {"id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"}, "number": {"type": "integer", "minimum": 1}, "head_sha": {"$ref": "#/$defs/commit"}, "base_sha": {"$ref": "#/$defs/commit"}}},
+    "actor": {"type": "object", "additionalProperties": false, "required": ["app_id", "installation_id", "actor_id", "actor_node_id", "login"], "properties": {"app_id": {"type": "integer", "minimum": 1}, "installation_id": {"type": "integer", "minimum": 1}, "actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}}},
+    "mergeProof": {
+      "type": "object", "additionalProperties": false,
+      "required": ["proof_source", "repository_id", "pull_request_id", "pull_request_node_id", "pull_request_number", "head_sha", "base_sha_before", "merge_commit_sha", "merged_at", "merged_by"],
+      "properties": {
+        "proof_source": {"enum": ["response-and-reread", "reconciliation-reread"]},
+        "repository_id": {"type": "integer", "minimum": 1}, "pull_request_id": {"type": "integer", "minimum": 1},
+        "pull_request_node_id": {"$ref": "#/$defs/nodeId"}, "pull_request_number": {"type": "integer", "minimum": 1},
+        "head_sha": {"$ref": "#/$defs/commit"}, "base_sha_before": {"$ref": "#/$defs/commit"},
+        "merge_commit_sha": {"$ref": "#/$defs/commit"}, "merged_at": {"type": "string", "format": "date-time"},
+        "merged_by": {"type": "object", "additionalProperties": false, "required": ["actor_id", "actor_node_id", "login"], "properties": {"actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}}}
+      }
+    }
+  }
+}

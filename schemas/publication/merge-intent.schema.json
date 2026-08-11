@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/merge-intent.schema.json",
+  "title": "Pathfinder One-Use Merge Intent",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "bindings", "repository", "pull_request", "actor", "merge_method", "endpoint_class", "started_at", "intent_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "operation_id": {"type": "string", "pattern": "^merge_operation_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "evidence_sha256", "policy_id", "policy_sha256", "merge_authorization_id", "authorization_sha256", "mission_id", "binding_id", "mission_authorization_id"],
+      "properties": {
+        "evidence_id": {"type": "string", "pattern": "^merge_evidence_[a-z0-9][a-z0-9_-]{7,63}$"}, "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "policy_id": {"type": "string", "pattern": "^merge_policy_[a-z0-9][a-z0-9_-]{7,63}$"}, "policy_sha256": {"$ref": "#/$defs/sha256"},
+        "merge_authorization_id": {"type": "string", "pattern": "^merge_authorization_[a-z0-9][a-z0-9_-]{7,63}$"}, "authorization_sha256": {"$ref": "#/$defs/sha256"},
+        "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "mission_authorization_id": {"type": "string", "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"}
+      }
+    },
+    "repository": {"$ref": "#/$defs/repository"},
+    "pull_request": {"$ref": "#/$defs/pullRequest"},
+    "actor": {"$ref": "#/$defs/actor"},
+    "merge_method": {"const": "squash"},
+    "endpoint_class": {"const": "github-rest-synchronous-pull-merge"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "intent_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "nodeId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+    "repository": {"type": "object", "additionalProperties": false, "required": ["id", "node_id", "owner", "name", "base_branch"], "properties": {"id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"}, "owner": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"}, "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"}, "base_branch": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"}}},
+    "pullRequest": {"type": "object", "additionalProperties": false, "required": ["id", "node_id", "number", "head_sha", "base_sha"], "properties": {"id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"}, "number": {"type": "integer", "minimum": 1}, "head_sha": {"$ref": "#/$defs/commit"}, "base_sha": {"$ref": "#/$defs/commit"}}},
+    "actor": {"type": "object", "additionalProperties": false, "required": ["app_id", "installation_id", "actor_id", "actor_node_id", "login"], "properties": {"app_id": {"type": "integer", "minimum": 1}, "installation_id": {"type": "integer", "minimum": 1}, "actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}}}
+  }
+}
