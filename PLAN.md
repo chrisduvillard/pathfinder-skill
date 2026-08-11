@@ -183,7 +183,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 - [x] Add real JSON Schemas for candidates, verification, Goal Binding, runtime boundary, mission state, run log, final summary, charter, roadmap, and doctrine.
 - [x] Validate JSON with a real parser before schema checks; reject duplicate keys, unknown enum values, missing required fields, and malformed timestamps.
-- [ ] Make JSON the source of truth and render Markdown views from it, eliminating drift between human and machine artifacts.
+- [x] Make JSON the source of truth and render Markdown views from it, eliminating drift between human and machine artifacts.
 - [x] Give each mission, goal, attempt, worktree, branch, commit, and PR a stable identifier.
 - [x] Define an append-only event log and a compact current-state snapshot.
 - [x] Define allowed state transitions, including `planned`, `authorized`, `prepared`, `running`, `verifying`, `verified`, `committed`, `published`, `awaiting-review`, `merged`, `blocked`, and `abandoned`.
@@ -1188,15 +1188,15 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 
 #### Sub-prompt J5.2 — exact archive and host dogfood
 
-- [ ] `[writes code]` Change only replay fixtures and documentation if dogfood exposes a real contradiction; first run without editing.
-- [ ] Exercise prompt Goal generation, view tamper repair, mission-view refresh after a seeded crash, and legacy intent goal-only degradation from an isolated packaged install.
-- [ ] Imitate `scripts/package-smoke.sh` and existing sanitized replay format; never use a live repository, credentials, publication, or merge.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] Show zero-caller evidence before removing any compatibility route exposed by dogfood.
-- [ ] Expected diff: zero unless a focused replay/doc correction is required; any correction stays under 150 lines.
-- [ ] Verify with `bash scripts/check-all.sh .`, `bash scripts/package-smoke.sh . "" git`, hosted Linux/macOS/Windows preflight, CodeQL, and Dependency Review.
-- [ ] Append a line to `PROGRESS.md` recording exact commit, package result, host results, and non-guarantees.
-- [ ] Stop if dogfood changes canonical JSON after Markdown tampering or requires parsing a view; return to the owning phase.
+- [x] `[writes code]` Change only replay fixtures and documentation if dogfood exposes a real contradiction; first run without editing.
+- [x] Exercise prompt Goal generation, view tamper repair, mission-view refresh after a seeded crash, and legacy intent goal-only degradation from an isolated packaged install.
+- [x] Imitate `scripts/package-smoke.sh` and existing sanitized replay format; never use a live repository, credentials, publication, or merge.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] Show zero-caller evidence before removing any compatibility route exposed by dogfood.
+- [x] Expected diff: zero unless a focused replay/doc correction is required; any correction stays under 150 lines.
+- [x] Verify with `bash scripts/check-all.sh .`, `bash scripts/package-smoke.sh . "" git`, hosted Linux/macOS/Windows preflight, CodeQL, and Dependency Review.
+- [x] Append a line to `PROGRESS.md` recording exact commit, package result, host results, and non-guarantees.
+- [x] Stop if dogfood changes canonical JSON after Markdown tampering or requires parsing a view; return to the owning phase.
 
 **Phase verification:** full local and hosted checks pass, the exact archive repairs views from JSON, and the checklist item “Make JSON the source of truth and render Markdown views from it” can be checked without qualification.
 
