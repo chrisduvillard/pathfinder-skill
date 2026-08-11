@@ -291,7 +291,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 ### Implementation status note
 
-The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master item is deliberately deferred rather than implied complete: any separately reviewed self-merge design. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
+The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master item is deliberately deferred rather than implied complete: conditional self-merge support. A separately reviewed, design-only implementation plan now appears at the end of this document; it does not enable merge authority. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
 
 ## Next execution batch — close the real mission-runtime gap
 
@@ -1225,3 +1225,395 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 ### Recommended first implementation slice
 
 Execute **J0.2, J1.1, and J1.2 only** after this plan. They close the existing prompt-path authority inversion with no mission-state schema migration and create the renderer primitive the later phases reuse.
+
+## Next execution batch — design conditional self-merge without enabling it
+
+Date: 2026-08-11
+
+Repository baseline: `codex/v3-controller` at `66f1893`
+
+Plan size: **Large** — a merge is an irreversible remote write whose safety depends on trusted authorization, GitHub identity and permission evidence, layered branch rules, review state, check provenance, race handling, and crash reconciliation.
+
+> Design status only. Nothing in this section authorizes implementation, publication, or merge. The shipped publisher must continue to expose no merge operation until the separately reviewed phases below reach their explicit enablement gate.
+
+### Investigation findings
+
+1. `pathfinder_core/adapters/github.py` is deliberately an awaiting-review publisher. Its protocol has push, exact PR lookup/creation, and bounded check polling, but no merge method.
+2. `tests/adapters/test_github.py` records branch-protection, unprotected-branch, active-ruleset, and merge-conflict observations while asserting zero merge attempts. This is a useful negative baseline, not an eligibility implementation.
+3. The enabled host bridge is local-only. `pathfinder_core/mission_host.py`, the operator guide, autonomous route, compatibility matrix, and threat model all stop at a verified local `awaiting-review` branch with no push, PR, or merge action. Conditional merge therefore depends on a separately approved runnable publication boundary; it cannot be slipped into the local action sequence.
+4. The mission and final-summary schemas can represent `merged` for observation after a human action. That enum does not grant a transition path or merge authority.
+5. The authorization snapshot allows only `none`, `local-branch`, or `github-awaiting-review`. Ordinary autonomy, a Goal Binding, repository prose, or the existing publication target cannot authorize merge.
+6. The protected-surface registry is additive and fail-closed for undeclared changed files, but declared protected work can still execute. Initial conditional merge needs a stricter rule: any protected category blocks automatic merge even when it was declared for implementation.
+7. GitHub states that rulesets layer with classic branch protection and with one another; all matching rules aggregate and the most restrictive version wins. By contrast, only one classic branch-protection rule applies to a branch. See [About rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) and [Managing a branch protection rule](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule).
+8. GitHub's `GET /repos/{owner}/{repo}/rules/branches/{branch}` endpoint returns every active repository- and organization-level ruleset rule that applies to an exact branch, excluding disabled and evaluate-only rules. This aggregate endpoint should be authoritative for applicability; complete source rulesets are still needed for bypass visibility. See [REST API endpoints for rules](https://docs.github.com/en/rest/repos/rules).
+9. Classic branch protection exposes required checks, administrator enforcement, review counts, stale-review dismissal, code-owner review, last-push approval, PR bypass allowances, linear history, and conversation resolution. Reading it requires repository Administration read permission. See [REST API endpoints for protected branches](https://docs.github.com/en/rest/branches/branch-protection).
+10. Rulesets may name users, teams, repository roles, organization administrators, deploy keys, or integrations as `always`, `pull_request`, or `exempt` bypass actors. GitHub may omit `bypass_actors` unless the caller has write access to the ruleset. Missing bypass visibility is therefore `unknown`, never proof that the merge credential cannot bypass.
+11. Required check evidence is more subtle than one combined green status. Checks and commit statuses with the same required name must both pass; required checks apply to the latest head or GitHub's test merge commit, and a requirement may pin the expected GitHub App. See [Troubleshooting required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks).
+12. GitHub exposes PR mergeability, review decision, merge-state status, merge queue, latest reviews, and review-thread resolution through GraphQL. A complete observer must paginate reviews and threads rather than trust a truncated first page. See [GraphQL pull request objects](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/pulls).
+13. A ruleset can require a merge queue. That is a different asynchronous protocol whose checks run against merge groups; a direct merge implementation must stop and hand off when any applicable rule requires the queue.
+14. The synchronous merge endpoint accepts `sha`, which makes a changed PR head fail with `409`. It does not bind the base SHA, applicable ruleset versions, review set, or check snapshot atomically. See [Merge a pull request](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request).
+15. GitHub now also exposes asynchronous and stacked-PR merge endpoints. They add delayed execution and may merge multiple PRs. They are explicitly outside the first conditional-merge design.
+16. A lost merge response cannot be retried blindly. The executor must first reconcile the exact PR's merged state, merge commit, head/base identity, and merging actor; rollback is a new revert change with separate authority, not an automatic undo.
+
+### Goal restated
+
+Pathfinder may eventually perform the final merge action only after an independent human has approved a low-risk controller-created PR and a separate trusted policy plus fresh GitHub evidence proves that every hard floor and every applicable repository rule is satisfied.
+
+Observable completion means:
+
+- A normal `/pathfinder auto` or `/goal` run still ends at `awaiting-review` and has no merge credential.
+- Conditional merge requires both a host-owned repository policy and a fresh explicit run authorization that names merge authority; neither is sufficient alone.
+- A merge intent is bound to immutable repository, policy, mission, PR, base, head, actor, and method identities before the remote call.
+- The observer positively reads classic branch protection, all active layered rules, source rulesets, bypass actors, reviews, threads, checks, deployments, and PR state; missing, truncated, stale, unsupported, or contradictory evidence blocks.
+- The merge credential is proven unable to bypass review or ruleset requirements.
+- At least one independent human approval and one required, provenance-pinned successful check are GitHub-enforced hard floors that repository policy cannot weaken.
+- Any protected surface, fork PR, draft, stale branch, unresolved thread, requested change, unknown rule type, merge queue, hidden bypass actor, or ambiguous identity remains `awaiting-review` or becomes `blocked`.
+- The only first-release remote mutation is one synchronous merge request for one exact PR head SHA. There is no auto-merge, asynchronous merge, stacked merge, queue enrollment, branch deletion, comment, release, deployment, or automatic revert.
+- A response-loss replay either proves that the exact intended merge already occurred or returns `reconcile-required`; it never sends a second blind merge request.
+
+### Non-goals
+
+- Fully autonomous approval: the implementation agent, PR author, last pusher, merge app, and check app cannot satisfy the independent-human-review floor.
+- Turning repository-controlled files into authority. A checked-in policy file may document intent but cannot enable merge.
+- Self-merge for Goal packs, parallel missions, fork PRs, stacked PRs, protected-surface changes, releases, deployments, migrations, or destructive data operations.
+- Implementing GitHub merge queues, auto-merge, asynchronous merge, or another forge in the first release.
+- Claiming that a client-side snapshot is atomically bound to GitHub's control plane. Concurrent repository-admin policy mutation remains an explicit residual risk.
+- Automatically reverting a completed merge. Recovery is a separately authorized forward change.
+
+### Recommended locked decisions
+
+- [x] **M-01 — Two keys:** require a host-owned repository policy and a fresh current-run merge authorization. Persistent policy alone never activates a run; ordinary autonomy authority never implies merge.
+- [x] **M-02 — Trusted storage:** store policy and authorization outside the repository trust boundary. Bind both to immutable GitHub repository id/node id, owner/name, base branch, and policy hash.
+- [x] **M-03 — Explicit invocation:** require the user or trusted approval store to opt into merge for this run. Bare `/pathfinder auto`, `/goal`, `run all`, resolved intent, or a previous approval remains awaiting-review-only.
+- [x] **M-04 — One PR:** first release allows one Goal, one PR, and at most one merge intent. Goal packs and dependent/stacked PRs are ineligible.
+- [x] **M-05 — Human floor:** require at least one current effective approval from an eligible human who is not the PR author, implementation agent, last pusher, merge credential actor, or check credential actor. Repository policy may require more, never fewer.
+- [x] **M-06 — Check floor:** require at least one GitHub-enforced status check pinned by context and expected app id, plus success for every other applicable required check/status on the exact GitHub-required commit. Policy may add checks, never remove them.
+- [x] **M-07 — No bypass:** require complete classic PR-bypass and ruleset-bypass evidence and prove the exact merge actor matches none of it. Hidden bypass data, administrator ambiguity, repository-role ambiguity, or an exempt actor blocks.
+- [x] **M-08 — Layer all controls:** combine the one applicable classic protection response with the aggregate active ruleset response. Fetch every source ruleset, including organization parents, to validate enforcement, version, conditions, and bypass actors.
+- [x] **M-09 — Supported-rule allowlist:** recognize only explicitly implemented rule types and parameters. An unknown type, new enum, omitted field, incomplete page, evaluate/disabled contradiction, or unsupported requirement blocks rather than being ignored.
+- [x] **M-10 — Low-risk changes only:** any baseline or additive protected-surface match blocks conditional merge even if declared. Policy must also define allowed path patterns and strict file/line/size ceilings; it may only narrow the shipped baseline.
+- [x] **M-11 — Same repository:** require the PR head and base repositories to share the exact immutable repository identity. Forks, deleted refs, retargeted bases, and maintainer-edit ambiguity block.
+- [x] **M-12 — Fresh and current:** require an open non-draft PR, exact expected head and base SHAs, a clean/up-to-date merge state, no unresolved review thread, no active change request, and a short-lived evidence snapshot. Do not auto-update or rebase after human approval.
+- [x] **M-13 — Merge method:** support synchronous `squash` first, only when repository settings and every applicable rule allow it. Block rebase, direct merge commits, signed-commit requirements, and method ambiguity until each has dedicated reconciliation fixtures.
+- [x] **M-14 — Queue handoff:** any merge-queue rule or existing queue entry blocks the direct executor and reports a human/queue handoff. Do not enqueue automatically.
+- [x] **M-15 — External effects:** the trusted policy must explicitly acknowledge that merging triggers notifications and may trigger repository workflows. A Goal that itself performs release/deploy/data side effects remains ineligible regardless of that acknowledgement.
+- [x] **M-16 — Three credential boundaries:** implementation has no forge credential; a GET-only evidence process holds the minimum elevated visibility needed to inspect policy/bypass data; a separate merge process holds only the identity and write permissions needed for the exact merge endpoint. No token is reused across implementation and merge.
+- [x] **M-17 — Immediate execution only:** do not use GitHub auto-merge, async merge, or stacked merge. Their delayed/multi-PR behavior breaks the last-moment evidence binding and the one-PR budget.
+- [x] **M-18 — Journal before mutation:** persist a closed merge intent before the request. On ambiguity, reconcile via read-only endpoints; never infer success from an exception, timeout, or PR closure alone.
+- [x] **M-19 — Default off:** ship observation and eligibility before mutation. The merge executor remains unreachable by normal route and CLI paths until a separate security review and explicit enablement commit.
+- [x] **M-20 — No automatic rollback:** a successful merge is terminal. A revert requires a new Goal, new authority, new PR, and normal review; the controller must never push directly to the base branch.
+
+### Authority and evidence contract
+
+| Layer | Trusted input or positive evidence | Failure behavior |
+|---|---|---|
+| Repository identity | GitHub numeric id/node id, owner/name, visibility, default branch, archived/disabled state | Any mismatch, rename ambiguity, archive, or disabled repository blocks |
+| Repository policy | Host-owned, admin-authored, versioned, hash-bound, unexpired, explicitly enabled for one repository/base | Missing, repo-local-only, expired, widened, or hash drift blocks |
+| Run authorization | Fresh trusted user/host approval naming merge authority, one mission, one policy hash, one merge budget | Bare autonomy, inherited approval, pack authority, or expired authority blocks |
+| Goal and diff | Exact mission/binding/authorization ids, controller-created same-repo branch, changed-file list, diff hash, zero protected matches | Undeclared file, protected category, symlink/submodule/binary ambiguity, or limit excess blocks |
+| PR identity | Exact PR node id/number, open state, non-draft, author, head/base repo ids, refs, SHAs, merge method | Retarget, force-push, fork, deleted ref, draft, closed, or identity drift blocks |
+| Classic protection | Full protection response or explicit absence, including review/check/bypass/admin/conversation/linear settings | Missing permission, partial response, or unsupported setting blocks |
+| Rulesets | Fully paginated aggregate active rules plus every source ruleset including parents, enforcement and bypass visibility | Hidden actor, page truncation, source mismatch, unknown rule, queue, or unsupported rule blocks |
+| Reviews | GitHub review decision plus fully paginated effective reviews and threads bound to the current diff/head | No independent human approval, changes requested, stale approval, unresolved thread, or unknown eligibility blocks |
+| Checks | Required contexts and app ids from classic/rulesets plus check-runs and commit statuses on the required SHA/test merge commit | Missing, pending, duplicate-source ambiguity, unexpected app, stale SHA, or non-success blocks |
+| Merge actor | Exact user/app/installation identity and scoped permission inventory, compared with all bypass actors | Actor identity unknown, admin/role ambiguity, or any possible bypass blocks |
+| Freshness | API version, observed timestamps, response/request ids, ETags where available, base/head reread immediately before intent | Snapshot expiry, control-plane drift, or inconsistent reread blocks |
+| Merge result | Synchronous response or later exact observation of merged PR, method-compatible merge commit, actor, head/base, and timestamp | Lost or contradictory evidence returns `reconcile-required`; no retry or fabricated `merged` state |
+
+### Fail-closed acceptance matrix
+
+- [ ] Protected branch with classic checks/reviews, an active additive ruleset, complete non-bypass actor evidence, independent approval, and exact green checks can produce `eligible`; the observer still performs zero merge calls.
+- [ ] Classic protection absent and no active rulesets returns `policy-unenforced`, even when the host-owned policy says enabled.
+- [ ] Classic protection present but required review count is zero returns `independent-review-not-enforced`.
+- [ ] Active rulesets present but one source ruleset or organization parent cannot be read returns `ruleset-evidence-incomplete`.
+- [ ] The aggregate branch-rules endpoint and fetched source ruleset disagree on ids, enforcement, or rule parameters returns `ruleset-drift`.
+- [ ] Missing `bypass_actors`, classic PR bypass allowances, merge actor identity, or actor-role resolution returns `bypass-visibility-unknown`.
+- [ ] Merge actor is an admin, repository-role bypass member, named user/team/app, or exempt integration returns `merge-actor-can-bypass`.
+- [ ] A new/unknown active GitHub rule type or enum returns `unsupported-active-rule`.
+- [ ] A `merge_queue` rule or queue entry returns `merge-queue-required`; no enqueue or merge call occurs.
+- [ ] Required deployments, signed commits, code-scanning/quality gates, or another initially unsupported rule returns its typed unsupported reason rather than a generic success.
+- [ ] A required check with the correct name but wrong app id, stale SHA, pending duplicate status, or conflicting check-run/status returns `required-check-unproven`.
+- [ ] Review approval from the author, agent, last pusher, merge actor, bot, dismissed reviewer, stale commit, or ineligible association does not count.
+- [ ] A current `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, requested code-owner review, or unresolved non-outdated thread blocks.
+- [ ] Any protected path, workflow, CODEOWNERS/policy surface, schema/migration, dependency-policy exception, submodule, symlink, binary, or diff-limit excess blocks.
+- [ ] Base advancement, head force-push, PR retarget, changed diff hash, policy expiry, ruleset update, review dismissal, or evidence timeout between observation and intent blocks.
+- [ ] A `409` head mismatch, `405` unmergeable response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success.
+- [ ] A lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT.
+- [ ] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential.
+
+### Phase K0 — ratify a standalone security contract
+
+**Goal:** turn this plan into a concise normative contract that can be reviewed without changing executable authority.
+
+**Preconditions:** current publisher and host bridge still have no merge operation; draft PR remains awaiting-review-only; no live credentials.
+
+#### Sub-prompt K0.1 — contract and API evidence map
+
+- [ ] `[writes docs only]` Change only a new `docs/specs/conditional-self-merge-contract.md`, `PLAN.md`, and links from existing controller/threat documentation if essential; present a file plan before editing.
+- [ ] Copy the locked M-01 through M-20 decisions, trust boundaries, evidence table, residual race, typed block reasons, and explicit non-goals into the normative contract without weakening v1's existing no-self-merge language.
+- [ ] Cite only current official GitHub REST/GraphQL documentation for API semantics. Record the chosen API version and every endpoint/field required to distinguish rulesets, classic protection, reviews, threads, checks, bypass actors, actor identity, mergeability, and result reconciliation.
+- [ ] State that repository content may document policy but cannot grant authority; host-owned policy and fresh run authorization are mandatory.
+- [ ] Existing tests must pass unmodified; no behavior or schema change is allowed.
+- [ ] No deletion is expected. Show zero-caller evidence before removing or renaming any existing no-merge assertion.
+- [ ] Expected diff: 140-220 documentation lines. Split endpoint details into an appendix if the contract exceeds 300 lines.
+- [ ] Verify every current `no self-merge`, `never merges`, and `awaiting-review` statement remains true and the publisher protocol still has zero merge methods.
+- [ ] Append a `PROGRESS.md` line recording design ratification only; do not claim support or enablement.
+- [ ] Stop if any required bypass, review, check-provenance, or merge-result fact cannot be obtained positively from supported GitHub APIs; record it as a blocker rather than substituting GitHub UI text or inference.
+
+**Phase verification:** review can answer who grants merge authority, what exact evidence is required, which races remain, what blocks, and which code paths must stay incapable of merge.
+
+**Rollback:** remove the new contract link and retain the current v1 no-self-merge contract. No state or remote side effect exists.
+
+### Phase K1 — define closed, host-owned merge contracts
+
+**Goal:** make authority, evidence, intent, and result machine-validatable before any network writer exists.
+
+**Preconditions:** K0 approved; schema versioning and canonical JSON rules remain unchanged; repository-local policy is untrusted.
+
+#### Sub-prompt K1.1 — policy and authorization schemas
+
+- [ ] `[writes code]` Add only `schemas/publication/merge-policy.schema.json`, `schemas/publication/merge-authorization.schema.json`, focused fixtures/tests, and schema documentation; present the proposed fields and invariants before editing.
+- [ ] The policy must bind immutable repository id/node id, owner/name, base branch, allowed low-risk paths, additive deny paths/categories, strict diff ceilings, required check context+app identities, approval floor, one supported merge method, workflow-side-effect acknowledgement, issuer, issued/expiry times, and canonical hash.
+- [ ] The authorization must bind a fresh explicit trusted request, one mission/binding/authorization id set, one policy hash, one repository/base, one merge budget, issue/expiry times, and a source limited to current user or authenticated host approval storage.
+- [ ] Enforce non-configurable floors: one independent human approval, one pinned required check, one same-repository PR, zero protected categories, one merge, and no pack/parallel authority.
+- [ ] Do not add a merge publication target to the existing mission authorization or make the local controller accept publication.
+- [ ] Imitate existing Draft 2020-12 closed schemas, canonical hashes, stable id patterns, fixture validators, and additional-property rejection.
+- [ ] Existing schema tests must pass unmodified. Add negative fixtures for repo-local provenance, widened floor, wildcard identity, missing app id, missing expiry, pack authority, and hash drift.
+- [ ] No deletion is expected. Show all callers before changing an existing authorization enum or schema.
+- [ ] Expected diff: 220-320 lines. Split policy and authorization if either review exceeds 180 lines.
+- [ ] Append a `PROGRESS.md` line recording contracts only and the continued absence of a merge caller.
+- [ ] Stop if policy storage cannot be authenticated outside the repository or if the host cannot distinguish a current explicit merge request from ordinary autonomy.
+
+#### Sub-prompt K1.2 — evidence, intent, and result schemas
+
+- [ ] `[writes code]` Add only closed merge-evidence, merge-intent, and merge-result schemas plus focused fixtures/tests; present the identity-binding and replay invariants before editing.
+- [ ] Evidence must carry completeness/pagination markers, API version, observation window, repository/actor/PR identities, exact head/base SHAs, diff and policy hashes, classic protection, aggregate active rules, source rulesets, bypass visibility, effective reviews/threads, required checks/statuses, mergeability, and typed unsupported/unknown fields.
+- [ ] Intent must bind the evidence hash, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
+- [ ] Result must distinguish `merged`, `not-merged`, `reconcile-required`, `policy-blocked`, `auth-error`, `rate-limited`, `permission-missing`, and `api-unavailable`; `merged` requires exact result evidence rather than a message string.
+- [ ] Imitate `OperationJournal` write-once binding, but do not widen its existing action enums yet. A dedicated merge journal keeps an unreachable future writer separate from the local host action machine.
+- [ ] Existing contract tests must pass unmodified. Add result-without-intent, changed-head, changed-policy, changed-actor, expired-evidence, missing-page, unknown-enum, and fabricated-merged negatives.
+- [ ] No deletion is expected. Show zero-caller evidence before replacing any existing publication or operation schema.
+- [ ] Expected diff: 280-420 lines, split across evidence and journal commits if reviewability suffers.
+- [ ] Append a `PROGRESS.md` line recording schema ids/versions and zero remote writers.
+- [ ] Stop if a result cannot prove the exact intended PR/head/base and actor after response loss; retain `reconcile-required` as terminal human handoff.
+
+**Phase verification:** invalid or incomplete authority/evidence cannot be represented as eligible, while all current local/publication schemas and callers are unchanged.
+
+**Rollback:** remove the unused publication schemas/fixtures. Existing mission state needs no migration because no enum or transition changed.
+
+### Phase K2 — build a read-only, complete GitHub observer
+
+**Goal:** collect normalized, fixture-backed evidence with zero mutation methods and explicit permission/completeness failures.
+
+**Preconditions:** K1 schemas green; endpoint/API version map ratified; no merge writer or live production credential.
+
+#### Sub-prompt K2.1 — fixture-driven observer and normalization
+
+- [ ] `[writes code]` Add a separate `pathfinder_core/adapters/github_merge_observer.py`, focused tests/fixtures, and no changes to `GitHubPublisher`; present the backend protocol and endpoint-to-evidence map before editing.
+- [ ] Expose read methods only for repository and credential actor identity, exact PR, base/head refs, changed files, classic protection, aggregate active branch rules, full source rulesets with parents/bypass actors, reviews, requested reviewers, review threads, checks, commit statuses, deployments, repository merge settings, and merged-state reconciliation.
+- [ ] Normalize response shapes into the closed evidence schema. Preserve ids, source levels, app identities, rule parameters, pagination totals/cursors, timestamps, and unknown fields needed to fail closed.
+- [ ] Treat 401, 403, 404, rate limit, timeout, malformed data, pagination ceiling, and missing bypass visibility as distinct typed evidence outcomes. A 404 is not synonymous with "unprotected" unless endpoint, repository identity, permission, and companion rule evidence prove that interpretation.
+- [ ] Imitate the current adapter's typed auth/rate/permission states and deterministic fixture backends; do not perform live calls in required tests.
+- [ ] Existing publisher tests must pass unmodified and continue asserting zero merge attempts.
+- [ ] No deletion is expected. Show all adapter callers before moving any existing method or state enum.
+- [ ] Expected diff: 300-450 lines per observer/fixture slice; split identity, policy, and PR/check normalization if larger.
+- [ ] Append a `PROGRESS.md` line listing supported evidence families and remaining unsupported rules.
+- [ ] Stop when an endpoint is not fully pageable, actor identity is ambiguous, a parent ruleset cannot be attributed, or the API omits a field required by the contract; return typed unknown evidence.
+
+#### Sub-prompt K2.2 — GET-only API client boundary
+
+- [ ] `[writes code]` Add only the minimal versioned GitHub HTTP client/backend, credential-boundary policy, redaction tests, and operator configuration needed by K2.1; present the exact hostname, methods, endpoints, headers, and permission scopes before editing.
+- [ ] Enforce `api.github.com`, TLS, GET-only requests, fixed API version/Accept headers, bounded response sizes, bounded pagination, timeouts, retry limits for safe reads only, and redaction of authorization headers and response bodies from logs.
+- [ ] Keep the elevated evidence token in a process that cannot issue POST/PATCH/PUT/DELETE. Never pass it to implementation, tests, repository commands, publisher callbacks, or the later merge writer.
+- [ ] Positively record token/actor identity and whether bypass lists were visible. Elevated permission is not positive evidence by itself.
+- [ ] Imitate existing structured command/network boundary reporting and capability degradation; do not add a general-purpose GitHub client or shell out to repository-provided code.
+- [ ] Existing tests must pass unmodified. Use a local fake HTTP server or transport fixture; required CI must not contact GitHub.
+- [ ] No deletion is expected. Show zero callers before replacing a backend seam.
+- [ ] Expected diff: 220-340 lines. Split transport from credential policy if larger.
+- [ ] Append a `PROGRESS.md` line recording zero mutating HTTP methods and credential non-guarantees.
+- [ ] Stop if bypass visibility requires granting the observer mutation capability that the runtime cannot mechanically constrain to GET; keep merge unsupported for that host.
+
+**Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
+
+**Rollback:** remove the unused observer/client. Existing awaiting-review publication remains unchanged and credentials were never exposed to implementation.
+
+### Phase K3 — implement a pure eligibility decision
+
+**Goal:** produce an auditable typed verdict from trusted contracts and evidence without network or mutation access.
+
+**Preconditions:** K2 normalization complete; all M decisions represented in schemas; protected registry and canonical diff evidence available.
+
+#### Sub-prompt K3.1 — policy lattice and hard floors
+
+- [ ] `[writes code]` Add only `pathfinder_core/merge_policy.py`, focused unit/property-style fixtures, and typed verdict documentation; present precedence and every deny code before editing.
+- [ ] Evaluate shipped hard floors, then host policy, then the most restrictive classic/ruleset combination. Repository settings may narrow but can never cancel a shipped floor or host-policy restriction.
+- [ ] Require exact identity/hash/time bindings, fully complete evidence, same-repository PR, open/non-draft/current branch, zero protected matches, diff ceilings, supported squash method, independent current human review, clean review decision/threads, required pinned checks, non-bypass actor, clean/up-to-date merge state, and an unexpired observation window.
+- [ ] Count the latest effective review per human only. Exclude author, implementation agent, last pusher, merge/check actors, bots, dismissed/stale reviews, and unknown associations. Require the greater of shipped, host-policy, classic, and ruleset approval counts.
+- [ ] Union required check identities across classic protection, all rulesets, and host policy. Require both a status and check run when GitHub reports both under a required name; validate expected app id and the exact GitHub-required SHA.
+- [ ] Block all unknown or initially unsupported active rule types, including merge queue, required deployments, required signatures, code scanning/quality/coverage, file restrictions, and metadata rules until dedicated semantics and fixtures are added.
+- [ ] Imitate `ExecutionPolicy` and `ProtectedSurfaceRegistry`: closed inputs, explicit errors, additive restrictions, no prose inference, and deterministic results.
+- [ ] Existing tests must pass unmodified. Add an adversarial matrix covering every fail-closed acceptance item above and pairwise classic/ruleset conflicts.
+- [ ] No deletion is expected. Show zero-caller evidence before consolidating existing publication states.
+- [ ] Expected diff: 300-450 lines, with data fixtures separate from decision logic. Split checks/reviews from rule layering if larger.
+- [ ] Append a `PROGRESS.md` line recording supported rules, all typed blockers, and zero merge capability.
+- [ ] Stop if eligibility needs a UI-only GitHub fact, repository prose, model judgment, or a permission/bypass inference; return an explicit unsupported/unknown verdict.
+
+#### Sub-prompt K3.2 — freshness and drift re-evaluation
+
+- [ ] `[writes code]` Change only the pure evaluator, evidence snapshot helpers, and focused tests; present the time/reread algorithm before editing.
+- [ ] Bind the snapshot to observed start/end times and a hard maximum age of 60 seconds; allow host policy to shorten but not lengthen it.
+- [ ] Require immediate rereads of repository, actor, PR head/base, policy/ruleset version identifiers, review decision, and check rollup before a future intent can be issued. Any mismatch requires a complete new snapshot, not selective patching.
+- [ ] Record that GitHub offers no atomic policy-snapshot precondition on the merge call. Treat a concurrent trusted-admin control-plane mutation after the final reread as a documented residual risk, not as something the client has solved.
+- [ ] Existing tests must pass unmodified. Use a fake clock and fixtures for expiry at the boundary, base advance, force-push, ruleset update, review dismissal, check rerun, actor rotation, and policy hash drift.
+- [ ] No deletion is expected. Expected diff: 100-180 lines.
+- [ ] Append a `PROGRESS.md` line recording the residual TOCTOU non-guarantee.
+- [ ] Stop if implementation attempts to cache or selectively reuse earlier green evidence after any identity/control-plane drift.
+
+**Phase verification:** a pure process can explain exactly why a PR is eligible or blocked, and exhaustive negative fixtures prove it cannot merge or perform network access.
+
+**Rollback:** remove the unused evaluator. No schema migration or external state exists.
+
+### Phase K4 — add a crash-safe merge primitive, unreachable by default
+
+**Goal:** implement one exact synchronous merge operation behind a dedicated boundary without routing any normal user flow to it.
+
+**Preconditions:** K0-K3 independently security-reviewed; runnable awaiting-review publication exists separately; exact PR identity is persisted; no merge queue or unsupported active rule.
+
+#### Sub-prompt K4.1 — dedicated merge credential and journal
+
+- [ ] `[writes code]` Add only a separate merge executor module/process, dedicated journal implementation using K1 schemas, focused fixtures, and credential policy; present the state machine and credential scopes before editing.
+- [ ] The executor accepts only schema-valid policy, authorization, fresh eligible evidence, and merge intent inputs. It cannot discover work, update a Goal, push, open/edit/comment on a PR, change protection/rulesets, delete a branch, release, deploy, or invoke repository code.
+- [ ] Restrict the merge token to the one repository and permissions needed for reading the exact PR and writing contents through the merge endpoint. Bind and compare its exact actor/app/installation identity with observer evidence and every bypass list.
+- [ ] Persist the write-once intent before network mutation. An intent with no terminal result is `reconcile-required`; it is never automatically replayed.
+- [ ] Imitate `OperationJournal` atomic write-once behavior and binding checks, but keep its namespace/action enums separate from the local mission journal until composition is explicitly approved.
+- [ ] Existing operation/publication tests must pass unmodified and retain zero merge calls.
+- [ ] No deletion is expected. Show zero callers for the new executor before and after this phase.
+- [ ] Expected diff: 220-340 lines. Split credential policy from journaling if larger.
+- [ ] Append a `PROGRESS.md` line recording that the primitive is unreachable/default-off.
+- [ ] Stop if the merge token is also available to implementation, observer, repository commands, or ordinary publication, or if its actor may bypass a rule.
+
+#### Sub-prompt K4.2 — exact synchronous request and reconciliation
+
+- [ ] `[writes code]` Change only the unreachable executor/backend protocol and fixture tests; present the request, response, crash points, and reconciliation table before editing.
+- [ ] Permit one `PUT /repos/{owner}/{repo}/pulls/{number}/merge` with exact `sha` and `merge_method: squash` only. Reject missing SHA, default method, rebase, merge commit, async, stacked, auto-merge, or queue endpoints.
+- [ ] Re-read and re-evaluate fresh evidence immediately before issuing the intent; after intent persistence, send at most one request.
+- [ ] Record success only when the response says merged and exact follow-up observation confirms repository/PR/head/base, method-compatible merge commit, merging actor, and time. Do not trust the response message string.
+- [ ] On timeout/connection loss, read the exact PR/merged endpoint once through the read-only boundary. Exact proof records the result; non-merged, closed-without-merge, changed identity, or unavailable evidence returns `reconcile-required` and sends no second PUT.
+- [ ] Map 401/403/404/405/409/422, rate limits, malformed success, and already-merged responses to typed results without retrying mutation.
+- [ ] Existing tests must pass unmodified. Add crashes before intent, after intent, before send, after remote side effect/before response, after response/before result, and after result; assert one or zero merge calls as appropriate.
+- [ ] No deletion is expected. Expected diff: 180-280 lines.
+- [ ] Append a `PROGRESS.md` line recording fixture call counts and the absence of a normal caller.
+- [ ] Stop if response-loss reconciliation cannot attribute the exact merge or if any path retries a pending intent.
+
+**Phase verification:** the primitive is internally crash-safe and adversarially tested, but repository search proves no CLI, route, publisher, mission, or host bridge can call it.
+
+**Rollback:** remove the unreachable primitive and journal records from test fixtures. If a future live test merged a disposable PR, preserve the audit record; never rewrite base history.
+
+### Phase K5 — compose an explicit, default-off conditional merge path
+
+**Goal:** expose the primitive only through a separately approved post-publication controller whose default remains observation-only.
+
+**Preconditions:** K4 green and independently reviewed; awaiting-review GitHub publication is itself runnable, idempotent, and isolated; operator has installed trusted policy and credential boundaries; disposable-repository live rehearsal complete.
+
+#### Sub-prompt K5.1 — read-only status and dry-run composition
+
+- [ ] `[writes code]` Add only a `merge status`/`merge evaluate` surface, composition state, operator docs, and focused tests; present the call graph before editing.
+- [ ] Default output is a typed eligibility/block report. It may collect evidence but cannot create an intent or load the merge token.
+- [ ] Keep normal `/goal`, `/pathfinder`, `/pathfinder auto`, mission host, Goal packs, publisher, and resume behavior unchanged. No automatic route escalation may call merge evaluation or execution.
+- [ ] Require exact persisted mission/PR metadata from the separately authorized publisher; never discover an arbitrary open PR by title, branch prefix alone, or latest timestamp.
+- [ ] Imitate concise controller status and structured `--json` output; rendered Markdown remains a view of canonical JSON.
+- [ ] Existing tests must pass unmodified. Add call-graph/behavior guards proving default routes and package installs load no merge credential and issue zero merge requests.
+- [ ] No deletion is expected. Show zero callers before adding the dry-run caller.
+- [ ] Expected diff: 180-280 lines.
+- [ ] Append a `PROGRESS.md` line recording dry-run-only composition.
+- [ ] Stop if awaiting-review publication lacks persisted exact PR identity or if reading merge status would implicitly authorize execution.
+
+#### Sub-prompt K5.2 — separately approved execution gate
+
+- [ ] `[writes code; separately approved enablement]` Change only the explicit merge execution command/controller, authorization loader, package/docs mirrors, and focused tests; present the final call graph and human approval evidence before editing.
+- [ ] Require an authenticated host-owned policy, fresh merge-enabled run authorization, exact mission/PR binding, one remaining merge budget, fresh eligible evidence, and explicit execution command. Absence of any key returns awaiting-review without loading the writer credential.
+- [ ] Make the feature disabled in shipped defaults. Enabling it requires an operator-owned setting outside the repository plus the current run authorization; repository code and the PR diff cannot toggle it.
+- [ ] Advance canonical state to `merged` only after K4 result proof. Preserve `awaiting-review`, `blocked`, or `reconcile-required` otherwise; never report merged from a closed PR alone.
+- [ ] Do not delete the head branch, comment, release, deploy, auto-revert, or activate another Goal after merge.
+- [ ] Existing tests must pass unmodified. Add missing-key, expired-key, wrong-repo, wrong-policy, second-call, pending-intent, response-loss, ordinary-auto, pack, and protected-diff negatives.
+- [ ] No deletion is expected. Show the exact new caller list; it must contain only the explicit controller path.
+- [ ] Expected diff: 220-340 lines. Split state projection/docs from execution if larger.
+- [ ] Append a `PROGRESS.md` line recording the enablement decision, call graph, and review reference.
+- [ ] Stop without implementation unless a human security review explicitly approves this sub-prompt after K0-K5.1 evidence. Approval to implement earlier phases does not authorize this gate.
+
+**Phase verification:** default installs remain awaiting-review-only; an explicitly configured test host can execute exactly one eligible disposable PR merge; all ordinary and missing-evidence paths issue zero calls.
+
+**Rollback:** disable the host-owned feature flag and revoke the merge credential. Preserve journals and merged observations. Do not attempt history rewrite or automatic revert.
+
+### Phase K6 — adversarial verification, packaging, and operational recovery
+
+**Goal:** prove the exact shipped artifact keeps merge authority narrow and fails safely across platforms, hosts, retries, and GitHub policy variants.
+
+**Preconditions:** K5 explicitly approved; all deterministic suites green; dedicated disposable GitHub repository available for optional live rehearsal only.
+
+#### Sub-prompt K6.1 — deterministic attack and regression suite
+
+- [ ] `[writes code]` Change only fixtures/evals, validation scripts, coverage/threat/operator documentation, and CI wiring; present the scenario matrix before editing.
+- [ ] Cover classic-only, ruleset-only, layered/more-restrictive, organization-parent, hidden-bypass, admin/role/app bypass, rule drift, review drift, check-source collision, required merge commit, fork, protected diff, queue, signed commits, deployment, unknown rule, API-version change, and every crash boundary.
+- [ ] Seed polarity tests that fail if `default off`, independent human review, pinned checks, same-repository, zero protected surfaces, no bypass, synchronous SHA binding, no retry, or no normal-route caller is weakened.
+- [ ] Imitate the existing behavioral invariant, replay, package smoke, and coverage-matrix conventions. Never put live credentials in CI fixtures or logs.
+- [ ] Existing tests must pass unmodified. No deletion is expected; show zero-caller evidence before removing any no-merge fixture.
+- [ ] Expected diff: 300-450 lines split by contracts, adapter, evaluator, executor, and behavior guards.
+- [ ] Verify focused tests, full `scripts/check-all.sh`, exact-archive package smoke, credential-free Codex/Claude install/load smoke, ShellCheck, CodeQL, Dependency Review, and hosted Ubuntu/macOS/Windows jobs.
+- [ ] Append a `PROGRESS.md` line with exact commit/archive ids and zero-credential hosted results.
+- [ ] Stop if a fixture can reach the merge backend without first producing valid policy, authorization, evidence, intent, and one-use budget records.
+
+#### Sub-prompt K6.2 — optional disposable live rehearsal and recovery guide
+
+- [ ] `[external mutation; separately approved]` Use only a dedicated disposable GitHub repository with no deployment/release hooks, test credentials, and a test PR created for this rehearsal; present exact targets and cleanup before acting.
+- [ ] Exercise one blocked PR for each visible GitHub rule family and at most one eligible squash merge. Capture sanitized endpoint/status evidence, never tokens or private response bodies.
+- [ ] Simulate a lost client response only through a controllable proxy/transport; verify read-only reconciliation and zero second merge call.
+- [ ] Do not point the rehearsal at Pathfinder, a production repository, an organization-wide ruleset, a fork network, or a branch with real release/deployment effects.
+- [ ] Existing deterministic tests remain the required gate; live rehearsal is bounded/manual and must not become flaky required CI.
+- [ ] Document operator actions for awaiting-review, policy blocked, permission missing, rate limited, reconcile required, token revocation, feature disablement, and separately authorized revert PR creation.
+- [ ] Expected repository diff: documentation/sanitized fixtures only, under 200 lines. No automatic deletion; explicitly retire test credentials after evidence capture.
+- [ ] Append a `PROGRESS.md` line naming only the disposable repository class, outcome, and sanitization—not secrets or private ids.
+- [ ] Stop if the target cannot be proven disposable or if any workflow can deploy, release, mutate data, notify real users, or affect another repository.
+
+**Phase verification:** exact packages preserve default-off behavior, deterministic attack cases stay green on all hosts, and a bounded disposable rehearsal confirms GitHub enforcement/reconciliation assumptions without production impact.
+
+**Rollback:** revoke/rotate test and merge credentials, disable the host-owned gate, archive the disposable repository if desired, and preserve audit records. Existing merges remain forward-only history.
+
+### What could go wrong
+
+1. **The bot relies on GitHub to block it while holding bypass power.** Prevent this with exact actor identity, complete bypass evidence, a credential that is not an admin/bypass actor, and a hard block when visibility is incomplete.
+2. **The evaluator mistakes one ruleset for the effective policy.** Use the aggregate exact-branch endpoint, fetch every repository/organization source, layer classic protection, and block on pagination or source drift.
+3. **A green check is forged or belongs to the wrong commit/app.** Union required contexts, pin expected app identities, inspect both check-runs and commit statuses, and bind them to GitHub's required latest head/test merge commit.
+4. **Approval becomes stale after a push or base change.** Require current effective reviews, last-push independence, a clean/up-to-date base, immediate reread, and no automatic update/rebase after review.
+5. **Repository content grants itself merge power.** Keep enablement, policy, approval, and credentials outside the repository; categorically block changes to protected/policy/CI/CODEOWNERS surfaces.
+6. **A timeout causes a duplicate or misattributed merge.** Journal intent first, send one SHA-bound request, and require exact read-only reconciliation before recording `merged`.
+7. **The feature quietly spreads into normal autonomy.** Keep a separate module, credential, journal, command, authorization type, package guard, and explicit zero-caller tests for ordinary routes.
+8. **A merge triggers deployment or another irreversible workflow.** Require explicit admin acknowledgement for ordinary merge-triggered workflows while continuing to block any Goal or repository whose merge path has release, deploy, data, or real-world side effects.
+9. **A repository admin weakens rules during the final race window.** GitHub does not bind the full policy snapshot to the merge request. Minimize the window, reread immediately, require a non-bypass actor, audit ids/times, and state this trusted-control-plane residual risk honestly.
+
+### Where confidence is lowest
+
+- GitHub's bypass-actor visibility can require elevated ruleset access. Some hosts may be unable to provide that visibility through a mechanically GET-only process; those hosts must remain awaiting-review-only.
+- GitHub policy and review/check state cannot all be atomically preconditioned on the synchronous merge call. Only the head SHA is server-bound by the request; the remaining race assumes trusted repository administrators do not mutate controls concurrently.
+- Required-check selection can target a test merge commit rather than the head and can combine check-runs with commit statuses. Fixture research must match current GitHub behavior before the evaluator recognizes this as supported.
+- CODEOWNERS and eligible-reviewer semantics are best treated as GitHub-enforced facts plus full review evidence, not reimplemented from a possibly changed repository file. The exact positive API proof needs disposable live rehearsal.
+- Signed commits, required deployments, code scanning/quality/coverage, merge queues, and rebase reconciliation each deserve separate designs. Blocking them initially is safer than partially supporting them.
+
+### What not to do
+
+- [ ] Do not check the remaining master item merely because this design exists; support requires K0-K6 evidence and the separately approved execution gate.
+- [ ] Do not add `merge()` to `GitHubPublisher` or a merge action to the local mission host as the first implementation step.
+- [ ] Do not let a checked-in YAML/JSON/Markdown file, prior approval, resolved intent, or ordinary Goal grant merge authority.
+- [ ] Do not treat branch `protected: true`, a green combined status, `mergeable: true`, or GitHub's merge button state as sufficient evidence.
+- [ ] Do not interpret 404/empty arrays/omitted bypass actors as absence of protection or bypass.
+- [ ] Do not count bot/self/stale/dismissed/author/last-pusher approval toward the human floor.
+- [ ] Do not allow protected surfaces, packs, forks, stacks, queues, releases, deployments, migrations, destructive changes, or unknown active rules in the first release.
+- [ ] Do not use auto-merge, asynchronous merge, stacked merge, direct pushes to the base, branch deletion, or automatic revert.
+- [ ] Do not retry a pending merge intent or fabricate `merged` from PR closure, an exception message, or a missing PR.
+- [ ] Do not expose observer/merge credentials to implementation, repository commands, test subprocesses, logs, or one another.
+- [ ] Do not claim the client has eliminated GitHub control-plane TOCTOU; document the residual administrator race.
+- [ ] Do not run live merge tests against this repository or any non-disposable codebase.
+
+### Recommended first implementation slice
+
+Execute **K0.1 only** after this plan is reviewed. It produces a standalone security/API contract while preserving every existing zero-merge invariant. K1-K3 may follow as schema, observation, and dry-run eligibility work after that contract is approved. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
