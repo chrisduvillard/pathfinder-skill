@@ -4,11 +4,11 @@ title: Pathfinder runtime trust boundary
 description: Autonomous work is allowed only when contracts, host enforcement, Goal identity, receipts, and zero-publication limits are all explicit.
 tags: [pathfinder, security, trust-boundary, autonomy]
 status: stable
-generated: { by: codex/gpt-5, at: "2026-08-11T20:01:42Z" }
+generated: { by: codex/gpt-5, at: "2026-08-11T20:29:00Z" }
 stale_after: "2026-11-09"
 sources:
   - id: threat-model
-    resource: https://github.com/chrisduvillard/pathfinder-skill/blob/26e7912ffcf690ef3f956fab7a098bbaffefddf0/docs/threat-model.md
+    resource: ../../docs/threat-model.md
     title: Pathfinder threat model
     author: human:chris-duvillard
     last_modified: "2026-08-11"
@@ -44,7 +44,7 @@ The controller does not independently observe the host sandbox, commands, model 
 
 # Execution Boundary
 
-Eligible unattended execution requires enforced filesystem and process boundaries, isolated credentials, allowlisted repository-code execution, an enforced tool allowlist, pre-execution consent, and denied or restricted network access. Shell interpreters, shell metacharacters, sensitive environment names, credential paths, and destructive or external action markers are rejected by policy.
+Eligible unattended execution requires enforced filesystem and process boundaries, isolated credentials, allowlisted repository-code execution, an enforced tool allowlist, pre-execution consent, and denied or restricted network access. For separately controller-owned commands, `ExecutionPolicy` rejects shell interpreters, shell metacharacters, sensitive environment names, credential paths, and destructive or external action markers. The enabled host bridge carries no argv: its attested host must enforce the equivalent structured-command boundary and return truthful receipts.
 
 # Failure Behavior
 
