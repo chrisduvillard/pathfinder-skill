@@ -40,3 +40,7 @@ The local bridge may run only one existing Goal sequentially through an attested
 ## Out of scope for v1
 
 Publication, self-merge, parallel Goals, autonomous opportunity generation, non-Git autonomous commits, release automation by missions, and formal verification of host/model truthfulness are not supported by the local bridge.
+
+The [conditional self-merge security contract](specs/conditional-self-merge-contract.md) is a
+future design and grants no v1 authority. It preserves the enabled bridge's zero-publication and
+zero-merge boundary.

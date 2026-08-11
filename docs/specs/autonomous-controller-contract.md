@@ -25,6 +25,10 @@ state transitions, Git isolation, execution eligibility, and publication gates.
 | D-07 | Concurrency | Exactly one Goal and one attempt execute at a time. |
 | D-08 | Distribution | Stable releases use immutable refs; rolling `main` is an explicitly labeled edge channel. |
 
+Future conditional merge remains design-only and does not alter D-05. Its separately reviewed
+authority and evidence requirements are recorded in the
+[conditional self-merge security contract](conditional-self-merge-contract.md).
+
 ## Goals
 
 1. Run one explicitly authorized Goal through a resumable, auditable state machine.

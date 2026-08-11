@@ -1349,16 +1349,18 @@ Observable completion means:
 
 #### Sub-prompt K0.1 — contract and API evidence map
 
-- [ ] `[writes docs only]` Change only a new `docs/specs/conditional-self-merge-contract.md`, `PLAN.md`, and links from existing controller/threat documentation if essential; present a file plan before editing.
-- [ ] Copy the locked M-01 through M-20 decisions, trust boundaries, evidence table, residual race, typed block reasons, and explicit non-goals into the normative contract without weakening v1's existing no-self-merge language.
-- [ ] Cite only current official GitHub REST/GraphQL documentation for API semantics. Record the chosen API version and every endpoint/field required to distinguish rulesets, classic protection, reviews, threads, checks, bypass actors, actor identity, mergeability, and result reconciliation.
-- [ ] State that repository content may document policy but cannot grant authority; host-owned policy and fresh run authorization are mandatory.
-- [ ] Existing tests must pass unmodified; no behavior or schema change is allowed.
-- [ ] No deletion is expected. Show zero-caller evidence before removing or renaming any existing no-merge assertion.
-- [ ] Expected diff: 140-220 documentation lines. Split endpoint details into an appendix if the contract exceeds 300 lines.
-- [ ] Verify every current `no self-merge`, `never merges`, and `awaiting-review` statement remains true and the publisher protocol still has zero merge methods.
-- [ ] Append a `PROGRESS.md` line recording design ratification only; do not claim support or enablement.
-- [ ] Stop if any required bypass, review, check-provenance, or merge-result fact cannot be obtained positively from supported GitHub APIs; record it as a blocker rather than substituting GitHub UI text or inference.
+- [x] `[writes docs only]` Change only a new `docs/specs/conditional-self-merge-contract.md`, `PLAN.md`, and links from existing controller/threat documentation if essential; present a file plan before editing.
+- [x] Copy the locked M-01 through M-20 decisions, trust boundaries, evidence table, residual race, typed block reasons, and explicit non-goals into the normative contract without weakening v1's existing no-self-merge language.
+- [x] Cite only current official GitHub REST/GraphQL documentation for API semantics. Record the chosen API version and every endpoint/field required to distinguish rulesets, classic protection, reviews, threads, checks, bypass actors, actor identity, mergeability, and result reconciliation.
+- [x] State that repository content may document policy but cannot grant authority; host-owned policy and fresh run authorization are mandatory.
+- [x] Existing tests must pass unmodified; no behavior or schema change is allowed.
+- [x] No deletion is expected. Show zero-caller evidence before removing or renaming any existing no-merge assertion.
+- [x] Expected diff: 140-220 documentation lines. Split endpoint details into an appendix if the contract exceeds 300 lines.
+- [x] Verify every current `no self-merge`, `never merges`, and `awaiting-review` statement remains true and the publisher protocol still has zero merge methods.
+- [x] Append a `PROGRESS.md` line recording design ratification only; do not claim support or enablement.
+- [x] Stop if any required bypass, review, check-provenance, or merge-result fact cannot be obtained positively from supported GitHub APIs; record it as a blocker rather than substituting GitHub UI text or inference.
+
+**Implementation note (2026-08-11):** the 183-line normative contract pins REST API version `2026-03-10`, the complete REST/GraphQL evidence map, all M-01-M-20 decisions, typed blockers, crash reconciliation, and the residual control-plane race. The approved v1 controller and threat contracts link to it as future design only. Repository search proves the publisher protocol still has zero merge methods, its only fixture merge method raises on use, and the enabled local transition map emits no remote publication or merge action. No schema, controller behavior, credential, publication, or merge authority changed; full preflight passes with 223 tests.
 
 **Phase verification:** review can answer who grants merge authority, what exact evidence is required, which races remain, what blocks, and which code paths must stay incapable of merge.
 
@@ -1616,4 +1618,4 @@ Observable completion means:
 
 ### Recommended first implementation slice
 
-Execute **K0.1 only** after this plan is reviewed. It produces a standalone security/API contract while preserving every existing zero-merge invariant. K1-K3 may follow as schema, observation, and dry-run eligibility work after that contract is approved. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
+**K0.1 is complete.** Execute **K1.1 only** next: define the closed, host-owned policy and authorization schemas without changing the existing mission authorization or adding a network writer. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
