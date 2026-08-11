@@ -1095,28 +1095,28 @@ Implementation note: the v1 final-summary schema has no active or reconcile-requ
 
 #### Sub-prompt J3.1 — generated candidate/verification blocks
 
-- [ ] `[writes code]` Change only `pathfinder_core/rendering.py`, focused rendering tests, and golden fixtures; first present generated-block markers and escaping rules.
-- [ ] Render the candidate section of `03-synthesis.md` from `03-candidates.json` and the structured result section of `03b-verification.md` from `03b-verification.json` between versioned generated markers.
-- [ ] Imitate candidate cards in `skills/pathfinder/references/routes/candidate-selection.md` and current verification fixture vocabulary.
-- [ ] Preserve narrative text outside generated markers byte-for-byte; reject malformed, nested, or duplicate marker regions.
-- [ ] Existing tests must pass unmodified; report failures.
-- [ ] Show all candidate/verification Markdown consumers before replacing their authored fields.
-- [ ] Expected diff: 100-150 lines per renderer; split candidates and verification if larger.
-- [ ] Verify with golden rendering, special-character escaping, duplicate-marker rejection, and rerender idempotency tests.
-- [ ] Append a line to `PROGRESS.md` recording generated sections and verification.
-- [ ] Stop if a displayed field is not present in schema JSON; either label it explicitly narrative/noncanonical or propose a versioned schema field.
+- [x] `[writes code]` Change only `pathfinder_core/rendering.py`, focused rendering tests, and golden fixtures; first present generated-block markers and escaping rules.
+- [x] Render the candidate section of `03-synthesis.md` from `03-candidates.json` and the structured result section of `03b-verification.md` from `03b-verification.json` between versioned generated markers.
+- [x] Imitate candidate cards in `skills/pathfinder/references/routes/candidate-selection.md` and current verification fixture vocabulary.
+- [x] Preserve narrative text outside generated markers byte-for-byte; reject malformed, nested, or duplicate marker regions.
+- [x] Existing tests must pass unmodified; report failures.
+- [x] Show all candidate/verification Markdown consumers before replacing their authored fields.
+- [x] Expected diff: 100-150 lines per renderer; split candidates and verification if larger.
+- [x] Verify with golden rendering, special-character escaping, duplicate-marker rejection, and rerender idempotency tests.
+- [x] Append a line to `PROGRESS.md` recording generated sections and verification.
+- [x] Stop if a displayed field is not present in schema JSON; either label it explicitly narrative/noncanonical or propose a versioned schema field.
 
 #### Sub-prompt J3.2 — eval authority cleanup
 
-- [ ] `[writes code]` Change only `evals/harness/eval-lib.sh`, `evals/harness/validate-bundle.py`, relevant eval fixtures/cases, and contract tests; first map each assertion to its canonical JSON input and rendered-output check.
-- [ ] Use JSON for candidate identity, grades, binding status, verification, and final state. Parse Markdown only to test renderer/UX output, never to establish those facts.
-- [ ] Imitate the duplicate-safe JSON validator and existing cross-artifact bundle checks.
-- [ ] Existing bad fixtures must still fail for their named reason; report any reason drift rather than weakening a case.
-- [ ] Show zero-caller evidence before removing assertion aliases.
-- [ ] Expected diff: under 150 lines per assertion family.
-- [ ] Verify with `bash scripts/check-evals.sh .` and `python3 -m unittest tests.contracts.test_artifact_validator`.
-- [ ] Append a line to `PROGRESS.md` recording which Markdown authority reads were removed.
-- [ ] Stop if a case has no canonical JSON evidence; add a schema-backed fixture or keep the case explicitly UX-only.
+- [x] `[writes code]` Change only `evals/harness/eval-lib.sh`, `evals/harness/validate-bundle.py`, relevant eval fixtures/cases, and contract tests; first map each assertion to its canonical JSON input and rendered-output check.
+- [x] Use JSON for candidate identity, grades, binding status, verification, and final state. Parse Markdown only to test renderer/UX output, never to establish those facts.
+- [x] Imitate the duplicate-safe JSON validator and existing cross-artifact bundle checks.
+- [x] Existing bad fixtures must still fail for their named reason; report any reason drift rather than weakening a case.
+- [x] Show zero-caller evidence before removing assertion aliases.
+- [x] Expected diff: under 150 lines per assertion family.
+- [x] Verify with `bash scripts/check-evals.sh .` and `python3 -m unittest tests.contracts.test_artifact_validator`.
+- [x] Append a line to `PROGRESS.md` recording which Markdown authority reads were removed.
+- [x] Stop if a case has no canonical JSON evidence; add a schema-backed fixture or keep the case explicitly UX-only.
 
 **Phase verification:** changing candidate/verification JSON changes generated Markdown; editing the generated block is repaired; narrative content remains unchanged.
 

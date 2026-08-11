@@ -128,42 +128,62 @@ assert_mission_view_repair() {
     || add_error "mission view repair lacks final views"
 }
 
+load_verification_results() {
+  local path schema validation_output failed
+  failed=0
+  verification_results=""
+  for sidecar in 03-candidates.json 03b-verification.json; do
+    path="$(artifact_file "$sidecar")"
+    if [ ! -f "$path" ]; then
+      add_error "$sidecar structured sidecar missing"
+      failed=1
+      continue
+    fi
+    case "$sidecar" in
+      03-candidates.json) schema="artifacts/candidates.schema.json" ;;
+      03b-verification.json) schema="artifacts/verification.schema.json" ;;
+    esac
+    validation_output="$("$PATHFINDER_EVAL_PYTHON" "$PATHFINDER_EVAL_VALIDATOR" "$PATHFINDER_SCHEMA_ROOT/$schema" "$path" 2>&1)" || {
+      add_error "$sidecar invalid: $validation_output"
+      failed=1
+    }
+  done
+  [ "$failed" -eq 0 ] || return 1
+  verification_results="$("$PATHFINDER_EVAL_PYTHON" "$PATHFINDER_BUNDLE_VALIDATOR" "$ARTIFACT_DIR" --verification-results 2>&1)" || {
+    add_error "candidate/verification sidecar mismatch: $verification_results"
+    return 1
+  }
+}
+
 assert_rejected_candidate_not_selectable() {
-  local verification funnel id
-  require_artifact "03b-verification.md" || return
+  local funnel id verdict grade
+  load_verification_results || return
   require_artifact "04-question-funnel.md" || return
-  verification="$(artifact_file "03b-verification.md")"
   funnel="$(artifact_file "04-question-funnel.md")"
 
-  while IFS= read -r id; do
+  while IFS=$'\t' read -r id verdict grade; do
     [ -n "$id" ] || continue
+    [ "$verdict" = "rejected" ] || continue
     if contains_fixed "$funnel" "selectable-candidate: $id"; then
       add_error "rejected candidate $id appears as selectable in 04-question-funnel.md"
     fi
-  done < <(awk -F': *' '/^rejected-candidate:/ { print $2 }' "$verification")
+  done < <(printf '%s\n' "$verification_results")
 }
 
 assert_verification_downgrade_reflected() {
-  local verification funnel id grade
-  require_artifact "03b-verification.md" || return
+  local funnel id verdict grade
+  load_verification_results || return
   require_artifact "04-question-funnel.md" || return
-  verification="$(artifact_file "03b-verification.md")"
   funnel="$(artifact_file "04-question-funnel.md")"
 
-  while read -r id grade; do
+  while IFS=$'\t' read -r id verdict grade; do
     [ -n "$id" ] || continue
+    [ "$verdict" = "downgraded" ] || continue
     contains_fixed "$funnel" "candidate-grade: $id $grade" \
       || add_error "downgraded candidate $id is not shown with post-verification grade $grade"
     contains_fixed "$funnel" "Verified: downgraded" \
       || add_error "04-question-funnel.md missing downgraded Verified line"
-  done < <(awk '/^downgraded-candidate:/ { print $2, $4 }' "$verification")
-  while read -r id grade; do
-    [ -n "$id" ] || continue
-    contains_fixed "$funnel" "candidate-grade: $id $grade" \
-      || add_error "downgraded candidate $id is not shown with post-verification grade $grade"
-    contains_fixed "$funnel" "Verified: downgraded" \
-      || add_error "04-question-funnel.md missing downgraded Verified line"
-  done < <(awk '/^downgrade:/ && $3 == "to" { print $2, $4 }' "$verification")
+  done < <(printf '%s\n' "$verification_results")
 }
 
 assert_protected_surface_boundary() {
@@ -278,7 +298,6 @@ run_assertion() {
     goal_contract) assert_goal_contract ;;
     structured-sidecars) assert_structured_sidecars ;;
     rejected-candidate-not-selectable) assert_rejected_candidate_not_selectable ;;
-    rejected_not_selectable) assert_rejected_candidate_not_selectable ;;
     verification-downgrade-reflected) assert_verification_downgrade_reflected ;;
     downgrade_reflected) assert_verification_downgrade_reflected ;;
     protected-surface-boundary) assert_protected_surface_boundary ;;

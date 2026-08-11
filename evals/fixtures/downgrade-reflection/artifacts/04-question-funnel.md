@@ -1,4 +1,4 @@
 # Question Funnel
 
-candidate-grade: CAND-DOWN-1 inferred
-Verified: downgraded confirmed to inferred by Phase 4b.
+candidate-grade: C3 partial
+Verified: downgraded verified to partial by Phase 4b.

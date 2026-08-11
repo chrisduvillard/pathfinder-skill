@@ -1,6 +1,21 @@
 from __future__ import annotations
 
+import html
+import re
+
 from .errors import StateError
+
+
+CANDIDATES_BEGIN = "<!-- pathfinder:generated:candidates:v1:begin -->"
+CANDIDATES_END = "<!-- pathfinder:generated:candidates:v1:end -->"
+VERIFICATION_BEGIN = "<!-- pathfinder:generated:verification:v1:begin -->"
+VERIFICATION_END = "<!-- pathfinder:generated:verification:v1:end -->"
+
+_GENERATED_PREFIX = "<!-- pathfinder:generated:"
+_GENERATED_MARKER = re.compile(
+    r"^<!-- pathfinder:generated:([a-z-]+):(v[1-9][0-9]*):(begin|end) -->(?=\r?$)",
+    re.MULTILINE,
+)
 
 
 def _inline(value) -> str:
@@ -13,6 +28,134 @@ def _inline(value) -> str:
 
 def _joined(values: list) -> str:
     return ", ".join(_inline(value) for value in values) if values else "none"
+
+
+def _markdown_inline(value) -> str:
+    rendered = html.escape(_inline(value), quote=False)
+    for character in "\\`*_{}[]#|":
+        rendered = rendered.replace(character, f"\\{character}")
+    return rendered
+
+
+def _markdown_joined(values: list) -> str:
+    return ", ".join(_markdown_inline(value) for value in values) if values else "none"
+
+
+def _replace_generated_region(
+    document: str,
+    begin_marker: str,
+    end_marker: str,
+    replacement: str,
+) -> str:
+    markers = list(_GENERATED_MARKER.finditer(document))
+    if document.count(_GENERATED_PREFIX) != len(markers):
+        raise StateError("malformed generated-block marker")
+
+    stack = None
+    regions: list[tuple[str, str, int, int]] = []
+    for marker in markers:
+        identity = (marker.group(1), marker.group(2))
+        if marker.group(3) == "begin":
+            if stack is not None:
+                raise StateError("nested generated-block markers")
+            stack = (identity, marker.start())
+            continue
+        if stack is None or stack[0] != identity:
+            raise StateError("mismatched generated-block markers")
+        regions.append((identity[0], identity[1], stack[1], marker.end()))
+        stack = None
+    if stack is not None:
+        raise StateError("unclosed generated-block marker")
+
+    target_name, target_version, _ = begin_marker.split(":")[-3:]
+    target_regions = [
+        region
+        for region in regions
+        if region[0] == target_name and region[1] == target_version
+    ]
+    if len(target_regions) != 1:
+        raise StateError("generated block must contain exactly one marker pair")
+    start, end = target_regions[0][2:]
+    if document[start : start + len(begin_marker)] != begin_marker:
+        raise StateError("malformed generated-block begin marker")
+    if not replacement.startswith(begin_marker) or not replacement.endswith(end_marker):
+        raise StateError("renderer produced malformed generated block")
+    return document[:start] + replacement + document[end:]
+
+
+def render_candidates_block(document: dict) -> str:
+    if document.get("schema_version") != 1:
+        raise StateError("unsupported candidates schema_version")
+    lines = [
+        CANDIDATES_BEGIN,
+        "## Structured candidates",
+        "",
+        f"- mission_id: {_markdown_inline(document['mission_id'])}",
+        f"- generated_at: {_markdown_inline(document['generated_at'])}",
+        f"- search_stop_reason: {_markdown_inline(document['search_stop_reason'])}",
+    ]
+    for position, candidate in enumerate(document["candidates"], start=1):
+        lines.extend([
+            "",
+            f"### {position}. {_markdown_inline(candidate['candidate_id'])} — "
+            f"{_markdown_inline(candidate['title'])}",
+            "",
+            f"- finding_ids: {_markdown_joined(candidate['finding_ids'])}",
+            f"- evidence_grade: {_markdown_inline(candidate['evidence_grade'])}",
+            f"- expected_value: {_markdown_inline(candidate['expected_value'])}",
+            f"- risk: {_markdown_inline(candidate['risk'])}",
+            f"- protected_surfaces: {_markdown_joined(candidate['protected_surfaces'])}",
+            f"- proof_available: {_markdown_inline(candidate['proof_available'])}",
+            f"- uncertainty: {_markdown_joined(candidate['uncertainty'])}",
+            f"- status: {_markdown_inline(candidate['status'])}",
+            f"- ranking_basis: {_markdown_inline(candidate['ranking_basis'])}",
+        ])
+    lines.append(CANDIDATES_END)
+    return "\n".join(lines)
+
+
+def render_verification_block(document: dict) -> str:
+    if document.get("schema_version") != 1:
+        raise StateError("unsupported verification schema_version")
+    lines = [
+        VERIFICATION_BEGIN,
+        "## Structured verification results",
+        "",
+        f"- mission_id: {_markdown_inline(document['mission_id'])}",
+        f"- verified_at: {_markdown_inline(document['verified_at'])}",
+        f"- verifier_depth: {_markdown_inline(document['verifier_depth'])}",
+        f"- lenses: {_markdown_joined(document['lenses'])}",
+    ]
+    for result in document["results"]:
+        lines.extend([
+            "",
+            f"### {_markdown_inline(result['candidate_id'])}",
+            "",
+            f"- verdict: {_markdown_inline(result['verdict'])}",
+            f"- final_grade: {_markdown_inline(result['final_grade'])}",
+            f"- proof_gaps: {_markdown_joined(result['proof_gaps'])}",
+            f"- adjudication: {_markdown_inline(result['adjudication'])}",
+        ])
+    lines.append(VERIFICATION_END)
+    return "\n".join(lines)
+
+
+def repair_candidates_markdown(markdown: str, document: dict) -> str:
+    return _replace_generated_region(
+        markdown,
+        CANDIDATES_BEGIN,
+        CANDIDATES_END,
+        render_candidates_block(document),
+    )
+
+
+def repair_verification_markdown(markdown: str, document: dict) -> str:
+    return _replace_generated_region(
+        markdown,
+        VERIFICATION_BEGIN,
+        VERIFICATION_END,
+        render_verification_block(document),
+    )
 
 
 def render_goal_command(binding: dict) -> str:

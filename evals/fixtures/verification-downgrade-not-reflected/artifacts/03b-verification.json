@@ -1,0 +1,1 @@
+{"schema_version":1,"mission_id":"mission_notreflected01","verified_at":"2026-08-10T12:01:00Z","verifier_depth":"standard","lenses":["grounding","proof"],"results":[{"candidate_id":"C2","verdict":"downgraded","final_grade":"partial","proof_gaps":["integration proof unavailable"],"adjudication":"funnel must reflect the lower final grade"}]}
