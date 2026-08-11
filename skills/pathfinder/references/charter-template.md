@@ -1,8 +1,8 @@
 # Pathfinder Charter JSON Template
 
-`.pathfinder/charter.json` is Pathfinder's canonical, durable, **local-only** stable creator intent. `.pathfinder/charter.md` is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state.
+`charter.json` in the selected intent namespace is Pathfinder's canonical, durable, **local-only** stable creator intent. Root scope uses `.pathfinder/`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/`. `charter.md` beside it is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state or fall back to another namespace.
 
-The charter holds purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy. Changing work belongs in `.pathfinder/roadmap.json`; the deeper Project Doctrine belongs in `.pathfinder/doctrine.json`.
+The charter holds purpose, users, success, constraints, non-goals, optional finished state, and autonomy policy. Changing work belongs in `roadmap.json` in the same namespace; the deeper Project Doctrine belongs in its sibling `doctrine.json`.
 
 ## Canonical shape
 

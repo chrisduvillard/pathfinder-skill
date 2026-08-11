@@ -156,7 +156,7 @@ Every work-producing run leaves a clean, resumable trail. Only phases the route 
 
 Markdown is the human view; JSON sidecars are the eval/replay/search view. That keeps the skill readable while giving stronger future models stable contracts to optimize against.
 
-Three private files persist across runs — **`.pathfinder/charter.md`** (stable intent), **`.pathfinder/roadmap.md`** (evolving work), and **`.pathfinder/doctrine.md`** (Project Doctrine: end goal, quality bars, autonomy policy, and hard stops). All are gitignored via `.git/info/exclude`, never committed, and sanitized on every read.
+Three canonical private JSON documents persist across runs—`charter.json` (stable intent), `roadmap.json` (evolving work), and `doctrine.json` (Project Doctrine: end goal, quality bars, autonomy policy, and hard stops)—with generated Markdown views for humans. Repository intent lives in `.pathfinder/`; an explicit monorepo scope such as `apps/api` gets the isolated namespace `.pathfinder/scopes/apps/api/intent/`. Namespaces never inherit from root or siblings. All are gitignored via `.git/info/exclude`, never committed, schema-validated, and sanitized on every read.
 
 <br>
 
@@ -198,7 +198,7 @@ The local autonomous bridge is the only path designed to commit without a per-st
 
 <br>
 
-Full exploration and autonomous-request preparation establish or reconcile creator intent when needed: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, future work, product philosophy, quality bars, autonomy policy, and hard stops. Prompt-to-goal deliberately skips this interview for ordinary Goal creation. Pathfinder saves stable intent to `.pathfinder/charter.md`, evolving work to `.pathfinder/roadmap.md`, and Project Doctrine to `.pathfinder/doctrine.md`. Intent improves selection but never authorizes execution; every local autonomous run still needs a fresh explicit request.
+Full exploration and autonomous-request preparation establish or reconcile creator intent when needed: up to 8–12 compact, value-of-information questions about purpose, users, success, constraints, non-goals, future work, product philosophy, quality bars, autonomy policy, and hard stops. Prompt-to-goal deliberately skips this interview for ordinary Goal creation. After explicit creator confirmation, the controller activates all three canonical JSON documents together in the selected repository or subproject namespace and renders replaceable Markdown views. Intent improves selection but never authorizes execution; every local autonomous run still needs a fresh explicit request.
 
 </details>
 

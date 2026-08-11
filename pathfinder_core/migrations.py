@@ -86,7 +86,7 @@ def _activation_inputs(input_files: dict[str, str | Path]) -> dict[str, dict]:
 
 
 def _restore_intent_files(
-    originals: dict[Path, bytes | None], intent_dir_existed: bool
+    originals: dict[Path, bytes | None], missing_directories: list[Path]
 ) -> None:
     for path, content in originals.items():
         if content is None:
@@ -94,11 +94,21 @@ def _restore_intent_files(
                 path.unlink()
         else:
             _atomic_write(path, content)
-    if not intent_dir_existed:
+    for directory in missing_directories:
         try:
-            next(iter(originals)).parent.rmdir()
+            directory.rmdir()
         except OSError:
             pass
+
+
+def _missing_directories(path: Path, stop: Path) -> list[Path]:
+    missing = []
+    current = path
+    while current != stop:
+        if not current.exists():
+            missing.append(current)
+        current = current.parent
+    return missing
 
 
 def activate_intent(
@@ -107,19 +117,19 @@ def activate_intent(
     input_files: dict[str, str | Path],
     *,
     creator_confirmed: bool,
+    scoped_root: str | Path = ".",
 ) -> dict:
     if not creator_confirmed:
         raise StateError("intent activation requires explicit creator confirmation")
     documents = _activation_inputs(input_files)
     repo_root = Path(root).resolve()
-    intent_dir = repo_root / ".pathfinder"
-    store = IntentStore(repo_root)
+    store = IntentStore(repo_root, scoped_root=scoped_root)
+    intent_dir = store.root
     validator = MissionStore(intent_dir)
     for kind in INTENT_KINDS:
         validator.validate(f"intent/{kind}.schema.json", documents[kind])
 
-    if intent_dir.is_symlink() or (intent_dir.exists() and not intent_dir.is_dir()):
-        raise StateError("intent activation requires a safe .pathfinder directory")
+    store._validate_safe_root()
     paths = [
         intent_dir / f"{kind}.{suffix}"
         for kind in INTENT_KINDS
@@ -133,7 +143,7 @@ def activate_intent(
     if backup.exists():
         raise StateError(f"backup destination already exists: {backup}")
     originals = {path: path.read_bytes() if path.exists() else None for path in paths}
-    intent_dir_existed = intent_dir.exists()
+    missing_directories = _missing_directories(intent_dir, repo_root)
     backup.mkdir(parents=True)
     for path, content in originals.items():
         if content is not None:
@@ -142,7 +152,7 @@ def activate_intent(
     try:
         store.write_all(documents)
     except Exception:
-        _restore_intent_files(originals, intent_dir_existed)
+        _restore_intent_files(originals, missing_directories)
         raise
 
     changed = [
@@ -162,6 +172,8 @@ def activate_intent(
     return {
         "kind": "intent-activation",
         "schema_version": 1,
+        "scoped_root": store.scoped_root,
+        "intent_dir": str(store.root),
         "changed": changed,
         "backup_dir": str(backup),
         "creator_confirmed": True,

@@ -57,6 +57,7 @@ def _parser() -> argparse.ArgumentParser:
         "intent-activate", help="activate creator-confirmed canonical intent JSON"
     )
     activate_intent_parser.add_argument("--root", required=True)
+    activate_intent_parser.add_argument("--scoped-root", default=".")
     activate_intent_parser.add_argument("--backup-dir", required=True)
     activate_intent_parser.add_argument("--charter-json", required=True)
     activate_intent_parser.add_argument("--roadmap-json", required=True)
@@ -184,6 +185,7 @@ def main(argv=None) -> int:
                         "doctrine": args.doctrine_json,
                     },
                     creator_confirmed=args.creator_confirmed,
+                    scoped_root=args.scoped_root,
                 )
             else:
                 result = migrate_mission(args.state_dir, args.backup_dir)

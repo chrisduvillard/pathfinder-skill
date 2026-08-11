@@ -40,12 +40,13 @@ class MigrationTests(unittest.TestCase):
             paths[kind] = path
         return paths
 
-    def activate(self, root, backup, inputs, confirmed=True):
+    def activate(self, root, backup, inputs, confirmed=True, scoped_root="."):
         return activate_intent(
             root,
             backup,
             inputs,
             creator_confirmed=confirmed,
+            scoped_root=scoped_root,
         )
 
     def test_v1_legacy_intent_migrates_without_granting_clarity(self):
@@ -105,6 +106,59 @@ class MigrationTests(unittest.TestCase):
             result = json.loads(output.getvalue())
             self.assertTrue(result["creator_confirmed"])
             self.assertFalse(result["authorization_granted"])
+            self.assertEqual(result["scoped_root"], ".")
+            self.assertEqual(
+                result["intent_dir"], str(Path(directory).resolve() / ".pathfinder")
+            )
+
+    def test_activation_cli_writes_only_the_selected_subproject_namespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            (repo / "apps" / "api").mkdir(parents=True)
+            inputs = self.write_activation_inputs(directory)
+            backup = repo / "backup"
+            argv = [
+                "migrate", "intent-activate", "--root", directory,
+                "--scoped-root", "apps/api", "--backup-dir", str(backup),
+                "--charter-json", str(inputs["charter"]),
+                "--roadmap-json", str(inputs["roadmap"]),
+                "--doctrine-json", str(inputs["doctrine"]),
+                "--creator-confirmed", "--json",
+            ]
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(argv), 0)
+            result = json.loads(output.getvalue())
+            namespace = (
+                repo.resolve()
+                / ".pathfinder"
+                / "scopes"
+                / "apps"
+                / "api"
+                / "intent"
+            )
+            self.assertEqual(result["scoped_root"], "apps/api")
+            self.assertEqual(result["intent_dir"], str(namespace))
+            self.assertTrue((namespace / "charter.json").is_file())
+            self.assertFalse((repo / ".pathfinder" / "charter.json").exists())
+
+    def test_scoped_activation_crash_removes_new_namespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            (repo / "apps" / "api").mkdir(parents=True)
+            inputs = self.write_activation_inputs(directory)
+            with mock.patch(
+                "pathfinder_core.intent_store._write_view_atomic",
+                side_effect=OSError("injected scoped activation failure"),
+            ):
+                with self.assertRaises(OSError):
+                    self.activate(
+                        directory,
+                        repo / "backup",
+                        inputs,
+                        scoped_root="apps/api",
+                    )
+            self.assertFalse((repo / ".pathfinder").exists())
 
     def test_missing_confirmation_or_document_preserves_legacy(self):
         with tempfile.TemporaryDirectory() as directory:

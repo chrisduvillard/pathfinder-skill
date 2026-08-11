@@ -1,6 +1,6 @@
 # Pathfinder Roadmap JSON Template
 
-`.pathfinder/roadmap.json` is Pathfinder's canonical, durable, **local-only** evolving desired work. `.pathfinder/roadmap.md` is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state.
+`roadmap.json` in the selected intent namespace is Pathfinder's canonical, durable, **local-only** evolving desired work. Root scope uses `.pathfinder/`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/`. `roadmap.md` beside it is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state or fall back to another namespace.
 
 The roadmap stores future capabilities, milestones, priorities, completion state, evidence, safety classification, and open questions. The charter holds stable creator intent, while doctrine holds the deep end-state model.
 

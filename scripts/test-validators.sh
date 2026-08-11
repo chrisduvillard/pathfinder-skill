@@ -291,6 +291,11 @@ R="$(newroot)"
 rewrite "$R/skills/pathfinder/references/routes/intent-refresh.md" 's/Never write authoritative Markdown as a fallback/Write authoritative Markdown as a fallback/'
 assert_catch "$R" "intent-refresh controller invariant|authoritative Markdown" "manual-install fallback guard catches authoritative Markdown writes"
 
+echo "== parser 9d: monorepo intent namespaces never inherit or fall back =="
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/SKILL.md" 's/Never inherit or fall back across intent namespaces/Inherit root intent when scoped intent is missing/'
+assert_catch "$R" "monorepo intent isolation|inherit|fall back" "intent namespace guard catches cross-product fallback"
+
 # ---- Production Markdown-authority guard ----
 markdownsrc="$here/scripts/check-markdown-authority.sh"
 new_markdown_root() {

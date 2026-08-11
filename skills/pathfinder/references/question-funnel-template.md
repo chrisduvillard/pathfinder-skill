@@ -156,7 +156,7 @@ clarity resolves for the rest).
 
 Intent clarity resolves (`intent_clarity: resolved`) only when every blocking unknown is resolved or converted.
 
-Record the screens in `04-question-funnel.md`, the ratified answers in `05-user-answers.md`, stable creator intent in `.pathfinder/charter.md`, evolving desired work in `.pathfinder/roadmap.md`, and the Project Doctrine in `.pathfinder/doctrine.md`. Also record the ambiguity ledger, each loop pass, the final `clarity` value on all three files, and any blocking-unknown conversions to roadmap Open Questions.
+Record the screens in `04-question-funnel.md` and the ratified answers in `05-user-answers.md`. After explicit creator confirmation, activate stable creator intent, evolving desired work, and Project Doctrine as canonical JSON in the selected intent namespace; their Markdown files are generated views only. Also record the ambiguity ledger, each loop pass, the final `intent_clarity` value on all three documents, and any blocking-unknown conversions to roadmap Open Questions.
 
 ## Mode selection (ask once)
 

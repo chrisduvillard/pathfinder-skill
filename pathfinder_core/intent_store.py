@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
 from pathlib import Path
 
@@ -20,6 +21,36 @@ RENDERERS = {
 }
 
 
+def _normalize_scoped_root(
+    repo_root: Path, scoped_root: str | Path
+) -> tuple[str, tuple[str, ...]]:
+    raw = str(scoped_root).replace("\\", "/")
+    if raw == ".":
+        return ".", ()
+    if not raw:
+        raise StateError("scoped root must be a normalized repository-relative path")
+    if raw.startswith("/") or re.match(r"^[A-Za-z]:/", raw):
+        raise StateError("scoped root must be repository-relative")
+    parts = tuple(raw.split("/"))
+    if any(part in {"", ".", ".."} for part in parts):
+        raise StateError("scoped root must be a normalized repository-relative path")
+    if parts[0] == ".pathfinder":
+        raise StateError("scoped root cannot use the reserved .pathfinder directory")
+
+    current = repo_root
+    for part in parts:
+        current /= part
+        if current.is_symlink():
+            raise StateError(f"scoped root must not traverse a symlink: {raw}")
+    if not current.is_dir():
+        raise StateError(f"scoped root must be an existing directory: {raw}")
+    try:
+        current.resolve().relative_to(repo_root.resolve())
+    except ValueError as error:
+        raise StateError("scoped root escapes the repository") from error
+    return "/".join(parts), parts
+
+
 def _write_view_atomic(path: Path, content: str) -> None:
     temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
     try:
@@ -34,21 +65,40 @@ def _write_view_atomic(path: Path, content: str) -> None:
 
 
 class IntentStore:
-    def __init__(self, repo_root: Path, schema_root: Path | None = None):
+    def __init__(
+        self,
+        repo_root: Path,
+        schema_root: Path | None = None,
+        *,
+        scoped_root: str | Path = ".",
+    ):
         self.repo_root = Path(repo_root)
-        self.root = self.repo_root / ".pathfinder"
+        self.scoped_root, self._scope_parts = _normalize_scoped_root(
+            self.repo_root, scoped_root
+        )
+        intent_root = self.repo_root / ".pathfinder"
+        self.root = (
+            intent_root
+            if not self._scope_parts
+            else intent_root / "scopes" / Path(*self._scope_parts) / "intent"
+        )
         self.lock_path = self.root / "intent.lock"
         self.schema_root = schema_root or Path(__file__).resolve().parents[1] / "schemas"
 
     def _validate_safe_root(self) -> None:
-        if self.root.is_symlink():
-            raise StateError(f"intent directory must not be a symlink: {self.root}")
-        if self.root.exists() and not self.root.is_dir():
-            raise StateError(f"intent path must be a directory: {self.root}")
+        _normalize_scoped_root(self.repo_root, self.scoped_root)
+        current = self.repo_root
+        for part in self.root.relative_to(self.repo_root).parts:
+            current /= part
+            if current.is_symlink():
+                raise StateError(f"intent directory must not be a symlink: {current}")
+            if current.exists() and not current.is_dir():
+                raise StateError(f"intent path must be a directory: {current}")
 
     def _ensure_safe_root(self) -> None:
         self._validate_safe_root()
         self.root.mkdir(parents=True, exist_ok=True)
+        self._validate_safe_root()
 
     def _path(self, kind: str, suffix: str) -> Path:
         if kind not in INTENT_KINDS:

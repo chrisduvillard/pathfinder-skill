@@ -52,15 +52,15 @@ Abandon is terminal. It preserves the state, event log, branch, and worktree for
 
 ## Activate or migrate local intent
 
-Canonical creator intent is `.pathfinder/charter.json`, `.pathfinder/roadmap.json`, and `.pathfinder/doctrine.json`. Their matching Markdown files are generated, replaceable views and are never read back into selection or authority. Confirm all six concrete paths are locally ignored and keep activation inputs plus backups in an ignored run folder or outside the repository.
+Canonical creator intent is one closed three-document namespace. Repository scope `.` uses `.pathfinder/{charter,roadmap,doctrine}.json`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/{charter,roadmap,doctrine}.json`. Matching Markdown files are generated, replaceable views and are never read back into selection or authority. A scoped namespace never inherits or falls back to root or a sibling. Confirm all six concrete paths in the selected namespace are locally ignored and keep activation inputs plus backups in an ignored run folder or outside the repository.
 
 After the creator explicitly confirms the complete three-document proposal, activate it with:
 
 ```bash
-bash scripts/pathfinder-controller.sh migrate intent-activate --root <repo-root> --backup-dir <new-backup-dir> --charter-json <draft-charter.json> --roadmap-json <draft-roadmap.json> --doctrine-json <draft-doctrine.json> --creator-confirmed --json
+bash scripts/pathfinder-controller.sh migrate intent-activate --root <repo-root> --scoped-root <scoped-root> --backup-dir <new-backup-dir> --charter-json <draft-charter.json> --roadmap-json <draft-roadmap.json> --doctrine-json <draft-doctrine.json> --creator-confirmed --json
 ```
 
-The command validates all three documents before creating the backup, preserves exact bytes for every existing JSON/view target, writes canonical JSON before deterministic views, and restores the original file set after a write failure. Its result always reports `authorization_granted: false` and `autonomy_authorized: false`. Do not pass `--creator-confirmed` on the creator's behalf or use a prior autonomous request as confirmation.
+Use `--scoped-root .` for repository intent or one normalized existing repository-relative directory for subproject intent. The command rejects absolute/traversal/alias paths, missing directories, symlinks, and `.pathfinder` itself. It validates all three documents before creating the backup, preserves exact bytes for every existing JSON/view target, writes canonical JSON before deterministic views, and restores the original file set plus newly created namespace directories after a write failure. Its result reports the normalized `scoped_root` and exact `intent_dir`, plus `authorization_granted: false` and `autonomy_authorized: false`. Do not pass `--creator-confirmed` on the creator's behalf or use a prior autonomous request as confirmation.
 
 The older command below is compatibility-only: it reads legacy v1 Markdown metadata, backs up exact bytes, and forces migrated clarity to unresolved. Runtime selection does not read that legacy Markdown.
 
@@ -89,7 +89,7 @@ Production Markdown reads are intentionally limited to that legacy migration and
 
 ## Cleanup and retention
 
-- `.pathfinder/{charter,roadmap,doctrine}.json`: retain as the canonical creator model. Keep matching `.md` views only for humans; either set is local-only and must never be committed.
+- `.pathfinder/{charter,roadmap,doctrine}.json` and `.pathfinder/scopes/<scoped-root>/intent/{charter,roadmap,doctrine}.json`: retain each selected namespace as a separate canonical creator model. Keep matching `.md` views only for humans; every namespace is local-only and must never be committed.
 - `.agent-work/pathfinder/...`: retain until the Goal/PR is reviewed; it is the human/replay evidence packet. Never publish it by default.
 - Mission state and authorization: retain at least through review/abandon and any audit window. Authorization belongs outside the repository trust boundary.
 - Mission worktrees: remove only after the controller proves no dirty files, unmerged commits, or active mission references. Never force-remove a worktree Pathfinder refuses to clean.

@@ -28,6 +28,7 @@ skill="$root/skills/pathfinder/SKILL.md"
 route_dir="$root/skills/pathfinder/references/routes"
 route_prompt="$route_dir/prompt-to-goal.md"
 route_autonomous="$route_dir/autonomous.md"
+route_intent="$route_dir/intent-refresh.md"
 route_discovery="$route_dir/discovery.md"
 route_synthesis="$route_dir/synthesis.md"
 route_files=(
@@ -252,13 +253,13 @@ else
 fi
 
 # Phase 4c canonical-intent invariants (SKILL.md/routes <-> JSON templates / mirrors)
-check_pair ".pathfinder/charter.json" "$charter" "canonical charter path"
+check_pair "selected intent namespace" "$charter" "canonical charter namespace"
 check_pair "stable creator intent" "$charter" "expanded charter purpose"
 check_pair "schemas/intent/charter.schema.json" "$charter" "charter JSON schema"
-check_pair ".pathfinder/roadmap.json" "$roadmap" "canonical roadmap path"
+check_pair "selected intent namespace" "$roadmap" "canonical roadmap namespace"
 check_pair "evolving desired work" "$roadmap" "roadmap purpose split"
 check_pair "schemas/intent/roadmap.schema.json" "$roadmap" "roadmap JSON schema"
-check_pair ".pathfinder/doctrine.json" "$doctrine" "canonical doctrine path"
+check_pair "selected intent namespace" "$doctrine" "canonical doctrine namespace"
 check_pair "Project Doctrine" "$doctrine" "doctrine purpose"
 check_pair "schemas/intent/doctrine.schema.json" "$doctrine" "doctrine JSON schema"
 check_pair "irreversible/external hard stops" "$doctrine" "doctrine hard-stop floor"
@@ -279,16 +280,33 @@ check_pair "not a skippable offer" "$funnel" "deep-intent non-skippable default"
 check_pair "future capabilities not started yet" "$funnel" "future-capabilities question"
 check_pair "8 to 12 compact screens" "$funnel" "deep-intent interview depth"
 check_pair "continue later" "$funnel" "partial-intent continuation escape"
-check_pair ".pathfinder/roadmap.json" "$arts" "artifact canonical roadmap document"
-check_pair ".pathfinder/doctrine.json" "$arts" "artifact canonical doctrine document"
+check_pair "intent namespace" "$arts" "artifact canonical intent namespace"
+check_pair "Never inherit or fall back across intent namespaces" "$route_intent" "monorepo intent isolation"
+check_pair ".pathfinder/scopes/apps/api/intent/" "$route_intent" "monorepo intent namespace path"
 check_pair "07b-cross-model-review.md" "$arts" "cross-model review artifact"
 check_pair "outside the run folder" "$arts" "intent files outside run folder"
+
+intent_namespace_invariants=(
+  "selected intent namespace"
+  ".pathfinder/scopes/apps/api/intent/"
+  "Never inherit or fall back across intent namespaces"
+  "normalized repository-relative path"
+)
+for inv in "${intent_namespace_invariants[@]}"; do
+  if grep -qF -- "$inv" "$skill"; then
+    verbose_ok "main intent namespace invariant present: \"$inv\""
+  else
+    err "main intent namespace invariant missing: \"$inv\""
+  fi
+done
 
 # Canonical intent is activated only by the controller. The runtime skill must not
 # retain flexible Markdown marker reads, and the manual-install fallback must not
 # invent authoritative Markdown when the controller is unavailable.
 intent_refresh_invariants=(
   "migrate intent-activate"
+  "--scoped-root"
+  'requested normalized `scoped_root`'
   "--creator-confirmed"
   "authorization_granted: false"
   "autonomy_authorized: false"
@@ -304,10 +322,9 @@ for inv in "${intent_refresh_invariants[@]}"; do
 done
 
 autonomous_intent_invariants=(
-  ".pathfinder/charter.json"
-  ".pathfinder/roadmap.json"
-  ".pathfinder/doctrine.json"
-  'Never parse `.pathfinder/*.md`'
+  "selected intent namespace"
+  "never fills a scoped model from root or sibling intent"
+  "Never parse generated Markdown"
   "Legacy-only or view-only intent is unresolved and goal-only"
 )
 for inv in "${autonomous_intent_invariants[@]}"; do
@@ -496,7 +513,7 @@ auto_invariants=(
   "Never unattended"
   "excluded from autonomous execution"
   "schemas/intent/doctrine.schema.json"
-  ".pathfinder/doctrine.json"
+  "selected intent namespace"
   "Doctrine Interview"
   "Project Doctrine"
   "protected code areas are eligible with doctrine proof"
@@ -520,7 +537,7 @@ auto_invariants=(
   "Never auto-escalate"
   "awaiting-review"
   "No self-merge in v1"
-  'never edits `.pathfinder/{charter,roadmap,doctrine}.{json,md}`'
+  "never edits any intent namespace"
   "total/open PRs"
 )
 for inv in "${auto_invariants[@]}"; do

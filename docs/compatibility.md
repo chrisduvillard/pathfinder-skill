@@ -16,7 +16,7 @@ Pathfinder can **create a bounded Goal in any readable folder**. It also exposes
 | Clean Git, no remote | Supported | Local protocol when host-attested | Ends at a committed local awaiting-review branch. |
 | Git with a non-GitHub remote | Supported | Same local protocol | Other forge adapters are deferred. |
 | GitHub remote | Supported | Same local protocol; no publication | Push, PR, CI polling, and merge are disabled in the bridge. |
-| Monorepo | Supported | One explicit scope | Bind the scoped root and exact repository commit; cache keys include both. Separate per-package intent namespaces are deferred. |
+| Monorepo | Supported | One explicit scope | Bind the scoped root and exact repository commit; cache keys include both. Root and subproject creator models use isolated intent namespaces with no fallback or inheritance. |
 | Unknown sandbox/network/credential controls | Supported | Blocked | Pathfinder saves the Goal and reports the missing enforcement. |
 
 ## Guarantee boundary

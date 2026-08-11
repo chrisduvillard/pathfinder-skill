@@ -18,7 +18,7 @@ Prompt-to-goal and source-first exploration work. Pathfinder saves a native/manu
 
 ## Monorepo
 
-The Goal Binding records the Git root, requested scoped root, exact base commit, dirty policy, and content fingerprint. Discovery/cache and changed-surface checks stay inside that scope unless the Goal explicitly names a cross-package dependency.
+The Goal Binding records the Git root, requested scoped root, exact base commit, dirty policy, and content fingerprint. Root intent remains in `.pathfinder/`; selecting `apps/api` reads and writes only `.pathfinder/scopes/apps/api/intent/`, while `apps/web` gets a separate namespace. A missing scoped model stays unresolved instead of borrowing the repository or sibling product model. Discovery/cache and changed-surface checks stay inside the selected scope unless the Goal explicitly names a cross-package dependency.
 
 ## Protected path
 

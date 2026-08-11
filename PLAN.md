@@ -249,7 +249,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Start exploration with one repository map and expand scouts only where uncertainty or risk justifies the cost.
 - [x] Replace the default five-scout/three-verifier fan-out with an adaptive evidence budget and hard maximum.
 - [x] Cache read-only discovery by base commit and scoped path fingerprint; invalidate only affected surfaces.
-- [ ] Add monorepo namespaces so charter/roadmap/doctrine can be scoped to a subproject without conflating unrelated products.
+- [x] Add monorepo namespaces so charter/roadmap/doctrine can be scoped to a subproject without conflating unrelated products. *(Root intent keeps the existing `.pathfinder/` layout; an explicit normalized subproject path maps to `.pathfinder/scopes/<scoped-root>/intent/`, with isolated locks/documents, no root-or-sibling fallback, path/symlink rejection, creator-confirmed CLI activation, and crash rollback.)*
 - [x] Render a compact status summary from controller state instead of rereading every Markdown artifact.
 - [x] Add `--json`/structured status for automation and concise human status for interactive use.
 - [x] Keep artifacts useful but stop creating placeholders for every unused phase; represent lifecycle explicitly in the state snapshot and render placeholders only when a human view needs them. *(Prompt and full-exploration routes now omit intentionally skipped phases and unselected scout domains; autonomous mission views derive active/terminal lifecycle from controller state.)*
@@ -291,7 +291,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 ### Implementation status note
 
-The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. Open master items are deliberately deferred rather than implied complete. In particular, a real host-to-controller mission bridge, command-level crash journaling, fixed cost/token caps, monorepo intent namespaces, exhaustive provenance-injection and GitHub-ruleset fixtures, a clean post-hardening host replay, and repeatable non-interactive host install tests remain future work.
+The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master items are deliberately deferred rather than implied complete: persisted goal-pack queues, any separately reviewed self-merge design, and repeatable non-interactive host install/load tests. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
 
 ## Next execution batch — close the real mission-runtime gap
 

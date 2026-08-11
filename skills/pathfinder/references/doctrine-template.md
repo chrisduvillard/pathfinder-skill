@@ -1,6 +1,6 @@
 # Pathfinder Doctrine JSON Template
 
-`.pathfinder/doctrine.json` is Pathfinder's canonical, durable, **local-only** Project Doctrine. `.pathfinder/doctrine.md` is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state.
+`doctrine.json` in the selected intent namespace is Pathfinder's canonical, durable, **local-only** Project Doctrine. Root scope uses `.pathfinder/`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/`. `doctrine.md` beside it is a deterministic, replaceable human view rendered by the controller; never edit or parse the view as state or fall back to another namespace.
 
 Doctrine stores the deep end-state model that guides Goal selection: end goal, product philosophy, user intent, quality bars, improvement heuristics, autonomous mission policy, and irreversible/external hard stops. It never authorizes a run; every autonomous mission requires a fresh explicit request.
 

@@ -2,7 +2,7 @@
 
 Autonomous mode is the guarded entry to **Full Autonomous Mission Mode**. The local host-driven bridge can start and drive exactly one explicitly selected Goal to a verified local branch. It is reached only by explicit invocation every run and never by persistent intent, normal exploration, or prompt-to-goal. A host must prove its runtime boundary, expose a stable native Goal lifecycle, and return schema-valid typed receipts; otherwise save the Goal and stop. Never auto-escalate or imitate a missing host capability in free-form prose.
 
-The Project Doctrine lives canonically in `.pathfinder/doctrine.json`, validated against `schemas/intent/doctrine.schema.json`; `.pathfinder/doctrine.md` is only its generated, replaceable human view. A missing, stale, tracked, or schema-invalid canonical doctrine cannot satisfy the autonomous intent gate, and no doctrine can authorize autonomous work.
+The Project Doctrine lives canonically in the selected intent namespace's `doctrine.json`, validated against `schemas/intent/doctrine.schema.json`; `doctrine.md` beside it is only a generated, replaceable human view. Root scope uses `.pathfinder/`; an explicit monorepo scope such as `apps/api` uses `.pathfinder/scopes/apps/api/intent/`. A missing, stale, tracked, or schema-invalid canonical doctrine cannot satisfy the autonomous intent gate, and Pathfinder never fills a scoped model from root or sibling intent. No doctrine can authorize autonomous work.
 
 ### Authorization and what stays fixed
 
@@ -28,7 +28,7 @@ When the local bridge passes every capability gate, the host must create a missi
 
 ### Goal selection from the creator model
 
-Read, schema-validate, and sanitize `.pathfinder/charter.json`, `.pathfinder/roadmap.json`, and `.pathfinder/doctrine.json`, then inspect current repo evidence. Never parse `.pathfinder/*.md` or use a Markdown mismatch to change selection; the controller may repair those views from canonical JSON. Distrust tracked JSON or views and require creator-model reconciliation through the intent-refresh route. Ignore only roadmap items that are already `complete` or `obsolete`, then consider the next highest-value remaining item. A previously `blocked` item may be skipped only when its recorded blocker is a recoverable per-goal block under "Recoverable blocks and isolation"; a `blocked` item whose recorded blocker is an irreversible/external hard stop, true unresolvable ambiguity, or creator input is recorded as excluded with its reason and next input, and the loop continues to the next item.
+Read, schema-validate, and sanitize `charter.json`, `roadmap.json`, and `doctrine.json` only from the selected intent namespace, then inspect current repo evidence. Never parse generated Markdown or use a Markdown mismatch to change selection; the controller may repair those views from canonical JSON. Distrust tracked JSON or views and require creator-model reconciliation through the intent-refresh route. Ignore only roadmap items that are already `complete` or `obsolete`, then consider the next highest-value remaining item. A previously `blocked` item may be skipped only when its recorded blocker is a recoverable per-goal block under "Recoverable blocks and isolation"; a `blocked` item whose recorded blocker is an irreversible/external hard stop, true unresolvable ambiguity, or creator input is recorded as excluded with its reason and next input, and the loop continues to the next item.
 
 The selected candidate falls into one of four closed safety dispositions:
 
@@ -60,7 +60,7 @@ Then apply two pre-execution filters **to every candidate regardless of disposit
 
 ### Phase 7-A: Autonomous execution loop (one Goal, sequential v1)
 
-Do not execute this phase unless `doctor --json` reports `mission_runner_available: true` and the active host separately proves the Runtime Boundary. The read-only doctor intentionally leaves host enforcement `unknown`; a model-authored claim is not attestation. The bridge executes exactly one eligible Goal through `pathfinder_core`, journals every action intent before the host acts, persists a typed receipt and terminal result before state advances, and returns `reconcile-required` rather than replaying an ambiguous action. A mission records roadmap outcomes in controller-owned mission artifacts but never edits `.pathfinder/{charter,roadmap,doctrine}.{json,md}`; changing creator intent requires a later explicit creator refresh, schema validation, and creator-confirmed controller activation.
+Do not execute this phase unless `doctor --json` reports `mission_runner_available: true` and the active host separately proves the Runtime Boundary. The read-only doctor intentionally leaves host enforcement `unknown`; a model-authored claim is not attestation. The bridge executes exactly one eligible Goal through `pathfinder_core`, journals every action intent before the host acts, persists a typed receipt and terminal result before state advances, and returns `reconcile-required` rather than replaying an ambiguous action. A mission records roadmap outcomes in controller-owned mission artifacts but never edits any intent namespace; changing creator intent requires a later explicit creator refresh, schema validation, and creator-confirmed controller activation for that same scope.
 
 ### Controller handoff (local/no-publication)
 
