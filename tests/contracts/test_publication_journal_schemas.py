@@ -232,11 +232,20 @@ class PublicationJournalSchemaTests(unittest.TestCase):
                     validate_journal(journal, self.authority)["disposition"], outcome
                 )
 
-    def test_new_contracts_have_no_production_caller_or_merge_call(self):
-        production = "\n".join(
-            path.read_text() for path in (ROOT / "pathfinder_core").rglob("*.py")
+    def test_evidence_observer_is_only_production_consumer_and_has_no_merge_call(self):
+        sources = {
+            path.relative_to(ROOT).as_posix(): path.read_text()
+            for path in (ROOT / "pathfinder_core").rglob("*.py")
+        }
+        evidence_consumers = {
+            path for path, source in sources.items() if "merge-evidence" in source
+        }
+        self.assertEqual(
+            evidence_consumers,
+            {"pathfinder_core/adapters/github_merge_observer.py"},
         )
-        for schema_name in ("merge-evidence", "merge-intent", "merge-result"):
+        production = "\n".join(sources.values())
+        for schema_name in ("merge-intent", "merge-result"):
             self.assertNotIn(schema_name, production)
         self.assertNotIn(".merge(", production)
 

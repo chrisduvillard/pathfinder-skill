@@ -1415,16 +1415,18 @@ Observable completion means:
 
 #### Sub-prompt K2.1 — fixture-driven observer and normalization
 
-- [ ] `[writes code]` Add a separate `pathfinder_core/adapters/github_merge_observer.py`, focused tests/fixtures, and no changes to `GitHubPublisher`; present the backend protocol and endpoint-to-evidence map before editing.
-- [ ] Expose read methods only for repository and credential actor identity, exact PR, base/head refs, changed files, classic protection, aggregate active branch rules, full source rulesets with parents/bypass actors, reviews, requested reviewers, review threads, checks, commit statuses, deployments, repository merge settings, and merged-state reconciliation.
-- [ ] Normalize response shapes into the closed evidence schema. Preserve ids, source levels, app identities, rule parameters, pagination totals/cursors, timestamps, and unknown fields needed to fail closed.
-- [ ] Treat 401, 403, 404, rate limit, timeout, malformed data, pagination ceiling, and missing bypass visibility as distinct typed evidence outcomes. A 404 is not synonymous with "unprotected" unless endpoint, repository identity, permission, and companion rule evidence prove that interpretation.
-- [ ] Imitate the current adapter's typed auth/rate/permission states and deterministic fixture backends; do not perform live calls in required tests.
-- [ ] Existing publisher tests must pass unmodified and continue asserting zero merge attempts.
-- [ ] No deletion is expected. Show all adapter callers before moving any existing method or state enum.
-- [ ] Expected diff: 300-450 lines per observer/fixture slice; split identity, policy, and PR/check normalization if larger.
-- [ ] Append a `PROGRESS.md` line listing supported evidence families and remaining unsupported rules.
-- [ ] Stop when an endpoint is not fully pageable, actor identity is ambiguous, a parent ruleset cannot be attributed, or the API omits a field required by the contract; return typed unknown evidence.
+- [x] `[writes code]` Add a separate `pathfinder_core/adapters/github_merge_observer.py`, focused tests/fixtures, and no changes to `GitHubPublisher`; present the backend protocol and endpoint-to-evidence map before editing.
+- [x] Expose read methods only for repository and credential actor identity, exact PR, base/head refs, changed files, classic protection, aggregate active branch rules, full source rulesets with parents/bypass actors, reviews, requested reviewers, review threads, checks, commit statuses, deployments, repository merge settings, and merged-state reconciliation.
+- [x] Normalize response shapes into the closed evidence schema. Preserve ids, source levels, app identities, rule parameters, pagination totals/cursors, timestamps, and unknown fields needed to fail closed.
+- [x] Treat 401, 403, 404, rate limit, timeout, malformed data, pagination ceiling, and missing bypass visibility as distinct typed evidence outcomes. A 404 is not synonymous with "unprotected" unless endpoint, repository identity, permission, and companion rule evidence prove that interpretation.
+- [x] Imitate the current adapter's typed auth/rate/permission states and deterministic fixture backends; do not perform live calls in required tests.
+- [x] Existing publisher tests must pass unmodified and continue asserting zero merge attempts.
+- [x] No deletion is expected. Show all adapter callers before moving any existing method or state enum.
+- [x] Expected diff: 300-450 lines per observer/fixture slice; split identity, policy, and PR/check normalization if larger.
+- [x] Append a `PROGRESS.md` line listing supported evidence families and remaining unsupported rules.
+- [x] Stop when an endpoint is not fully pageable, actor identity is ambiguous, a parent ruleset cannot be attributed, or the API omits a field required by the contract; return typed unknown evidence.
+
+**Implementation note (2026-08-11):** added one unused, fixture-only read protocol and normalizer covering 16 endpoint families; exact request ids/ETags/timestamps, repository/actor/PR/ref/file identities, merge settings and reconciliation, layered classic/ruleset/bypass evidence, review state, checks/statuses, and complete pagination now produce schema-valid canonical snapshots. Ten focused tests distinguish auth, permission, 404, rate, availability, timeout, malformed, pagination, bypass, actor, attribution, ref-drift, future-field, unsupported-rule, and reconciliation paths; a bare classic-protection 404 cannot become `absent` without exact repository, permission, endpoint, and companion-page proof. The cohesive 708-line production module exceeds the estimate because the protocol, closed projections, audit hashes, and typed stop paths share one intentionally isolated seam; review remains separated into the production observer, a 91-line raw fixture, and focused tests. `GitHubPublisher` and its tests are byte-unchanged, the observer has no HTTP implementation or mutating method, merge intent/result still have zero production consumers, and full preflight passes with 247 tests. Merge queue, required deployments/signatures, code scanning/quality, file/metadata restrictions, and unknown future rules remain explicitly unsupported.
 
 #### Sub-prompt K2.2 — GET-only API client boundary
 
