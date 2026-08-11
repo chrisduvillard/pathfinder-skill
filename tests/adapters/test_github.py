@@ -12,12 +12,14 @@ from pathfinder_core.errors import PolicyError
 
 
 class FixtureBackend:
-    def __init__(self, checks=None, error=None):
+    def __init__(self, checks=None, error=None, api_observations=None):
         self.checks = list(checks or [CheckState.SUCCESS])
         self.error = error
+        self.api_observations = dict(api_observations or {})
         self.pr = None
         self.created = 0
         self.pushed = 0
+        self.merge_attempts = 0
 
     def _raise(self):
         if self.error:
@@ -44,6 +46,10 @@ class FixtureBackend:
         if len(self.checks) > 1:
             return self.checks.pop(0)
         return self.checks[0]
+
+    def merge(self, pull_request):
+        self.merge_attempts += 1
+        raise AssertionError("awaiting-review publisher must never merge")
 
 
 def publish(backend, **overrides):
@@ -86,6 +92,26 @@ class GitHubPublisherTests(unittest.TestCase):
     def test_failed_checks_do_not_publish_success(self):
         result = publish(FixtureBackend([CheckState.FAILURE]))
         self.assertEqual(result.state, PublicationState.CHECKS_FAILED)
+
+    def test_forge_policy_and_mergeability_fixtures_never_trigger_merge(self):
+        scenarios = {
+            "branch-protection-enabled": {
+                "branch_protection": {"required_status_checks": {"strict": True}},
+            },
+            "branch-protection-absent": {"branch_protection": None},
+            "repository-ruleset-active": {
+                "rulesets": [{"id": 123, "enforcement": "active"}],
+            },
+            "merge-conflict": {"mergeable": False, "mergeable_state": "dirty"},
+        }
+        for name, observations in scenarios.items():
+            with self.subTest(scenario=name):
+                backend = FixtureBackend(api_observations=observations)
+                result = publish(backend)
+                self.assertEqual(backend.api_observations, observations)
+                self.assertEqual(result.state, PublicationState.AWAITING_REVIEW)
+                self.assertEqual(backend.created, 1)
+                self.assertEqual(backend.merge_attempts, 0)
 
     def test_credentials_must_be_publication_only(self):
         with self.assertRaisesRegex(PolicyError, "publication-only"):

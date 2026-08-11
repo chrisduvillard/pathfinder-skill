@@ -267,7 +267,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add idempotency tests showing resume does not duplicate commits, branches, or PRs.
 - [x] Add dirty-tree, symlink, malicious filename, hook, credential-helper, and command-injection fixtures.
 - [x] Add prompt-injection fixtures covering source files, README/docs, tests, diffs, tool output, intent files, and prior artifacts.
-- [ ] Add GitHub API fixtures for branch protection, rulesets, auth failure, rate limit, pending checks, failed checks, merge conflict, and existing PR.
+- [x] Add GitHub API fixtures for branch protection, rulesets, auth failure, rate limit, pending checks, failed checks, merge conflict, and existing PR. *(Protected, unprotected, active-ruleset, and conflicted observations remain awaiting-review with zero merge attempts; typed auth/rate failures, bounded pending/failed checks, and exact existing-PR reuse are covered separately.)*
 - [x] Add Linux/macOS/Windows controller tests.
 - [x] Add recorded replay cases produced by actual Pathfinder runs. *(Sanitized local Claude Code dogfood now guards placeholder churn, ignored-path failure, and pre-approval repository execution; no credentials, private paths, or transcript text are retained.)*
 - [x] Add a small optional live-model suite for the highest-value behaviors: question choice, intent preservation, safe routing, native Goal activation, and honest blocking.
