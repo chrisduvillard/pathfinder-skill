@@ -55,6 +55,18 @@ git diff --check                          # trailing whitespace / conflict marke
 git diff --cached --check                 # staged whitespace / conflict markers
 ```
 
+The credential-free host probe is separate because it requires both current
+host CLIs. It installs only from temporary local marketplaces, does not invoke a
+model, and does not read host authentication:
+
+```bash
+bash scripts/check-host-installs.sh .
+```
+
+To run the same probe from an isolated package archive, use
+`PATHFINDER_HOST_SMOKE=1 bash scripts/package-smoke.sh .`. CI installs the
+versions pinned in `.github/workflows/manifests.yml` before running it.
+
 Use `bash scripts/check-skill-consistency.sh . --verbose` when you need every successful invariant; the default output stays concise and always prints failures.
 
 These run cleanly on Linux, macOS, and Windows Git-Bash/MSYS with no extra environment

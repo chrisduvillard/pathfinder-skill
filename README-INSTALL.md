@@ -24,10 +24,12 @@ codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
 ```
 
-Then invoke it in Codex with `$pathfinder`, or run `/skills` to pick it.
+Then invoke it in Codex with `$pathfinder:pathfinder`, or run `/skills` to pick it.
 
-`$pathfinder` invokes the installed skill. Codex's native `/goal` command is a
-separate lifecycle control for the durable Goal that Pathfinder prepares.
+Codex namespaces plugin skills as `$plugin-name:skill-name`. The shorter
+`$pathfinder` form below is for a manual skill install. Codex's native `/goal`
+command is a separate lifecycle control for the durable Goal that Pathfinder
+prepares.
 
 Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
 
@@ -58,13 +60,18 @@ No separate slash-command wrapper is required.
 
 ## Manual Codex install
 
-If your Codex setup supports Agent Skills, copy this repo's `skills/pathfinder/` directory (its `SKILL.md` and `references/`) to your Codex skills folder, commonly:
+Copy this repo's `skills/pathfinder/` directory (its `SKILL.md` and `references/`) to either the repository or user Codex skill location:
 
 ```text
-~/.codex/skills/pathfinder/
+<repo>/.agents/skills/pathfinder/
+~/.agents/skills/pathfinder/
 ```
 
-Invoke it in Codex with `$pathfinder` or by running `/skills`. If your Codex runtime does not auto-discover skills, include `SKILL.md` as context and invoke it the same way.
+Codex scans `.agents/skills` from the current working directory through the
+repository root and also reads the user location. Invoke this manual install
+with `$pathfinder` or by running `/skills`. See OpenAI's official
+[Build skills](https://learn.chatgpt.com/docs/build-skills) guide for the current
+discovery locations and invocation behavior.
 
 ## Claude Code `/goal` compatibility
 

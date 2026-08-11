@@ -51,17 +51,19 @@ uses `/pathfinder`.
 ```bash
 codex plugin marketplace add chrisduvillard/pathfinder-skill
 codex plugin add pathfinder@pathfinder
-# then run /skills, or type $pathfinder to invoke it
+# then run /skills, or type $pathfinder:pathfinder to invoke it
 ```
 
-`$pathfinder` invokes this skill; Codex's native `/goal` command controls a
-durable Goal after Pathfinder has prepared one.
+Codex namespaces plugin skills as `$plugin-name:skill-name`, so the plugin form
+is `$pathfinder:pathfinder`. A manual Codex skill remains `$pathfinder`.
+Codex's native `/goal` command controls a durable Goal after Pathfinder has
+prepared one.
 
 Marketplace installs use the immutable **stable** release tag. Repository `main`
 is the explicitly labeled **edge** channel for manual/development installs.
 
 > [!NOTE]
-> Prefer no plugin system? Copy `skills/pathfinder/` into `~/.claude/skills/` (Claude Code) or `~/.codex/skills/` (Codex). Full notes in [`README-INSTALL.md`](README-INSTALL.md).
+> Prefer no plugin system? Copy `skills/pathfinder/` into `~/.claude/skills/` (Claude Code) or `~/.agents/skills/` (Codex). Full notes in [`README-INSTALL.md`](README-INSTALL.md).
 
 <br>
 

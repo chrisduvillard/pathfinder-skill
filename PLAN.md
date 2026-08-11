@@ -272,7 +272,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add recorded replay cases produced by actual Pathfinder runs. *(Sanitized local Claude Code dogfood now guards placeholder churn, ignored-path failure, and pre-approval repository execution; no credentials, private paths, or transcript text are retained.)*
 - [x] Add a small optional live-model suite for the highest-value behaviors: question choice, intent preservation, safe routing, native Goal activation, and honest blocking.
 - [x] Add a nightly dogfood run against tiny synthetic repositories; never point CI autonomy at arbitrary external repositories.
-- [ ] Add plugin install/load smoke tests for Claude Code and Codex when their non-interactive test surfaces are available. *(Manual dogfood now covers an isolated Codex edge install and Claude load/status/prompt-controller runs; a repeatable credential-free Codex model invocation is still unavailable.)*
+- [x] Add plugin install/load smoke tests for Claude Code and Codex when their non-interactive test surfaces are available. *(A credential-free isolated harness now installs the exact local snapshot on both hosts, proves Codex plugin and `.agents/skills` discovery through model-visible prompt JSON, and proves Claude strict validation plus parsed skill inventory. It deliberately does not invoke a model or claim native Goal/autonomy behavior.)*
 - [x] Maintain a coverage matrix mapping every README autonomy promise to a deterministic test, a live/replay eval, or an explicitly documented non-guarantee.
 
 ### P3 — Harden distribution, operations, and documentation
@@ -291,7 +291,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 ### Implementation status note
 
-The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master items are deliberately deferred rather than implied complete: any separately reviewed self-merge design and repeatable non-interactive host install/load tests. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
+The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master item is deliberately deferred rather than implied complete: any separately reviewed self-merge design. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
 
 ## Next execution batch — close the real mission-runtime gap
 

@@ -3,6 +3,7 @@
 | Promise | Required evidence |
 |---|---|
 | Portable install/validation | Ubuntu, macOS, and Windows workflow matrix; manifest and portability checks |
+| Plugin installation and skill discovery | credential-free `check-host-installs.sh`; pinned Codex local install + prompt-input probe; pinned Claude strict validation + install/list/details probe |
 | Fast concrete prompt to Goal | `prompt-fast-path` replay; supporting-note-laundering Goal eval |
 | Explicit authority only | authorization schema/mission tests; `authorization-denied` replay |
 | Unknown enforcement blocks work | execution-policy tests; `sandbox-blocked` replay |

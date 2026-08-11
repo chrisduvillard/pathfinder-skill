@@ -28,3 +28,16 @@ Intent, host-receipt, terminal-result, and transition crash boundaries are teste
 The host/runtime must prove filesystem and process isolation, network policy, credential isolation, and native Goal lifecycle access. The local bridge must have no publication credential. Repository understanding, candidate value, code quality, and verifier judgment remain model behavior backed by evidence and replays—not formal proofs. `unknown` host enforcement blocks unattended execution.
 
 Stable installs use immutable release tags. Repository `main` is the edge channel and may change between commits.
+
+## Credential-free host installation smoke
+
+`scripts/check-host-installs.sh` builds an isolated local marketplace from the
+exact supplied tree and never invokes a model or reads host authentication.
+Codex must install and enable the plugin, expose the namespaced
+`pathfinder:pathfinder` skill and its installed `SKILL.md` in model-visible
+prompt JSON, and discover a separate repository-scoped manual skill from
+`.agents/skills`. Claude Code must strictly validate the local marketplace,
+install and enable the plugin, and parse exactly one Pathfinder skill in its
+component inventory. CI installs pinned host CLI versions before running this
+probe. These checks prove packaging and discovery, not model behavior, native
+Goal execution, runtime attestation, or autonomy.

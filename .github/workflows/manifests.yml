@@ -110,3 +110,26 @@ jobs:
       - name: Check diff cleanliness
         shell: bash
         run: git diff --check
+
+  host-install:
+    name: host install/load (credential-free)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install pinned host CLIs
+        shell: bash
+        run: |
+          host_tools="${RUNNER_TEMP}/pathfinder-host-tools"
+          npm install --prefix "$host_tools" --no-audit --no-fund --no-package-lock \
+            @openai/codex@0.146.0 \
+            @anthropic-ai/claude-code@2.1.226
+          printf '%s\n' "$host_tools/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Install host-probe dependencies
+        run: sudo apt-get update && sudo apt-get install --yes jq
+
+      - name: Install and load the exact local plugin without credentials
+        shell: bash
+        run: bash scripts/check-host-installs.sh .

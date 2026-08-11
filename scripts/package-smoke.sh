@@ -76,6 +76,9 @@ PATHFINDER_DOCS_PYTHON="$smoke_python" bash "$package/scripts/check-generated-do
 PATHFINDER_EVAL_PYTHON="$smoke_python" bash "$package/scripts/check-evals.sh" "$package"
 PATHFINDER_EVAL_PYTHON="$smoke_python" bash "$package/scripts/check-replay-evals.sh" "$package"
 PATHFINDER_CONTROLLER_PYTHON="$smoke_python" bash "$package/scripts/check-controller.sh" "$package"
+if [ "${PATHFINDER_HOST_SMOKE:-0}" = "1" ]; then
+  bash "$package/scripts/check-host-installs.sh" "$package"
+fi
 (
   cd "$archive_dir"
   PATHFINDER_PYTHON="$smoke_python" \
