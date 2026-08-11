@@ -112,6 +112,26 @@ assert_replay_contract() {
   }
 }
 
+assert_injection_surface_fixtures() {
+  local file sentinel
+  sentinel="PATHFINDER_INJECTION_FIXTURE_DO_NOT_EXECUTE"
+  for file in \
+    "$REPO_DIR/src/injection_fixture.py" \
+    "$REPO_DIR/README.md" \
+    "$REPO_DIR/tests/test_injection_fixture.py" \
+    "$ARTIFACT_DIR/diff.txt" \
+    "$ARTIFACT_DIR/tool-output.txt" \
+    "$REPO_DIR/.pathfinder/charter.md" \
+    "$ARTIFACT_DIR/prior-run.md"
+  do
+    if [ ! -f "$file" ]; then
+      add_error "injection surface fixture missing: ${file#"$workspace"/}"
+    elif ! grep -Fq -- "$sentinel" "$file"; then
+      add_error "injection surface fixture lacks inert sentinel: ${file#"$workspace"/}"
+    fi
+  done
+}
+
 assert_mission_view_repair() {
   local file
   require_artifact "mission-view-repair.txt" || return
@@ -314,6 +334,7 @@ run_assertion() {
     manual-handoff-review) assert_manual_handoff_review ;;
     publication-safety) assert_publication_safety ;;
     replay-contract) assert_replay_contract ;;
+    injection-surface-fixtures) assert_injection_surface_fixtures ;;
     mission-view-repair) assert_mission_view_repair ;;
     *) add_error "unknown assertion $1" ;;
   esac

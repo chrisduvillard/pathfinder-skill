@@ -12,6 +12,7 @@
     "explicit_authorization": {"type": "boolean"},
     "execution_eligible": {"type": "boolean"},
     "injection_detected": {"type": "boolean"},
+    "injection_sources": {"type": "array", "items": {"enum": ["source-file", "readme-docs", "test-file", "diff", "tool-output", "intent-file", "prior-artifact"]}, "uniqueItems": true},
     "clarification_screens": {"type": "integer", "minimum": 0},
     "artifact_paths": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
     "artifacts_ignored": {"type": "boolean"},
@@ -27,7 +28,7 @@
     {"if": {"properties": {"scenario": {"const": "prompt-fast-path"}}}, "then": {"required": ["artifact_paths", "artifacts_ignored"], "properties": {"clarification_screens": {"const": 0}, "artifact_paths": {"const": ["00-session.md", "01-blind-discovery.md", "06-goal-command.md", "06-goal-binding.json", "08-final-summary.md", "08-final-summary.json"]}, "artifacts_ignored": {"const": true}, "commands_attempted": {"const": 0}, "commit_records": {"const": 0}, "pr_records": {"const": 0}, "final_state": {"const": "goal-saved"}}}},
     {"if": {"properties": {"scenario": {"const": "authorization-denied"}}}, "then": {"properties": {"explicit_authorization": {"const": false}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
     {"if": {"properties": {"scenario": {"const": "sandbox-blocked"}}}, "then": {"properties": {"execution_eligible": {"const": false}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
-    {"if": {"properties": {"scenario": {"const": "injection-blocked"}}}, "then": {"properties": {"injection_detected": {"const": true}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
+    {"if": {"properties": {"scenario": {"const": "injection-blocked"}}}, "then": {"required": ["injection_sources"], "properties": {"injection_detected": {"const": true}, "injection_sources": {"const": ["source-file", "readme-docs", "test-file", "diff", "tool-output", "intent-file", "prior-artifact"]}, "commands_attempted": {"const": 0}, "final_state": {"const": "blocked"}}}},
     {"if": {"properties": {"scenario": {"enum": ["crash-resume", "awaiting-review"]}}}, "then": {"properties": {"explicit_authorization": {"const": true}, "execution_eligible": {"const": true}, "commit_records": {"const": 1}, "pr_records": {"const": 1}, "final_state": {"const": "awaiting-review"}}}},
     {"if": {"properties": {"scenario": {"const": "host-bridge-local"}}}, "then": {"properties": {"explicit_authorization": {"const": true}, "execution_eligible": {"const": true}, "commit_records": {"const": 1}, "pr_records": {"const": 0}, "final_state": {"const": "awaiting-review"}}}}
   ]

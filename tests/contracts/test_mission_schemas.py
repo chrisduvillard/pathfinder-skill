@@ -79,6 +79,16 @@ class MissionSchemaTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 fixture(path.name)
 
+    def test_injection_replay_requires_every_untrusted_surface(self):
+        path = ROOT / "evals" / "replays" / "fixtures" / "injection-blocked" / "artifacts" / "replay.json"
+        replay = json.loads(path.read_text(), object_pairs_hook=reject_duplicate_keys)
+        validate("replays/replay.schema.json", replay)
+        for mutation in (replay["injection_sources"][:-1], [*replay["injection_sources"], "unknown"]):
+            with self.subTest(mutation=mutation), self.assertRaises(Exception):
+                changed = copy.deepcopy(replay)
+                changed["injection_sources"] = mutation
+                validate("replays/replay.schema.json", changed)
+
     def test_operation_result_rejects_raw_output(self):
         with self.assertRaises(Exception):
             validate(
