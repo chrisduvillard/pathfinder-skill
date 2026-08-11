@@ -5,11 +5,11 @@ description: The host-driven controller advances one authorized Goal through wor
 resource: ../../pathfinder_core/mission_host.py
 tags: [pathfinder, controller, state-machine, local]
 status: stable
-generated: { by: codex/gpt-5, at: "2026-08-11T20:01:42Z" }
+generated: { by: codex/gpt-5, at: "2026-08-11T20:23:09Z" }
 stale_after: "2026-11-09"
 sources:
   - id: mission-host
-    resource: https://github.com/chrisduvillard/pathfinder-skill/blob/26e7912ffcf690ef3f956fab7a098bbaffefddf0/pathfinder_core/mission_host.py
+    resource: ../../pathfinder_core/mission_host.py
     title: Host mission controller source
     author: human:chris-duvillard
     last_modified: "2026-08-11"
@@ -27,7 +27,7 @@ sources:
 
 # Lifecycle
 
-Mission start validates and seals the Goal Binding, authorization snapshot, runtime boundary, and effective protected-surface policy. It fixes mission identity to the Goal, base commit, and a deterministic attempt id, then moves `planned` to `authorized`.[^mission-host]
+Mission start validates and seals the Goal Binding, authorization snapshot, runtime boundary, and effective protected-surface policy. It binds the authorization to the Goal, base commit, and charter/roadmap/doctrine hashes, fixes a deterministic attempt id, then moves `planned` to `authorized`.[^mission-host]
 
 | Current state | Required host action | Success state |
 |---|---|---|

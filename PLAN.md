@@ -208,14 +208,14 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Implement a read-only repository capability probe before any mission writes.
 - [x] Detect Git root, subproject scope, current branch, base commit, remote type, default branch, dirty state, hooks configuration, and worktree support.
 - [x] Define a dirty-tree policy: default to blocking autonomy; optionally allow an explicit committed-base run that ignores uncommitted changes and says so before Goal generation.
-- [x] Create mission worktrees through one controller function; verify the resolved path, ownership, base commit, and absence of symlink escapes.
+- [x] Create mission worktrees through one controller function; verify the resolved path, ownership, base commit, and absence of symlink escapes. *(The enabled host bridge delegates this action to an attested host and validates the typed receipt; `WorktreeManager` is not a production caller in that bridge.)*
 - [x] Neutralize repository hooks for every controller-owned Git command that can trigger them, not just commit and push.
 - [x] Avoid `git pull` as an opaque step; fetch, resolve the exact remote base, verify fast-forward ancestry, then create/rebase deterministically.
 - [x] Run exactly one goal at a time in v1.
 - [x] Add a real `mission start/next/record/resume` host bridge and one typed offline end-to-end mission; unsupported native Goal hosts stop at a manual handoff instead of inventing lifecycle support.
 - [x] Journal an immutable intent before every host action, then persist its typed receipt and terminal result before advancing state.
 - [x] On restart, recover from persisted receipts/results and require explicit host reconciliation when actual Git/Goal state is ambiguous; never replay the last action by assumption.
-- [x] Detect and reuse an existing branch/PR for the same attempt; never create duplicate PRs after a timeout.
+- [x] Detect and reuse an existing branch/PR for the same attempt; never create duplicate PRs after a timeout. *(This remains a separately fixture-tested publication primitive, not an enabled host-bridge action.)*
 - [x] Preserve recoverable blocked work without carrying its diff into the next goal.
 - [x] Add safe worktree cleanup/status commands; never delete a dirty or unmerged worktree automatically.
 - [x] Disable the Opportunity Scout by default in v1; when enabled later, cap derived goals at the run’s initial immutable limit.
@@ -237,6 +237,12 @@ The first autonomous release should be deliberately narrower than the current pr
 - [ ] When self-merge is reconsidered, support both branch protection and repository rulesets and require an explicit repo policy plus positive API evidence.
 - [x] For non-GitHub remotes, stop at a verified local branch until an adapter exists.
 - [x] For non-Git repositories, provide discovery and Goal generation only.
+
+Completion qualifier: structured command, worktree, and GitHub publication components are tested
+controller primitives, but the enabled `mission start/next/record/resume` bridge delegates local
+side effects to an attested host. It validates Runtime Boundary claims, immutable intents, typed
+receipts, and zero-publication budgets; it does not independently observe the host sandbox or
+compose the publisher. Those limits are explicit non-guarantees, not implied production wiring.
 
 ### P2 — Make Pathfinder substantially faster and easier to use
 
@@ -291,7 +297,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 ### Implementation status note
 
-The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master item is deliberately deferred rather than implied complete: conditional self-merge support. A separately reviewed, design-only implementation plan now appears at the end of this document; it does not enable merge authority. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
+The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. Two compositions remain deliberately deferred rather than implied complete: GitHub publication from the enabled host bridge and conditional self-merge. The publisher stays a separately tested primitive, and the separately reviewed self-merge plan at the end of this document enables no merge authority. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
 
 ## Next execution batch — close the real mission-runtime gap
 

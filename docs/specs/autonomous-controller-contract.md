@@ -19,7 +19,7 @@ state transitions, Git isolation, execution eligibility, and publication gates.
 | D-01 | Authorization | Every external-write mission requires a fresh explicit `/pathfinder auto` request or equivalent trusted user instruction. |
 | D-02 | Review semantics | Use `human-review-required` for work that may proceed to review; reserve `pre-action-approval-required` for a stop before implementation. |
 | D-03 | Runtime | Python 3.11, standard-library first; report `runner_available` and degrade honestly when unavailable. |
-| D-04 | Publication | Local Git and GitHub pull requests only in v1; other forges stop at a verified local branch. |
+| D-04 | Publication | The enabled v1 host bridge stops at a verified local branch. GitHub publication primitives remain separately tested but uncomposed; other forges also stop locally. |
 | D-05 | Merge | No autonomous self-merge in v1. Successful publication ends at `awaiting-review`. |
 | D-06 | Intent and authority | Descriptive intent may remain repo-local; approval and authorization evidence must be host-owned or supplied explicitly per run. |
 | D-07 | Concurrency | Exactly one Goal and one attempt execute at a time. |
@@ -34,7 +34,7 @@ authority and evidence requirements are recorded in the
 1. Run one explicitly authorized Goal through a resumable, auditable state machine.
 2. Block unattended execution when filesystem, network, process, or credential isolation is unknown.
 3. Prevent repository content from granting authority or supplying executable command text.
-4. Create at most one branch, commit sequence, and pull request for an attempt across retries.
+4. Create at most one branch and commit sequence for an enabled local attempt; separately tested publication primitives create at most one pull request across retries.
 5. Degrade to Goal generation or a verified local plan when controller capabilities are insufficient.
 
 ## Non-Goals
@@ -102,6 +102,10 @@ Allowed lifecycle states are:
 `blocked` and `abandoned` are terminal mission dispositions. `merged` is representable for observing
 later human action but is never produced by the v1 autonomous controller.
 
+The state schema retains `published` and PR identity for the separate callback orchestrator and
+fixture-backed publication components. The enabled `HostMissionController` moves from `committed`
+through typed native-Goal completion directly to local `awaiting-review`; it has no remote action.
+
 Every transition validates its predecessor, checkpoints atomically, and records an event. A lock or
 lease prevents concurrent resume. Restart reconciles stored state with real Git and forge state
 before deciding the next transition; it does not replay the last command blindly.
@@ -117,6 +121,11 @@ before deciding the next transition; it does not replay the last command blindly
 - Cleanup is never automatic for dirty, unmerged, or mission-referenced worktrees.
 - Non-Git repositories stop at discovery and Goal generation.
 
+`WorktreeManager` is the controller-owned implementation of these Git rules. The enabled
+host-driven bridge does not call it directly: the attested host performs the one declared worktree
+action and returns a typed receipt. The bridge validates receipt identity and contract bindings but
+does not claim to independently observe host filesystem enforcement.
+
 ## Execution Contract
 
 Commands are structured argument arrays chosen by trusted controller policy. Raw shell text from
@@ -126,6 +135,12 @@ Unattended execution requires positively enforceable filesystem, process, networ
 timeout, and credential rules. `unknown` means ineligible. Implementation and verification run
 without forge credentials, credential helpers, host keychains, secret mounts, or unnecessary
 network. Command evidence records hashes and redacted outcomes, never secret values.
+
+`Executor` implements the structured-command policy for controller-owned execution. The enabled
+host-driven bridge delegates implementation and verification to the attested host, validates the
+declared Runtime Boundary and typed receipt, and deliberately records no invented argv or
+environment evidence. Actual process, network, filesystem, and credential enforcement remains a
+host responsibility and unknown enforcement blocks eligibility.
 
 ## Goal Adapter Contract
 
@@ -147,10 +162,12 @@ The pack state is atomic, restart-stable, and admits exactly one active item. Ea
 
 ## Publication Contract
 
-Publication runs separately from implementation and receives narrowly scoped forge credentials.
-GitHub lookup uses repository, head branch, base branch, and mission metadata to reuse an existing
-PR. CI polling is bounded and distinguishes pending, failure, timeout, auth, rate limit, and missing
-permission. Success ends at `awaiting-review`; no controller path calls merge.
+Publication components run separately from implementation and accept narrowly scoped forge
+credentials. GitHub lookup uses repository, head branch, base branch, and mission metadata to reuse
+an existing PR. CI polling is bounded and distinguishes pending, failure, timeout, auth, rate limit,
+and missing permission. These components are fixture-tested but are not composed into the enabled
+host-driven bridge, which rejects `github-awaiting-review` and nonzero PR budgets. A separately
+reviewed future composition may end at `awaiting-review`; no controller path calls merge.
 
 ## Capability Degradation
 
@@ -170,5 +187,6 @@ permission. Success ends at `awaiting-review`; no controller path calls merge.
 3. Crash/resume tests at every transition create no duplicate branch, commit, or PR.
 4. Charter and doctrine remain byte-identical across a synthetic mission.
 5. Dirty-tree, hook, symlink, credential, injection, and forge-error fixtures fail safely.
-6. A successful GitHub fixture mission reaches `awaiting-review` exactly once and never merges.
+6. A successful GitHub fixture mission reaches `awaiting-review` exactly once and never merges;
+   the enabled host bridge remains local-only until publication is separately composed and reviewed.
 7. Non-Git and unsupported-host fixtures produce honest Goal-only handoffs.

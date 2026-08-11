@@ -83,6 +83,10 @@ class HostMissionController:
         for field, value in expected:
             if authorization[field] != value:
                 raise StateError(f"authorization snapshot drift: {field}")
+        for name, expected_hash in authorization["intent_hashes"].items():
+            intent = binding["intent_snapshot"][name]
+            if intent is None or intent["sha256"] != expected_hash:
+                raise StateError(f"authorization intent hash drift: {name}")
         if authorization["publication_target"] not in {"none", "local-branch"}:
             raise StateError("host mission start supports local/no-publication targets only")
         if authorization["limits"]["max_total_prs"] != 0:

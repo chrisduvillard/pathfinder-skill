@@ -272,6 +272,19 @@ class OneGoalMissionTests(unittest.TestCase):
                 )
             self.assertFalse(controller.store.state_path.exists())
 
+    def test_host_mission_start_rejects_intent_hash_drift(self):
+        for name in ("charter", "roadmap", "doctrine"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                auth = local_authorization()
+                auth["intent_hashes"][name] = "b" * 64
+                controller = HostMissionController(Path(directory) / "mission")
+                with self.assertRaisesRegex(StateError, f"intent hash drift: {name}"):
+                    controller.start(
+                        binding=goal_binding(), authorization=auth,
+                        runtime_boundary=BOUNDARY,
+                    )
+                self.assertFalse(controller.store.state_path.exists())
+
     def test_host_mission_start_rejects_authorization_that_widens_binding_budgets(self):
         for field, value in (("max_attempts", 3), ("max_wall_seconds", 3601)):
             with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
