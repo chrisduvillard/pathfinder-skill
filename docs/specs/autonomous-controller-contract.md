@@ -133,7 +133,13 @@ operations remain unsupported; Pathfinder does not simulate native persistence.
 - Claude: use `/goal` only when the host surface is supported; otherwise save a manual command.
 - Generic: save a clearly labeled, non-persistent Implementation Goal and continuation instructions.
 
-Only one native Goal is accepted by a v1 mission. Additional selected work remains outside the mission and requires a later explicit run; a native Goal queue is deferred.
+Only one native Goal is accepted by each child mission. The sequential-pack amendment below permits a separately authorized fixed queue while preserving this one-active-Goal boundary.
+
+### Sequential-pack amendment (2026-08-11)
+
+An already reviewed numbered pack may run only after the current user explicitly approves `run all`. A pack authorization binds its fixed order and every child mission, binding, Goal, and canonical binding hash. All children must share the exact repository scope, base commit, and intent hashes; every child remains a complete one-Goal mission with zero publication authority.
+
+The pack state is atomic, restart-stable, and admits exactly one active item. Each child receives a derived one-Goal authorization no wider than the pack and binding limits. After verification and commit, a new typed `complete-goal` action must return the same stable native Goal identity recorded at activation. The queue cannot advance and the next child state cannot be created before that receipt is persisted and the child reaches `awaiting-review`. A blocked, abandoned, ambiguous, or budget-limited child terminates the pack without skipping or starting later work. Pack children are independent branches from the same base; dependent work must remain one Goal or receive a later fresh authorization.
 
 ## Publication Contract
 

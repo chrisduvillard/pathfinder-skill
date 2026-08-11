@@ -1,6 +1,6 @@
 # Autonomous controller threat model
 
-This is the threat model for the enabled local host-driven mission protocol. `mission_runner_available` means the protocol is callable, not that a host is trusted or unattended execution is eligible. Missing runtime attestation, native Goal identity, or typed receipt stops at a saved Goal/manual handoff. Publication is disabled.
+This is the threat model for the enabled local host-driven mission protocol and its sequential pack wrapper. `mission_runner_available` means the protocol is callable, not that a host is trusted or unattended execution is eligible. Missing runtime attestation, native Goal activation/completion identity, or typed receipt stops at a saved Goal/manual handoff. A pack adds no authority: it seals an explicitly approved order by binding hash, permits one active child, and stops on ambiguity or a blocker. Publication is disabled.
 
 ## Protected assets
 

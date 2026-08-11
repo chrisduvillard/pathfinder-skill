@@ -62,8 +62,7 @@ class ProjectionTests(unittest.TestCase):
     def test_awaiting_review_projection_is_terminal_and_matched(self):
         with tempfile.TemporaryDirectory() as directory:
             controller = self.start(directory)
-            self.advance(controller, 5)
-            controller.next()
+            self.advance(controller, 6)
             projection = build_mission_projection(controller.root)
             summary = projection["final_summary"]
             self.assertEqual(projection["run_log"]["verification"], "passed")
@@ -73,6 +72,10 @@ class ProjectionTests(unittest.TestCase):
             self.assertEqual(summary["goals"][0]["commit_ids"], ["c" * 40])
             self.assertEqual(summary["goals"][0]["verification"], "passed")
             self.assertIsNone(summary["goals"][0]["pr_url"])
+            self.assertEqual(
+                [item["action_kind"] for item in projection["operations"]][-1],
+                "complete-goal",
+            )
 
     def test_blocked_projection_uses_only_redacted_receipt_summary(self):
         with tempfile.TemporaryDirectory() as directory:

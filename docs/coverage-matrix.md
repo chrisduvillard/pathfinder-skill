@@ -8,8 +8,9 @@
 | Unknown enforcement blocks work | execution-policy tests; `sandbox-blocked` replay |
 | Repository injection cannot authorize | trust-route policy; `injection-blocked` replay |
 | Protected policy cannot come from prose | versioned baseline schema; additive-only explicit override tests; policy-hash drift and undeclared-path receipt rejection |
-| Local action crash recovery | intent/receipt/result/transition crash matrix for all five host actions; `host-bridge-local` replay; ambiguous missing receipts require reconciliation |
-| Fixed local mission budgets | widening-limit rejection; narrower-limit deadline fixture; restart-expiry and late-success tests; one Goal/attempt and zero-PR construction |
+| Local action crash recovery | intent/receipt/result/transition crash matrix for all six host actions, including native Goal completion; `host-bridge-local` replay; ambiguous missing receipts require reconciliation |
+| Persisted Goal packs | ordered binding-hash authorization; one-active-item guard; native completion before advancement; restart/queue-checkpoint recovery; blocked/deadline/symlink/tamper fixtures |
+| Fixed local mission budgets | widening-limit rejection; narrower-limit deadline fixture; restart-expiry and late-success tests; one active Goal/attempt, pack-wide deadline, and zero-PR construction |
 | One local commit and zero PRs in the enabled bridge | mission idempotency tests; `host-bridge-local` replay maxima; separate GitHub primitive fixtures |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |

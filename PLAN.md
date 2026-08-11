@@ -201,7 +201,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Add a Claude adapter for `/goal`, including version/hook availability checks and clear manual handoff when the command cannot be activated programmatically.
 - [x] Keep the Implementation Goal fallback, but label it as non-persistent and require explicit continuation behavior.
 - [x] Add a capability negotiation record to every Goal Binding and test all three adapter paths.
-- [ ] For goal packs, activate only one native Goal at a time and persist the queue in mission state.
+- [x] For goal packs, activate only one native Goal at a time and persist the queue in mission state. *(An explicit `run all` authorization now seals ordered binding hashes; atomic pack state delegates to isolated one-Goal child missions, requires a matching typed `complete-goal` receipt before advancing, and stops without starting later work on block, ambiguity, abandonment, or deadline expiry.)*
 
 ### P1 — Build the sequential autonomous controller
 
@@ -219,7 +219,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] Preserve recoverable blocked work without carrying its diff into the next goal.
 - [x] Add safe worktree cleanup/status commands; never delete a dirty or unmerged worktree automatically.
 - [x] Disable the Opportunity Scout by default in v1; when enabled later, cap derived goals at the run’s initial immutable limit.
-- [x] Enforce fixed maxima in the enabled bridge: one Goal and stable attempt, authorization limits no wider than the Goal Binding, restart-stable wall deadline, and zero open/total PRs. Token/cost accounting remains an explicit non-guarantee until a host exposes it.
+- [x] Enforce fixed maxima in the enabled bridge: one active Goal and stable attempt, an explicitly approved pack's fixed Goal count/order, authorization limits no wider than each Goal Binding, restart-stable mission/pack wall deadlines, and zero open/total PRs. Token/cost accounting remains an explicit non-guarantee until a host exposes it.
 
 ### P1 — Enforce execution and publication safety
 
@@ -291,7 +291,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 ### Implementation status note
 
-The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master items are deliberately deferred rather than implied complete: persisted goal-pack queues, any separately reviewed self-merge design, and repeatable non-interactive host install/load tests. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
+The master checklist above is the completion record. The risk-ordered sub-prompts below are preserved as the original execution specification; their boxes are not a second status tracker. Completed behavior is also recorded in `PROGRESS.md` and must have a deterministic check, replay, or explicit non-guarantee. The remaining master items are deliberately deferred rather than implied complete: any separately reviewed self-merge design and repeatable non-interactive host install/load tests. Token/cost accounting also remains an explicit host-owned non-guarantee until the typed protocol exposes trustworthy usage.
 
 ## Next execution batch — close the real mission-runtime gap
 

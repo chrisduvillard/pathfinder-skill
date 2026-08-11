@@ -15,7 +15,7 @@ If the assistant cannot execute slash commands directly, ask the user to paste/r
 If approved:
 
 - Before execution or manual handoff, record Runtime Boundary in `07-run-log.md`: `primary_runtime`, `mission_worktree` when autonomous mode runs, `tool_allowlist_enforced`, `sandbox_scope`, `network_access`, `credential_exposure`, `repo_code_execution`, and `pre_execution_consent`.
-- Run the goal or equivalent Implementation Goal. For a goal pack, run one numbered goal at a time unless the user explicitly asked to run all goals in the pack.
+- Run the goal or equivalent Implementation Goal. For a goal pack, run one numbered goal at a time unless the user explicitly asked to run all goals in the pack. A `run all` request uses the persisted sequential queue only after every ordered binding is validated and hash-bound; a block stops the pack rather than skipping ahead.
 - Log progress in `07-run-log.md`, including the structured completion claim when the executor surfaces one.
 - Compare the completion claim and actual changed surfaces against the saved Goal Binding, then record Binding Status as `matched`, `missing`, `stale-objective`, `mismatched`, or `not-run`. A non-autonomous `missing`, `stale-objective`, or `mismatched` status stops the run report and sends the next input back to the user; it does not authorize extra fixing outside the saved goal.
 - If Cross-Model Review is enabled for this run, write `07b-cross-model-review.md` and run or hand off the optional Phase 7b review after a completed-claim or ordinary blocker.

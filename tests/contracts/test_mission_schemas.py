@@ -55,6 +55,63 @@ BOUNDARY = {
     "execution_eligible": True, "blocking_reasons": [], "observed_at": NOW,
 }
 
+GOAL_PACK_AUTHORIZATION = {
+    "schema_version": 1,
+    "authorization_id": "authorization_pack1234",
+    "pack_id": "pack_12345678",
+    "explicit_request": True,
+    "trusted_source": "current-user-turn",
+    "authorized_at": NOW,
+    "base_commit": COMMIT,
+    "intent_hashes": {"charter": HASH, "roadmap": HASH, "doctrine": HASH},
+    "goal_bindings": [
+        {
+            "position": position,
+            "mission_id": f"mission_packgoal{position:02d}",
+            "binding_id": f"binding_packgoal{position:02d}",
+            "goal_id": f"goal_packgoal{position:02d}",
+            "sha256": HASH,
+        }
+        for position in (1, 2)
+    ],
+    "limits": {
+        "max_goals": 2,
+        "max_attempts_per_goal": 2,
+        "max_wall_seconds": 3600,
+        "max_total_prs": 0,
+    },
+    "publication_target": "local-branch",
+    "snapshot_sha256": HASH,
+}
+
+GOAL_PACK_STATE = {
+    "schema_version": 1,
+    "pack_id": "pack_12345678",
+    "authorization_id": "authorization_pack1234",
+    "state": "authorized",
+    "revision": 0,
+    "current_goal_index": 0,
+    "goals": [
+        {
+            "position": position,
+            "mission_id": f"mission_packgoal{position:02d}",
+            "binding_id": f"binding_packgoal{position:02d}",
+            "goal_id": f"goal_packgoal{position:02d}",
+            "binding_sha256": HASH,
+            "status": "active" if position == 1 else "queued",
+            "child_state_dir": f"goals/{position:04d}",
+            "activated_at": NOW if position == 1 else None,
+            "completed_at": None,
+            "final_state": None,
+        }
+        for position in (1, 2)
+    ],
+    "terminal_reason": None,
+    "deadline_at": "2026-08-10T13:00:00+00:00",
+    "created_at": NOW,
+    "updated_at": NOW,
+}
+
 EVENT = {
     "schema_version": 1, "event_id": "event_12345678", "mission_id": "mission_12345678", "sequence": 1,
     "event_type": "transition", "from_state": "planned", "to_state": "authorized", "attempt_id": None,
@@ -70,7 +127,7 @@ class MissionSchemaTests(unittest.TestCase):
                     Draft202012Validator.check_schema(schema(f"{folder}/{path.name}"))
 
     def test_valid_mission_documents(self):
-        for path, instance in [("mission/mission-state.schema.json", STATE), ("mission/authorization-snapshot.schema.json", AUTHORIZATION), ("mission/event.schema.json", EVENT), ("artifacts/runtime-boundary.schema.json", BOUNDARY), ("mission/operation-intent.schema.json", fixture("operation-intent.valid.json")), ("mission/operation-result.schema.json", fixture("operation-result.valid.json"))]:
+        for path, instance in [("mission/mission-state.schema.json", STATE), ("mission/authorization-snapshot.schema.json", AUTHORIZATION), ("mission/goal-pack-authorization.schema.json", GOAL_PACK_AUTHORIZATION), ("mission/goal-pack-state.schema.json", GOAL_PACK_STATE), ("mission/event.schema.json", EVENT), ("artifacts/runtime-boundary.schema.json", BOUNDARY), ("mission/operation-intent.schema.json", fixture("operation-intent.valid.json")), ("mission/operation-result.schema.json", fixture("operation-result.valid.json"))]:
             with self.subTest(path=path):
                 validate(path, instance)
 
@@ -141,6 +198,22 @@ class MissionSchemaTests(unittest.TestCase):
         instance["explicit_request"] = False
         with self.assertRaises(Exception):
             validate("mission/authorization-snapshot.schema.json", instance)
+
+        pack = copy.deepcopy(GOAL_PACK_AUTHORIZATION)
+        pack["explicit_request"] = False
+        with self.assertRaises(Exception):
+            validate("mission/goal-pack-authorization.schema.json", pack)
+
+    def test_goal_pack_schemas_reject_single_item_and_unknown_queue_status(self):
+        authorization = copy.deepcopy(GOAL_PACK_AUTHORIZATION)
+        authorization["goal_bindings"] = authorization["goal_bindings"][:1]
+        authorization["limits"]["max_goals"] = 1
+        with self.assertRaises(Exception):
+            validate("mission/goal-pack-authorization.schema.json", authorization)
+        state = copy.deepcopy(GOAL_PACK_STATE)
+        state["goals"][0]["status"] = "maybe-running"
+        with self.assertRaises(Exception):
+            validate("mission/goal-pack-state.schema.json", state)
 
     def test_unknown_runtime_boundary_is_not_eligible(self):
         instance = copy.deepcopy(BOUNDARY)

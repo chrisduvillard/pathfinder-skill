@@ -97,6 +97,7 @@ RECEIPT_CODES = {
     "implement": "implementation-complete",
     "verify": "verification-passed",
     "commit": "commit-created",
+    "complete-goal": "goal-complete",
 }
 
 
@@ -107,6 +108,7 @@ def host_receipt(action, *, outcome="succeeded"):
         "implement": "implementation_12345678",
         "verify": "verification_12345678",
         "commit": "c" * 40,
+        "complete-goal": "goal_native_12345678",
     }
     evidence = {
         "code": RECEIPT_CODES[action["action_kind"]],
@@ -558,6 +560,49 @@ class OneGoalMissionTests(unittest.TestCase):
             result = controller.record(receipt)
             self.assertEqual(result["status"], "manual-handoff")
             self.assertEqual(result["state"]["state"], "blocked")
+
+    def test_native_goal_must_complete_before_the_mission_is_terminal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mission"
+            controller = HostMissionController(root, clock=lambda: NOW)
+            controller.start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            for _step in range(5):
+                action = controller.next()["action"]
+                controller.record(host_receipt(action))
+            completion = controller.next()
+            self.assertEqual(completion["status"], "action-required")
+            self.assertEqual(completion["action"]["action_kind"], "complete-goal")
+            self.assertEqual(
+                completion["action"]["context"]["native_goal_id"],
+                "goal_native_12345678",
+            )
+            pending = HostMissionController(root).next()
+            self.assertEqual(pending["status"], "reconcile-required")
+            self.assertEqual(controller.store.load()["state"], "committed")
+            terminal = controller.record(host_receipt(completion["action"]))
+            self.assertEqual(terminal["state"]["state"], "awaiting-review")
+
+    def test_goal_completion_receipt_must_match_the_activated_native_goal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            controller = HostMissionController(
+                Path(directory) / "mission", clock=lambda: NOW
+            )
+            controller.start(
+                binding=goal_binding(), authorization=local_authorization(),
+                runtime_boundary=BOUNDARY,
+            )
+            for _step in range(5):
+                action = controller.next()["action"]
+                controller.record(host_receipt(action))
+            action = controller.next()["action"]
+            receipt = host_receipt(action)
+            receipt["evidence"]["stable_id"] = "goal_native_different"
+            with self.assertRaisesRegex(StateError, "activated native Goal"):
+                controller.record(receipt)
+            self.assertFalse(controller._receipt_path(action["operation_id"]).exists())
 
     def test_semantically_invalid_receipt_is_not_persisted(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -47,8 +47,7 @@ class MissionViewTests(unittest.TestCase):
             controller.record(host_receipt(action))
 
     def finish(self, controller: HostMissionController) -> None:
-        self.advance(controller, 5)
-        controller.next()
+        self.advance(controller, 6)
 
     def test_active_refresh_writes_replaceable_run_log_views_only(self):
         with tempfile.TemporaryDirectory() as directory:

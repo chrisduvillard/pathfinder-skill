@@ -22,7 +22,7 @@ typed receipts, and explicit current-run authority, and publication remains disa
 - Autonomous work requires complete intent, item-level execution eligibility, injection-safe
   provenance, an enforceable runtime boundary, a mission worktree, credential separation,
   verification, and diff review.
-- V1 is sequential, runs one Goal, creates at most one verified local commit, and ends at awaiting-review with no publication or self-merge.
+- The controller is sequential and permits only one active native Goal. A single mission creates at most one verified local commit; an explicitly approved pack persists an ordered, hash-bound queue of independent one-Goal missions and activates the next only after a typed native completion receipt. Every child ends at awaiting-review with no publication or self-merge.
 - Autonomous missions may update roadmap evidence but never charter or doctrine policy.
 - Every work-producing path must leave a human-readable artifact trail plus the structured sidecar
   files defined in `artifact-structure.md` whenever the corresponding artifact exists.

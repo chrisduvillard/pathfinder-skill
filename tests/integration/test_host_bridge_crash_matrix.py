@@ -21,6 +21,7 @@ ACTIONS = (
     "implement",
     "verify",
     "commit",
+    "complete-goal",
 )
 
 

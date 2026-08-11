@@ -2,7 +2,9 @@
 
 ## GitHub repository
 
-`/pathfinder auto` may use the local bridge only when the active host provides real runtime attestation, stable native Goal identity, and typed receipts. It stops at a committed local awaiting-review branch. GitHub publication and merge are disabled; otherwise it saves the Goal/manual handoff.
+`/pathfinder auto` may use the local bridge only when the active host provides real runtime attestation, stable native Goal activation and completion identities, and typed receipts. It stops at a committed local awaiting-review branch. GitHub publication and merge are disabled; otherwise it saves the Goal/manual handoff.
+
+If the user explicitly approves `run all` for an already reviewed numbered pack, Pathfinder may use `mission pack-start` with the ordered schema-valid Goal Bindings and a hash-bound pack authorization. Each item runs as an independent one-Goal mission from the same base. The controller requires native Goal completion before creating the next child mission, and any block leaves the remaining queue untouched and unstarted.
 
 ## Git repository without a remote
 

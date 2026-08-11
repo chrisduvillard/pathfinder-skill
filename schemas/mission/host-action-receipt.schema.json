@@ -10,7 +10,7 @@
     "operation_id": {"type": "string", "pattern": "^operation_[a-z0-9][a-z0-9_-]{7,63}$"},
     "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
     "attempt_id": {"type": "string", "pattern": "^attempt_[a-z0-9][a-z0-9_-]{7,63}$"},
-    "action_kind": {"enum": ["prepare-worktree", "activate-goal", "implement", "verify", "commit", "publish"]},
+    "action_kind": {"enum": ["prepare-worktree", "activate-goal", "implement", "verify", "commit", "complete-goal", "publish"]},
     "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "authorization_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "runtime_boundary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -26,7 +26,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["code", "redacted_summary", "stable_id", "artifact_sha256", "exit_status", "changed_files", "worktree_path", "branch_id", "branch_name"],
       "properties": {
-        "code": {"enum": ["worktree-prepared", "goal-active", "implementation-complete", "verification-passed", "verification-failed", "commit-created", "publication-complete", "manual-handoff", "action-failed", "not-found", "ambiguous"]},
+        "code": {"enum": ["worktree-prepared", "goal-active", "implementation-complete", "verification-passed", "verification-failed", "commit-created", "goal-complete", "publication-complete", "manual-handoff", "action-failed", "not-found", "ambiguous"]},
         "redacted_summary": {"type": "string", "maxLength": 2000},
         "stable_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$"},
         "artifact_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},

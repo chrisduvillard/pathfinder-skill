@@ -19,8 +19,9 @@ STAGE_ORDER = {
     "implementation": 2,
     "verification": 3,
     "commit": 4,
-    "publication": 5,
-    "cleanup": 6,
+    "goal-completion": 5,
+    "publication": 6,
+    "cleanup": 7,
 }
 OPERATION_FILE = re.compile(
     r"^(operation_[a-z0-9][a-z0-9_-]{7,63})\.(intent|result|receipt)\.json$"

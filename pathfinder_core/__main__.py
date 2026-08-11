@@ -8,6 +8,7 @@ from pathlib import Path
 from .artifacts import write_saved_prompt_goal
 from .capabilities import capabilities_json, probe_capabilities
 from .errors import PathfinderError, StateError
+from .goal_pack import GoalPackController
 from .migrations import activate_intent, migrate_intent, migrate_mission
 from .mission_host import HostMissionController
 from .mission_views import write_mission_views
@@ -47,6 +48,33 @@ def _parser() -> argparse.ArgumentParser:
     abandon = mission_commands.add_parser("abandon", help="mark an active mission abandoned")
     abandon.add_argument("--state-dir", required=True)
     abandon.add_argument("--json", action="store_true", dest="as_json")
+    pack_start = mission_commands.add_parser(
+        "pack-start", help="initialize an ordered local Goal pack"
+    )
+    pack_start.add_argument("--state-dir", required=True)
+    pack_start.add_argument("--goal-binding", required=True, action="append")
+    pack_start.add_argument("--authorization", required=True)
+    pack_start.add_argument("--runtime-boundary", required=True)
+    pack_start.add_argument(
+        "--protected-policy",
+        help="explicit additive protected-surface policy JSON",
+    )
+    pack_start.add_argument("--json", action="store_true", dest="as_json")
+    for name, help_text in (
+        ("pack-next", "return the next action for the active queued Goal"),
+        ("pack-resume", "resume the active queued Goal without replay"),
+        ("pack-status", "show persisted Goal pack queue state"),
+        ("pack-abandon", "abandon the Goal pack and active child mission"),
+    ):
+        command = mission_commands.add_parser(name, help=help_text)
+        command.add_argument("--state-dir", required=True)
+        command.add_argument("--json", action="store_true", dest="as_json")
+    pack_record = mission_commands.add_parser(
+        "pack-record", help="record one typed receipt for the active queued Goal"
+    )
+    pack_record.add_argument("--state-dir", required=True)
+    pack_record.add_argument("--receipt-file", required=True)
+    pack_record.add_argument("--json", action="store_true", dest="as_json")
     migrate = commands.add_parser("migrate", help="back up and migrate local Pathfinder state")
     migrate_commands = migrate.add_subparsers(dest="migrate_command", required=True)
     migrate_intent_parser = migrate_commands.add_parser("intent", help="migrate .pathfinder intent files")
@@ -108,6 +136,67 @@ def main(argv=None) -> int:
         args = _parser().parse_args(argv)
         if args.command == "doctor":
             return _doctor(args.as_json)
+        if args.command == "mission" and args.mission_command == "pack-status":
+            state = GoalPackController(args.state_dir).status()
+            if args.as_json:
+                print(json.dumps(state, indent=2, sort_keys=True))
+            else:
+                print(f"pack: {state['pack_id']}")
+                print(f"state: {state['state']}")
+                current = state["current_goal_index"]
+                print(f"active_goal: {current + 1 if current is not None else 'none'}")
+                print(f"goals: {len(state['goals'])}")
+            return 0
+        if args.command == "mission" and args.mission_command == "pack-start":
+            state = GoalPackController(args.state_dir).start(
+                bindings=[read_json(Path(path)) for path in args.goal_binding],
+                authorization=read_json(Path(args.authorization)),
+                runtime_boundary=read_json(Path(args.runtime_boundary)),
+                protected_policy=(
+                    read_json(Path(args.protected_policy))
+                    if args.protected_policy else None
+                ),
+            )
+            if args.as_json:
+                print(json.dumps(state, indent=2, sort_keys=True))
+            else:
+                print(f"pack: {state['pack_id']}")
+                print(f"state: {state['state']}")
+                print(f"goals: {len(state['goals'])}")
+                print("publication: local-only")
+            return 0
+        if args.command == "mission" and args.mission_command in {
+            "pack-next", "pack-resume",
+        }:
+            result = GoalPackController(args.state_dir).next()
+            if args.as_json:
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"status: {result['status']}")
+                print(f"pack: {result['state']['pack_id']}")
+                if result.get("action"):
+                    print(f"action: {result['action']['action_kind']}")
+                    print(f"operation: {result['action']['operation_id']}")
+            return 0
+        if args.command == "mission" and args.mission_command == "pack-record":
+            result = GoalPackController(args.state_dir).record(
+                read_json(Path(args.receipt_file))
+            )
+            if args.as_json:
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"status: {result['status']}")
+                print(f"pack: {result['state']['pack_id']}")
+                print(f"operation: {result['operation_id']}")
+            return 0
+        if args.command == "mission" and args.mission_command == "pack-abandon":
+            state = GoalPackController(args.state_dir).abandon()
+            if args.as_json:
+                print(json.dumps(state, indent=2, sort_keys=True))
+            else:
+                print(f"pack: {state['pack_id']}")
+                print("state: abandoned")
+            return 0
         if args.command == "mission" and args.mission_command == "status":
             state = MissionStore(args.state_dir).load()
             if args.as_json:

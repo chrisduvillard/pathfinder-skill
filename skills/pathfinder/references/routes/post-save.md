@@ -10,7 +10,7 @@ Do not show this screen until the recognition-first contract is accepted and `06
 5. Run the saved goal now with Cross-Model Review enabled after showing the exact command and review packet plan.
 ```
 
-Default to option 2 unless the user explicitly selects another mode. Do not recommend option 3 or option 5 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run. For a goal pack, saving first and asking before running remains the default. If the user approves execution of a pack, proceed one goal at a time and ask before the next goal unless the user explicitly says to run all goals in the pack.
+Default to option 2 unless the user explicitly selects another mode. Do not recommend option 3 or option 5 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run. For a goal pack, saving first and asking before running remains the default. If the user approves one item, use a single mission and ask again before another. If the user explicitly approves `run all`, and every item independently passes the autonomous gates against the same scope/base, use the controller's ordered hash-bound pack queue; never turn approval for one item into authority for the rest.
 
 Option 5 enables Cross-Model Review for this run only. It runs the saved goal under the normal Phase 7 approval rules, then runs optional Phase 7b after a completed-claim or ordinary blocker. Option 5 does not authorize commits, pushes, PRs, merges, or protected-area changes.
 

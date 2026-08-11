@@ -10,13 +10,16 @@
     "operation_id": {"type": "string", "pattern": "^operation_[a-z0-9][a-z0-9_-]{7,63}$"},
     "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
     "attempt_id": {"type": "string", "pattern": "^attempt_[a-z0-9][a-z0-9_-]{7,63}$"},
-    "action_kind": {"enum": ["prepare-worktree", "activate-goal", "implement", "verify", "commit", "publish"]},
+    "action_kind": {"enum": ["prepare-worktree", "activate-goal", "implement", "verify", "commit", "complete-goal", "publish"]},
     "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "authorization_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "runtime_boundary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "context": {"$ref": "#/$defs/context"},
     "requested_at": {"type": "string", "format": "date-time"}
   },
+  "allOf": [
+    {"if": {"properties": {"action_kind": {"const": "complete-goal"}}, "required": ["action_kind"]}, "then": {"properties": {"context": {"required": ["native_goal_id"], "properties": {"native_goal_id": {"type": "string"}}}}}}
+  ],
   "$defs": {
     "context": {
       "type": "object", "additionalProperties": false,
@@ -24,6 +27,7 @@
       "properties": {
         "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
         "goal_id": {"type": ["string", "null"], "pattern": "^goal_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "native_goal_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$"},
         "worktree_id": {"type": ["string", "null"], "pattern": "^worktree_[a-z0-9][a-z0-9_-]{7,63}$"},
         "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "deadline_at": {"type": "string", "format": "date-time"},

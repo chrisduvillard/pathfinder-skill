@@ -22,7 +22,20 @@ mkdir -p "$package"
 if [ "$source_mode" = "git" ]; then
   git -C "$root" archive --format=tar --output="$archive" HEAD
 elif [ "$source_mode" = "worktree" ]; then
-  tar -cf "$archive" --exclude=.git --exclude=.venv --exclude=__pycache__ --exclude=.pathfinder --exclude=.agent-work -C "$root" .
+  file_list="$archive_dir/worktree-files"
+  git -C "$root" ls-files --cached --others --exclude-standard -z |
+    while IFS= read -r -d '' path; do
+      case "$path" in
+        */__pycache__/*) continue ;;
+      esac
+      if [ -e "$root/$path" ] || [ -L "$root/$path" ]; then
+        printf '%s\0' "$path"
+      fi
+    done > "$file_list"
+  (
+    cd "$root"
+    tar -cf "$archive" --null -T "$file_list"
+  )
 else
   echo "::error::package source mode must be worktree or git"
   exit 1

@@ -144,6 +144,7 @@ Every work-producing run leaves a clean, resumable trail. Only phases the route 
 ├─ 04-question-funnel.md      the choices put to you
 ├─ 05-user-answers.md         what you picked
 ├─ 06-goal-command.md         a ready-to-copy /goal or grouped goal pack
+├─ goals/NNNN/                per-item bindings and controller views for a run-all pack
 ├─ 07-run-log.md              progress if the goal is run
 ├─ 07b-cross-model-review.md  optional second-model review packet
 ├─ 08-final-summary.md        what was explored, found, and decided
@@ -187,6 +188,7 @@ The local autonomous bridge is the only path designed to commit without a per-st
 - **Defers docs until after a source-first pass.** Full exploration selects one to five scout domains from the initial map, expanding only where uncertainty or risk justifies it, then ranks a **Top 5**. Prompt-to-goal loads only its focused route. Both retain the same evidence and sidecar contracts.
 - **Adversarial verification.** The default blind **three-verifier panel** re-checks top candidates, downgrades or rejects the weak ones, and surfaces a `Verified:` grade. Low-risk work can take cheaper paths; protected, autonomous, or contested work uses deeper verification.
 - **Pick the work your way.** Choose from ranked candidate cards, drill down *intent → domain → surface → target → boundaries*, or select several moves as a numbered **goal pack**.
+- **Resume an approved pack safely.** An explicit `run all` approval can be sealed as an ordered binding-hash queue. Pathfinder activates one native Goal at a time, requires typed completion before advancing, and stops the pack on any blocker instead of skipping ahead.
 - **Proof bound to the goal.** Each goal records a Goal Binding plus capability profile; run logs and summaries record the Runtime Boundary and Binding Status, so "done" is checked against the original objective instead of drifting into looks-done prose.
 - **Optional cross-model review.** After a run, Pathfinder can hand the goal, diff, and checks to the best available reviewer capability profile for goal-bounded fixes — recorded in `07b-cross-model-review.md`, or a manual handoff packet if no safe launcher is available.
 - **Meaningful progress, not play-by-play.** Updates appear when the route, evidence, Goal, execution disposition, or required input changes; each says what changed, the strongest evidence, and the next gate instead of listing every file or internal check.

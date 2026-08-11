@@ -414,6 +414,6 @@ Ask only after `06-goal-command.md` is saved:
 
 Default to option 2. Do not recommend option 3 or option 5 merely because the user confirmed the goal, selected a narrow scope, or the goal looks safe; confirmation to save is not confirmation to run.
 
-For a goal pack, default remains save first and ask before running. If the user approves execution, run one numbered goal at a time unless the user explicitly asks to run all goals in the pack.
+For a goal pack, default remains save first and ask before running. Approval for one numbered item authorizes only that item. If the user explicitly approves `run all`, validate every ordered binding independently and use the persisted hash-bound sequential queue; a block stops the pack without skipping ahead.
 
 Option 5 enables Cross-Model Review for this run only. It writes `07b-cross-model-review.md`, then runs or hands off the optional Phase 7b review after a completed-claim or ordinary blocker. It does not authorize commits, pushes, PRs, merges, or protected-area changes.

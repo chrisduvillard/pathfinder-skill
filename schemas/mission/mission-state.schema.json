@@ -20,6 +20,7 @@
     "branch_id": {"type": ["string", "null"], "pattern": "^branch_[a-z0-9][a-z0-9_-]{7,63}$"},
     "branch_name": {"type": ["string", "null"]},
     "commit_ids": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}, "uniqueItems": true},
+    "native_goal_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$"},
     "pr_id": {"type": ["string", "null"]},
     "pr_url": {"type": ["string", "null"], "format": "uri"},
     "terminal_reason": {"type": ["string", "null"], "enum": [null, "budget-limited"]},

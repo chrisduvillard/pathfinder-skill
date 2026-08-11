@@ -49,6 +49,8 @@ class HostProtocolTests(unittest.TestCase):
         for action in HostAction:
             document = copy.deepcopy(self.request_document)
             document["action_kind"] = action.value
+            if action is HostAction.COMPLETE_GOAL:
+                document["context"]["native_goal_id"] = "goal_native_12345678"
             with self.subTest(action=action.value):
                 request = self.protocol.validate_request(
                     document, trusted_binding=trusted_binding(document)
@@ -136,6 +138,24 @@ class HostProtocolTests(unittest.TestCase):
         receipt["evidence"].update(code="manual-handoff", redacted_summary="Run /goal manually")
         result = self.protocol.validate_receipt(receipt, request=self.request())
         self.assertIs(result.outcome, HostOutcome.MANUAL_HANDOFF)
+
+    def test_goal_completion_requires_the_activated_native_identity(self):
+        document = copy.deepcopy(self.request_document)
+        document["action_kind"] = "complete-goal"
+        with self.assertRaisesRegex(StateError, "native_goal_id|native Goal identity"):
+            self.protocol.validate_request(
+                document, trusted_binding=trusted_binding(document)
+            )
+        document["context"]["native_goal_id"] = "goal_native_12345678"
+        request = self.protocol.validate_request(
+            document, trusted_binding=trusted_binding(document)
+        )
+        receipt = fixture("host-action-receipt.valid.json")
+        receipt["action_kind"] = "complete-goal"
+        receipt["evidence"]["code"] = "goal-complete"
+        receipt["evidence"]["stable_id"] = None
+        with self.assertRaisesRegex(StateError, "stable native Goal identity"):
+            self.protocol.validate_receipt(receipt, request=request)
 
     def test_successful_worktree_receipt_requires_typed_identity(self):
         request_document = copy.deepcopy(self.request_document)

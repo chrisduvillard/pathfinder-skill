@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/mission/goal-pack-state.schema.json",
+  "title": "Pathfinder Goal Pack State",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "pack_id", "authorization_id", "state", "revision", "current_goal_index", "goals", "terminal_reason", "deadline_at", "created_at", "updated_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "pack_id": {"type": "string", "pattern": "^pack_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "authorization_id": {"type": "string", "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "state": {"enum": ["authorized", "running", "awaiting-review", "blocked", "abandoned"]},
+    "revision": {"type": "integer", "minimum": 0},
+    "current_goal_index": {"type": ["integer", "null"], "minimum": 0, "maximum": 19},
+    "goals": {
+      "type": "array", "minItems": 2, "maxItems": 20,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["position", "mission_id", "binding_id", "goal_id", "binding_sha256", "status", "child_state_dir", "activated_at", "completed_at", "final_state"],
+        "properties": {
+          "position": {"type": "integer", "minimum": 1, "maximum": 20},
+          "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+          "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+          "goal_id": {"type": "string", "pattern": "^goal_[a-z0-9][a-z0-9_-]{7,63}$"},
+          "binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "status": {"enum": ["queued", "active", "completed", "blocked", "abandoned"]},
+          "child_state_dir": {"type": "string", "pattern": "^goals/[0-9]{4}$"},
+          "activated_at": {"type": ["string", "null"], "format": "date-time"},
+          "completed_at": {"type": ["string", "null"], "format": "date-time"},
+          "final_state": {"type": ["string", "null"], "enum": [null, "awaiting-review", "blocked", "abandoned"]}
+        }
+      }
+    },
+    "terminal_reason": {"type": ["string", "null"], "enum": [null, "budget-limited", "goal-blocked", "abandoned"]},
+    "deadline_at": {"type": "string", "format": "date-time"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

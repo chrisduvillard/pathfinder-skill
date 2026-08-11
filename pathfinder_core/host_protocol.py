@@ -19,6 +19,7 @@ class HostAction(str, Enum):
     IMPLEMENT = "implement"
     VERIFY = "verify"
     COMMIT = "commit"
+    COMPLETE_GOAL = "complete-goal"
     PUBLISH = "publish"
 
 
@@ -97,6 +98,11 @@ class HostProtocol:
         for field in REQUEST_TRUSTED_FIELDS:
             if trusted_binding.get(field) != document[field]:
                 raise StateError(f"host action request has forged trusted field: {field}")
+        if (
+            document["action_kind"] == HostAction.COMPLETE_GOAL.value
+            and not document["context"].get("native_goal_id")
+        ):
+            raise StateError("Goal completion request requires the activated native Goal identity")
         return HostActionRequest(
             action_id=document["action_id"],
             operation_id=document["operation_id"],
@@ -127,11 +133,11 @@ class HostProtocol:
         if outcome is HostOutcome.MANUAL_HANDOFF and evidence["code"] != "manual-handoff":
             raise StateError("manual handoff receipt must carry manual-handoff evidence")
         if (
-            request.action_kind is HostAction.ACTIVATE_GOAL
+            request.action_kind in {HostAction.ACTIVATE_GOAL, HostAction.COMPLETE_GOAL}
             and outcome is HostOutcome.SUCCEEDED
             and not evidence["stable_id"]
         ):
-            raise StateError("successful Goal activation requires a stable native Goal identity")
+            raise StateError("successful Goal lifecycle action requires a stable native Goal identity")
         return HostActionReceipt(
             action_id=document["action_id"],
             operation_id=document["operation_id"],

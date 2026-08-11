@@ -21,6 +21,7 @@ ACTION_BY_STATE = {
     "running": ("implementation", "implement"),
     "verifying": ("verification", "verify"),
     "verified": ("commit", "commit"),
+    "committed": ("goal-completion", "complete-goal"),
 }
 TERMINAL_STATES = {"awaiting-review", "merged", "blocked", "abandoned"}
 SUCCESS_BY_ACTION = {
@@ -29,6 +30,7 @@ SUCCESS_BY_ACTION = {
     "implement": ("running", "verifying", "implementation-complete"),
     "verify": ("verifying", "verified", "verification-passed"),
     "commit": ("verified", "committed", "commit-created"),
+    "complete-goal": ("committed", "awaiting-review", "goal-complete"),
 }
 RESULT_CODES = {
     "succeeded": "completed",
@@ -147,6 +149,7 @@ class HostMissionController:
             "branch_id": None,
             "branch_name": None,
             "commit_ids": [],
+            "native_goal_id": None,
             "pr_id": None,
             "pr_url": None,
             "created_at": at,
@@ -242,6 +245,10 @@ class HostMissionController:
                  "action_kind": action_kind}
             ),
         }
+        if action_kind == "complete-goal":
+            if not state.get("native_goal_id"):
+                raise StateError("cannot complete a Goal without its activated native identity")
+            context["native_goal_id"] = state["native_goal_id"]
         trusted = {
             "operation_id": operation_id,
             "mission_id": state["mission_id"],
@@ -274,9 +281,6 @@ class HostMissionController:
 
     def next(self) -> dict:
         state = self.store.load()
-        if state["state"] == "committed":
-            state = self.store.move("awaiting-review", attempt_id=state["attempt_id"])
-            return {"status": "terminal", "state": state}
         if state["state"] in TERMINAL_STATES:
             return {"status": "terminal", "state": state}
         if state["state"] not in ACTION_BY_STATE:
@@ -377,6 +381,8 @@ class HostMissionController:
             }
         if action_kind == "commit":
             return {"commit_ids": [evidence["stable_id"]]}
+        if action_kind == "activate-goal":
+            return {"native_goal_id": evidence["stable_id"]}
         return {}
 
     def _advance(self, state: dict, receipt: dict, *, apply: bool) -> dict:
@@ -422,6 +428,12 @@ class HostMissionController:
         if intent["protected_policy_sha256"] != protected_registry.sha256:
             raise StateError("operation protected policy hash no longer matches mission contract")
         self.protocol.validate_receipt(receipt, request=self._request_from_intent(intent))
+        if (
+            receipt["action_kind"] == "complete-goal"
+            and receipt["outcome"] == HostOutcome.SUCCEEDED.value
+            and receipt["evidence"]["stable_id"] != state.get("native_goal_id")
+        ):
+            raise StateError("Goal completion receipt does not match the activated native Goal")
         if receipt["outcome"] == HostOutcome.SUCCEEDED.value:
             required = set(
                 protected_registry.required_categories(

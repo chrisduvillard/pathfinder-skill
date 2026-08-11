@@ -124,6 +124,13 @@ R="$(newroot)"
 rewrite "$R/skills/pathfinder/references/routes/execute-review.md" 's/^## Phase 7: Approval/## Phase Seven: Approval/'
 assert_catch "$R" "section-boundary heading missing or renamed" "boundary-heading guard catches a renamed ## Phase 7: heading"
 
+echo "== parser 3c: sequential Goal-pack authority guard =="
+# Removing the ordered binding-hash handoff must fail instead of leaving a queue
+# whose membership can drift between approval and activation.
+R="$(newroot)"
+rewrite "$R/skills/pathfinder/references/routes/autonomous.md" '/ordered binding hashes/d'
+assert_catch "$R" "ordered binding hashes" "autonomous guard catches a removed ordered binding-hash contract"
+
 echo "== parser 4a: VERSION.md 'Version:' regex (extracted from check-manifests.sh) =="
 # Pull the REAL version_re out of check-manifests.sh and prove it (a) matches exactly one clean
 # 'Version:' line and (b) counts two when a second is present — the >1 case the parser rejects.
