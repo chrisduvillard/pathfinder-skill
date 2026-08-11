@@ -44,6 +44,7 @@ bash scripts/check-skill-consistency.sh   # SKILL.md <-> references drift guard
 bash scripts/check-skill-behavior.sh      # SKILL.md safety-direction + screen-escape invariants
 bash scripts/check-manifests.sh           # JSON validity + version parity + marketplace rules
 bash scripts/check-portability.sh         # validation/release shell portability guard
+bash scripts/check-generated-docs.sh      # canonical policy -> committed Markdown drift guard
 bash scripts/check-markdown-authority.sh  # production Markdown-to-state reader allowlist
 bash scripts/check-shell.sh               # warning-or-higher ShellCheck over every Bash file
 bash scripts/check-evals.sh               # deterministic artifact-contract eval fixtures
@@ -77,6 +78,10 @@ before you push, not after.
   title-case (`Productivity`). Changing either to match the other breaks that
   platform's listing.
 - Keep `VERSION.md` as the version and changelog source of truth.
+- `policies/protected-surfaces.v1.json` is the source of truth for the protected-surface
+  table in `docs/protected-surfaces.md`. Do not edit the generated region by hand. After
+  changing the policy, run `python3 scripts/render_protected_surfaces.py .` and commit both
+  files; `check-generated-docs.sh` rejects stale or malformed generated regions.
 - `SKILL.md` owns routing and the trust boundary; `references/routes/*.md` are required
   modules loaded only for the selected path. Other `references/*.md` files intentionally
   mirror shared screens/contracts so each is useful when loaded on its own; route presence

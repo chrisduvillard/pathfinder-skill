@@ -36,6 +36,7 @@ jobs:
     name: preflight (${{ matrix.os }})
     env:
       PATHFINDER_CONTROLLER_PYTHON: python
+      PATHFINDER_DOCS_PYTHON: python
       PATHFINDER_EVAL_PYTHON: python
     strategy:
       fail-fast: false
@@ -81,6 +82,10 @@ jobs:
       - name: Check validation/release portability
         shell: bash
         run: bash scripts/check-portability.sh
+
+      - name: Check generated policy documentation
+        shell: bash
+        run: bash scripts/check-generated-docs.sh
 
       - name: Run ShellCheck
         shell: bash

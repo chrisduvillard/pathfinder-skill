@@ -242,7 +242,7 @@ The first autonomous release should be deliberately narrower than the current pr
 
 - [x] Reduce `SKILL.md` to a thin router, trust boundary, and required route-loading rules.
 - [x] Move explore, prompt-to-goal, intent-refresh, autonomous, status, and reviewer workflows into separate route references loaded only when needed.
-- [ ] Replace hand-copied rule mirrors with canonical schema/config fragments and generated documentation where practical.
+- [x] Replace hand-copied rule mirrors with canonical schema/config fragments and generated documentation where practical. *(The highest-value data mirror—the protected-surface category/path table—is now deterministically generated from the versioned baseline and checked locally, in packaged archives, and on all hosted platforms; behavioral prose remains explicitly guarded rather than mechanically generated.)*
 - [x] Make prompt-to-goal independent of the full Doctrine Interview; ask only unresolved Goal-contract questions.
 - [x] Require the deep creator interview only before explicit autonomous execution or an explicit creator-model refresh.
 - [x] Add a fast path for a well-formed prompt: targeted search, proof discovery, one recognition screen, then native Goal activation.
