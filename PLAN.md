@@ -1475,10 +1475,14 @@ snapshot. Later source-only readers now resolve exact permission-qualified membe
 walk every check suite/run under a global ceiling without using GitHub's 1,000-suite shortcut,
 and fully paginate REST reviews before reading one exact `Metadata=read`-qualified repository
 permission per unique reviewer identity. Reviewer permission responses are cross-checked against
-the requested actor and retain distinct target-bound audits. These readers still have no caller
-and do not compose REST policy/rules with the GraphQL review view, classify required checks into
-a snapshot, or bind exact controller last-pusher evidence, so the positive-identity/bypass
-checkbox and both K5 installed-host readiness items remain unchecked.
+the requested actor and retain distinct target-bound audits. Check evidence now also projects the
+complete suite/run set and the latest creator-bearing `/statuses` item per context into the observer
+contract, cross-checking the result against the combined `/status` envelope, deriving `required`
+only from a closed caller-supplied context/App union, and sharing one global request budget. These
+readers still have no caller and do not derive that union from live
+policy/rules, reconcile REST with the GraphQL review view, cross-check check-run PR links, compose a
+snapshot, or bind exact controller last-pusher evidence, so the positive-identity/bypass checkbox
+and both K5 installed-host readiness items remain unchecked.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 

@@ -185,20 +185,26 @@ missing request ids, and byte/page ceilings. It accepts only the exact read-only
 credential declaration and exposes no arbitrary query, mutation, URL, environment loader, or
 enabled caller.
 
-The source now also has an uncalled bypass-membership reader and complete check-run traversal. Team
-and organization `404` become absence only on the exact endpoint with GitHub's `Members=read`
+The source now also has uncalled bypass-membership, review, and check-evidence readers. Team and
+organization `404` become absence only on the exact endpoint with GitHub's `Members=read`
 qualification; repository-role reads require `Metadata=read`, exact bot identity, and preserve all
 six GitHub permission levels so `maintain`/`triage` cannot be silently collapsed into `write`.
-Every resolution has a unique request audit. Check collection lists every suite for the exact SHA,
-then paginates runs per suite under one global request ceiling, rejecting duplicate suite/run/request
-ids and SHA or suite drift instead of using GitHub's 1,000-suite shortcut.
+Every resolution has a unique request audit. REST reviews are fully paginated, each unique actor's
+current repository permission is read once with positive `Metadata=read` evidence, and the returned
+id/login must match the review actor. Check collection lists every suite for the exact SHA, then
+paginates runs per suite instead of using GitHub's 1,000-suite shortcut. It reads the combined
+`/status` envelope, fully paginates the creator-bearing `/statuses` history, derives the latest item
+per context, and cross-checks the derived count/state against the exact repository id/name and SHA
+in the combined response. Required evidence is marked only from a closed context/App union supplied
+by the future policy composer. One global request ceiling covers suites, runs, and both status reads;
+duplicate suite/run/status/request ids and repository/SHA/suite/state drift fail closed.
 
 These primitives are still not the production collector: no source composes all REST and GraphQL
 families, records the credential receipt and every identity audit in a normalized snapshot,
-transforms policy/ruleset sources, attaches reviewer-permission audits and required-check
-classification to the complete suite/run set, or binds the authenticated controller's exact last
-pusher. The system must not substitute UI text or omit those facts. Conditional merge therefore
-remains unsupported for live use.
+transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
+sets or check-run PR links, or binds the authenticated controller's exact last pusher. The system
+must not substitute UI text or omit those facts. Conditional merge therefore remains unsupported
+for live use.
 
 ## Typed block and result contract
 

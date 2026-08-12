@@ -651,6 +651,13 @@ class GitHubGETClientTests(unittest.TestCase):
             if "GitHubCheckRunReader(" in path.read_text():
                 check_consumers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(check_consumers, [])
+        check_evidence_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_checks.py":
+                continue
+            if "GitHubCheckEvidenceReader(" in path.read_text():
+                check_evidence_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(check_evidence_consumers, [])
         review_consumers = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):
             if path.name == "github_reviews.py":

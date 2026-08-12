@@ -34,8 +34,12 @@ organization absence and exact repository-role permissions, while the check read
 before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader
 fully paginates the REST review audit and reads one exact repository permission for every unique
 review actor, requiring positive `Metadata=read` evidence and cross-checking the returned actor.
-These readers retain distinct request audits and fail on identity, permission, pagination, request
-budget, or SHA drift; none is an installed collector.
+The check reader also reads the combined status envelope, fully paginates the creator-bearing status
+history, derives the latest item per context, cross-checks count/state for the exact repository/SHA,
+and classifies checks only against a closed supplied context/App union. Suites, runs, and both status
+reads share one request budget. These readers retain distinct request audits and fail on identity,
+permission, pagination, request budget, or SHA drift; none is an installed collector, and the
+required union is not yet derived from live policy/rules.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full
