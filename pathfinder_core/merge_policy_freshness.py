@@ -98,8 +98,14 @@ def compare_complete_reread(initial, reread, blocks) -> None:
         (
             DenyCode.RULESET_DRIFT,
             "reread.rules",
-            (initial["classic_protection"], initial["active_rules"], initial["source_rulesets"]),
-            (reread["classic_protection"], reread["active_rules"], reread["source_rulesets"]),
+            (
+                initial["classic_protection"], initial["active_rules"],
+                initial["source_rulesets"], initial["bypass_memberships"],
+            ),
+            (
+                reread["classic_protection"], reread["active_rules"],
+                reread["source_rulesets"], reread["bypass_memberships"],
+            ),
         ),
         (
             DenyCode.REVIEW_DRIFT,

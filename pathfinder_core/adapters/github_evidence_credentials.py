@@ -7,7 +7,7 @@ from typing import Mapping
 EVIDENCE_BOUNDARY = "github-evidence-get-only"
 REQUIRED_READ_PERMISSIONS = frozenset({
     "administration", "checks", "contents", "deployments", "metadata",
-    "pull_requests", "statuses",
+    "members", "pull_requests", "statuses",
 })
 
 

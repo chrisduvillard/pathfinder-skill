@@ -6,7 +6,7 @@
     {"name": "fork pull request", "updates": [["pull_request", "same_repository", false]], "code": "fork"},
     {"name": "non-controller branch", "updates": [["pull_request", "head_ref", "feature/example"]], "code": "controller-branch-unproven"},
     {"name": "administrator actor", "updates": [["actor", "administration_permission", "read"]], "code": "merge-actor-can-bypass"},
-    {"name": "matched bypass actor", "updates": [["actor", "bypass_assessment", "match"]], "code": "merge-actor-can-bypass"},
+    {"name": "matched bypass actor", "updates": [["source_rulesets", 0, "bypass_actor_keys", ["Integration:24680:always"]], ["pagination", "bypass_actors", "items", 1], ["actor", "bypass_assessment", "match"]], "code": "merge-actor-can-bypass"},
     {"name": "merge queue entry", "updates": [["mergeability", "queue_entry", true]], "code": "merge-queue-required"},
     {"name": "merge conflict", "updates": [["mergeability", "mergeable", "CONFLICTING"]], "code": "merge-conflict"},
     {"name": "base behind", "updates": [["mergeability", "merge_state_status", "BEHIND"]], "code": "base-behind"},

@@ -17,6 +17,8 @@ _ALLOWED_PATHS = tuple(re.compile(pattern) for pattern in (
     r"^/app$",
     r"^/app/installations/[1-9][0-9]*$",
     rf"^/users/{_PART}$",
+    rf"^/orgs/{_PART}/memberships/{_PART}$",
+    rf"^/orgs/{_PART}/teams/{_PART}/memberships/{_PART}$",
     rf"^/repos/{_PART}/{_PART}$",
     rf"^/repos/{_PART}/{_PART}/git/ref/heads/{_REF}$",
     rf"^/repos/{_PART}/{_PART}/pulls/[1-9][0-9]*$",

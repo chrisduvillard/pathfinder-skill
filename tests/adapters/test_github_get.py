@@ -148,6 +148,17 @@ class GitHubGETClientTests(unittest.TestCase):
         )
         self.assertEqual(value.data["permission"], "write")
 
+        for target in (
+            "/orgs/owner/memberships/pathfinder-merge%5Bbot%5D",
+            "/orgs/owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+        ):
+            with self.subTest(target=target):
+                transport = FixtureGETTransport(response(data={"state": "active"}))
+                result = client(transport).get_endpoint(
+                    "bypass-memberships", target
+                )
+                self.assertEqual(result.data["state"], "active")
+
     def test_statuses_map_without_leaking_body_or_credential(self):
         cases = (
             (401, {}, ObservationOutcome.AUTH_ERROR),

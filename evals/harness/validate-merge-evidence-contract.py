@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import copy
 import json
 import sys
 from datetime import datetime
@@ -173,7 +174,7 @@ def main() -> int:
         GitHubMergeObserver,
         ObservationOutcome,
     )
-    from pathfinder_core.merge_policy import MergePolicyEvaluator
+    from pathfinder_core.merge_policy import DenyCode, MergePolicyEvaluator
     from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
     from tests.adapters.test_github_merge_observer import FixtureObservationBackend
 
@@ -215,6 +216,43 @@ def main() -> int:
     )
     require(single.eligible, "actual pure evaluator rejected the current fixture")
     require(not single.intent_ready, "single-snapshot verdict became intent-ready")
+    for case in document["rules"]["membership_bypass_cases"]:
+        responses = copy.deepcopy(observer["responses"])
+        responses["bypass-actors"]["items"] = [case["bypass_actor"]]
+        responses["bypass-actors"]["page"]["total_count"] = 1
+        responses["bypass-memberships"]["items"] = [case["membership"]]
+        responses["bypass-memberships"]["page"]["total_count"] = 1
+        responses["bypass-memberships"]["audits"] = [{
+            "request_id": case["membership"]["request_id"], "etag": None,
+            "observed_at": "2026-08-11T12:08:10+00:00",
+            "target": case["target"], "status": 200,
+            "permission_qualified": True,
+        }]
+        membership_observation = GitHubMergeObserver(
+            FixtureObservationBackend(responses)
+        ).observe(bindings=evidence["bindings"], **observer["context"])
+        require(
+            membership_observation.outcome is ObservationOutcome.OBSERVED
+            and membership_observation.evidence["actor"]["bypass_assessment"]
+            == "match"
+            and membership_observation.evidence["source_rulesets"][0][
+                "bypass_actor_keys"
+            ]
+            == [case["normalized_key"]],
+            f"actual observer did not resolve {case['normalized_key']}",
+        )
+        membership_verdict = evaluator.evaluate(
+            authority["policy"],
+            authorization,
+            ProtectedSurfaceRegistry.load().to_document(),
+            membership_observation.evidence,
+            now=datetime.fromisoformat("2026-08-11T12:08:30+00:00"),
+        )
+        require(
+            DenyCode.MERGE_ACTOR_CAN_BYPASS
+            in {block.code for block in membership_verdict.blocks},
+            f"actual evaluator did not block {case['normalized_key']}",
+        )
     evaluation = evaluator.evaluate_reread(
         authority["policy"],
         authorization,

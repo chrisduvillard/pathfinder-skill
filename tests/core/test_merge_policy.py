@@ -63,6 +63,18 @@ def rehash_evidence(evidence, *, diff=False):
     evidence["evidence_sha256"] = canonical_sha256(evidence, "evidence_sha256")
 
 
+def add_membership_audit(evidence, membership, target, *, status=200):
+    request_id = membership["request_id"]
+    evidence["observation"]["requests"].append({
+        "surface": "bypass-memberships", "request_id": request_id,
+        "etag": None, "observed_at": "2026-08-11T12:08:10+00:00",
+        "target": target, "status": status, "permission_qualified": True,
+    })
+    evidence["observation"]["request_ids_sha256"] = canonical_sha256([
+        item["request_id"] for item in evidence["observation"]["requests"]
+    ])
+
+
 def complete_reread(evidence):
     reread = copy.deepcopy(evidence)
     reread["evidence_id"] = "merge_evidence_example1_reread"
@@ -76,9 +88,14 @@ def complete_reread(evidence):
         "receipt_id": "policy_read_example1_reread",
         "observed_at": "2026-08-11T12:08:22+00:00",
     })
+    request_id_map = {}
     for item in observation["requests"]:
-        item["request_id"] = f"{item['request_id']}-reread"
+        old_request_id = item["request_id"]
+        item["request_id"] = f"{old_request_id}-reread"
+        request_id_map[old_request_id] = item["request_id"]
         item["observed_at"] = "2026-08-11T12:08:30+00:00"
+    for membership in reread["bypass_memberships"]:
+        membership["request_id"] = request_id_map[membership["request_id"]]
     observation["request_ids_sha256"] = canonical_sha256([
         item["request_id"] for item in observation["requests"]
     ])
@@ -778,7 +795,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         ambiguous_memberships = (
             "Team:123:always",
             "RepositoryRole:5:pull_request",
-            "OrganizationAdmin:1:exempt",
+            "OrganizationAdmin:all:exempt",
         )
         for actor_key in ambiguous_memberships:
             with self.subTest(ambiguous_membership=actor_key):
@@ -797,6 +814,173 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             DenyCode.BYPASS_VISIBILITY_UNKNOWN,
             codes(self.evaluate(evidence=evidence)),
         )
+
+    def test_typed_membership_matches_block_each_supported_bypass_class(self):
+        cases = (
+            (
+                "Team:123:always",
+                {
+                    "policy_source": "ruleset", "ruleset_id": 7001,
+                    "actor_type": "Team", "actor_id": 123,
+                    "bypass_mode": "always", "subject_actor_id": 97531,
+                    "subject_login": "pathfinder-merge[bot]",
+                    "request_id": "req-bypass-membership-team",
+                    "organization_login": "example-owner",
+                    "team_slug": "release-engineering",
+                    "membership_state": "active", "membership_role": "member",
+                },
+            ),
+            (
+                "RepositoryRole:5:pull_request",
+                {
+                    "policy_source": "ruleset", "ruleset_id": 7001,
+                    "actor_type": "RepositoryRole", "actor_id": 5,
+                    "bypass_mode": "pull_request", "subject_actor_id": 97531,
+                    "subject_login": "pathfinder-merge[bot]",
+                    "request_id": "req-bypass-membership-role",
+                    "bypass_role_name": "maintain",
+                    "subject_role_name": "maintain", "subject_permission": "write",
+                },
+            ),
+            (
+                "OrganizationAdmin:all:exempt",
+                {
+                    "policy_source": "ruleset", "ruleset_id": 7001,
+                    "actor_type": "OrganizationAdmin", "actor_id": None,
+                    "bypass_mode": "exempt", "subject_actor_id": 97531,
+                    "subject_login": "pathfinder-merge[bot]",
+                    "request_id": "req-bypass-membership-admin",
+                    "organization_login": "example-owner",
+                    "membership_state": "active", "organization_role": "admin",
+                },
+            ),
+        )
+        for actor_key, membership in cases:
+            with self.subTest(actor_key=actor_key):
+                evidence = copy.deepcopy(self.evidence)
+                evidence["source_rulesets"][0]["bypass_actor_keys"] = [actor_key]
+                evidence["source_rulesets"][0]["bypass_actor_metadata"] = [{
+                    "key": actor_key,
+                    "actor_name": (
+                        membership.get("team_slug")
+                        or membership.get("bypass_role_name")
+                    ),
+                }]
+                evidence["bypass_memberships"] = [membership]
+                evidence["pagination"]["bypass_actors"]["items"] = 1
+                evidence["pagination"]["bypass_memberships"]["items"] = 1
+                evidence["actor"]["bypass_assessment"] = "match"
+                if membership["actor_type"] == "Team":
+                    target = "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D"
+                elif membership["actor_type"] == "OrganizationAdmin":
+                    target = "/orgs/example-owner/memberships/pathfinder-merge%5Bbot%5D"
+                else:
+                    target = "/repos/example-owner/example-repo/collaborators/pathfinder-merge%5Bbot%5D/permission"
+                add_membership_audit(evidence, membership, target)
+                rehash_evidence(evidence)
+                verdict = self.evaluate(evidence=evidence)
+                self.assertIn(DenyCode.MERGE_ACTOR_CAN_BYPASS, codes(verdict))
+                self.assertNotIn(DenyCode.BYPASS_VISIBILITY_UNKNOWN, codes(verdict))
+
+    def test_membership_no_match_and_fabricated_assessment_are_recomputed(self):
+        evidence = copy.deepcopy(self.evidence)
+        evidence["source_rulesets"][0]["bypass_actor_keys"] = [
+            "Team:123:always"
+        ]
+        evidence["source_rulesets"][0]["bypass_actor_metadata"] = [{
+            "key": "Team:123:always", "actor_name": "release-engineering",
+        }]
+        evidence["bypass_memberships"] = [{
+            "policy_source": "ruleset", "ruleset_id": 7001,
+            "actor_type": "Team", "actor_id": 123, "bypass_mode": "always",
+            "subject_actor_id": 97531,
+            "subject_login": "pathfinder-merge[bot]",
+            "request_id": "req-bypass-membership-team",
+            "organization_login": "example-owner", "team_slug": "release-engineering",
+            "membership_state": "absent", "membership_role": None,
+        }]
+        evidence["pagination"]["bypass_actors"]["items"] = 1
+        evidence["pagination"]["bypass_memberships"]["items"] = 1
+        add_membership_audit(
+            evidence, evidence["bypass_memberships"][0],
+            "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+            status=404,
+        )
+        rehash_evidence(evidence)
+        verdict = self.evaluate(evidence=evidence)
+        self.assertTrue(verdict.eligible)
+        self.assertNotIn(DenyCode.MERGE_ACTOR_CAN_BYPASS, codes(verdict))
+
+        unqualified = copy.deepcopy(evidence)
+        next(
+            item for item in unqualified["observation"]["requests"]
+            if item["surface"] == "bypass-memberships"
+        )["permission_qualified"] = False
+        rehash_evidence(unqualified)
+        self.assertIn(
+            DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+            codes(self.evaluate(evidence=unqualified)),
+        )
+
+        source_drift = copy.deepcopy(evidence)
+        source_drift["source_rulesets"][0]["bypass_actor_metadata"][0][
+            "actor_name"
+        ] = "unrelated-team"
+        rehash_evidence(source_drift)
+        self.assertIn(
+            DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+            codes(self.evaluate(evidence=source_drift)),
+        )
+
+        reread = complete_reread(evidence)
+        reread["bypass_memberships"][0].update({
+            "membership_state": "active", "membership_role": "member",
+        })
+        membership_request = reread["bypass_memberships"][0]["request_id"]
+        next(
+            item for item in reread["observation"]["requests"]
+            if item["request_id"] == membership_request
+        )["status"] = 200
+        reread["actor"]["bypass_assessment"] = "match"
+        rehash_evidence(reread)
+        result = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.protected_policy,
+            evidence, reread, now=REREAD_NOW,
+        )
+        self.assertIn(DenyCode.RULESET_DRIFT, codes(result))
+        self.assertFalse(result.intent_ready)
+
+        evidence["actor"]["bypass_assessment"] = "match"
+        rehash_evidence(evidence)
+        verdict = self.evaluate(evidence=evidence)
+        self.assertIn(DenyCode.BYPASS_VISIBILITY_UNKNOWN, codes(verdict))
+        self.assertNotIn(DenyCode.MERGE_ACTOR_CAN_BYPASS, codes(verdict))
+
+    def test_classic_team_membership_match_is_independently_recomputed(self):
+        evidence = copy.deepcopy(self.evidence)
+        evidence["classic_protection"]["bypass_actor_keys"] = ["Team:123"]
+        evidence["classic_protection"]["bypass_actor_metadata"] = [{
+            "key": "Team:123", "actor_name": "release-engineering",
+        }]
+        evidence["bypass_memberships"] = [{
+            "policy_source": "classic-protection", "ruleset_id": None,
+            "actor_type": "Team", "actor_id": 123, "bypass_mode": None,
+            "subject_actor_id": 97531,
+            "subject_login": "pathfinder-merge[bot]",
+            "request_id": "req-bypass-membership-classic-team",
+            "organization_login": "example-owner", "team_slug": "release-engineering",
+            "membership_state": "active", "membership_role": "maintainer",
+        }]
+        evidence["pagination"]["bypass_memberships"]["items"] = 1
+        evidence["actor"]["bypass_assessment"] = "match"
+        add_membership_audit(
+            evidence, evidence["bypass_memberships"][0],
+            "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+        )
+        rehash_evidence(evidence)
+        verdict = self.evaluate(evidence=evidence)
+        self.assertIn(DenyCode.MERGE_ACTOR_CAN_BYPASS, codes(verdict))
+        self.assertNotIn(DenyCode.BYPASS_VISIBILITY_UNKNOWN, codes(verdict))
 
         evidence = copy.deepcopy(self.evidence)
         evidence["actor"]["bypass_assessment"] = "unknown"

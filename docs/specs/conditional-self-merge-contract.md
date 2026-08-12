@@ -95,8 +95,11 @@ Every condition is required; policy can only make it stricter.
 - Every required check/status is complete and successful on the exact head or test merge commit
   selected by GitHub. A same-name check run and commit status must both satisfy the requirement;
   context/app/SHA ambiguity blocks.
-- Classic PR bypass allowances and every applicable ruleset bypass actor are visible. The exact
-  merge App/installation matches none and has no administration permission.
+- Classic PR bypass allowances and every applicable ruleset bypass actor are visible. Every
+  team, repository-role, or organization-admin actor has exactly one typed resolution bound to
+  the same policy source, ruleset/mode where applicable, organization/repository, and exact merge
+  bot id/login. Missing, duplicate, extra, pending, or identity-drifted resolutions are unknown.
+  The exact merge App/installation matches none and has no administration permission.
 - Only supported classic settings and ruleset rules are active. Merge queue, required deployment,
   required signature, code scanning/quality/coverage, file/metadata restriction, or an unknown
   rule is an initial typed blocker.
@@ -122,6 +125,7 @@ For GraphQL, persist the exact query hash; absent fields and unknown enum values
 | Classic protection | `GET /repos/{owner}/{repo}/branches/{base}/protection`: required checks and strict/app ids, `enforce_admins`, required review count, stale/code-owner/last-push rules, dismissal and bypass allowances, restrictions, linear history, signatures, and conversation resolution. [Protected branches](https://docs.github.com/en/rest/branches/branch-protection#get-branch-protection) |
 | Applicable rules | Fully paginate `GET /repos/{owner}/{repo}/rules/branches/{base}`: every active rule's type, parameters, ruleset id/source/source type, allowed merge methods, review count, and pinned check identities. Disabled/evaluate-only rules do not satisfy a floor. Hash the normalized type/parameter set and require every fetched source ruleset to produce the same semantic hash. [Rules for a branch](https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch) |
 | Ruleset sources/bypass | Fully paginate `GET /repos/{owner}/{repo}/rulesets?includes_parents=true`, then each referenced ruleset: id/node id, source/source type, target, enforcement, conditions, rules, timestamps, and complete `bypass_actors` including actor id/type/mode. Omitted bypass actors are unknown, not empty. Cross-check GraphQL `RepositoryRuleset.bypassActors`, `conditions`, `rules`, `source`, and `updatedAt` when needed. [REST rulesets](https://docs.github.com/en/rest/repos/rules) · [GraphQL rulesets](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/repos#repositoryruleset) |
+| Bypass membership | For each membership-based bypass actor, bind the exact merge bot id/login and policy source. The bypass-actor source projection must carry the exact team slug or repository-role name beside its id/mode; the resolution cannot supply that metadata independently. Resolve teams with `GET /orgs/{org}/teams/{team_slug}/memberships/{username}` and require `state: active`; resolve organization-admin actors with `GET /orgs/{org}/memberships/{username}` and require `state: active` plus `role: admin`; resolve repository-role actors by comparing GraphQL `repositoryRoleDatabaseId`/`repositoryRoleName` with the exact `role_name` from `GET /repos/{owner}/{repo}/collaborators/{username}/permission`. Every resolution binds one unique request id whose audit records the exact allowlisted target, `200`/qualified `404` status, and positive permission qualification; one audit cannot cover multiple resolutions. A permission of `none` is an authoritative no-match only when paired with no role name; a different non-null effective role remains unknown because it need not disprove every underlying role grant. Team/org `404` may become `absent` only inside a permission-qualified exact-endpoint backend; `403`, pending, missing role name, or ambiguous absence remains unknown. Organization-admin and deploy-key ruleset actors use GitHub's idless/null actor semantics rather than a fabricated numeric id. [Team membership](https://docs.github.com/en/rest/teams/members#get-team-membership-for-a-user) · [Organization membership](https://docs.github.com/en/rest/orgs/members#get-organization-membership-for-a-user) · [Repository permission](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user) · [GraphQL rulesets](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/repos#repositoryruleset) |
 | Review decision/threads/queue | One paginated GraphQL PR query: `id`, `state`, `isDraft`, head/base OIDs and repositories, `mergeable`, `mergeStateStatus`, `reviewDecision`, `mergeQueueEntry`, latest opinionated reviews, review requests including `asCodeOwner`, and every review thread's `isResolved`/`isOutdated`. [GraphQL pull requests](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/pulls#pullrequest) |
 | Review audit | Fully paginate `GET /repos/{owner}/{repo}/pulls/{number}/reviews` and `/requested_reviewers`: review id, actor id/login/type, state, `commit_id`, submission time, author association, requested users/teams. For every candidate human approval, read `GET /repos/{owner}/{repo}/collaborators/{username}/permission`, cross-check the returned user id, and require legacy `write` or `admin`; association alone is not permission evidence. [Reviews](https://docs.github.com/en/rest/pulls/reviews#list-reviews-for-a-pull-request) · [Review requests](https://docs.github.com/en/rest/pulls/review-requests#get-all-requested-reviewers-for-a-pull-request) · [Repository permission](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user) |
 | Check runs | Fully paginate check suites/runs for GitHub's required SHA: run id/name, `head_sha`, status, conclusion, started/completed times, App id/slug, suite id, and PR head/base identities. Do not rely on the endpoint's 1,000-suite shortcut. [Check runs](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference) |
@@ -146,9 +150,11 @@ failure. Rate limits are never retried inside the freshness window.
 The dedicated host process must inject a credential directly into the GET-only boundary; there is
 no repository config, environment loader, CLI flag, logging hook, or general-purpose URL method.
 An installation credential must declare `read` for repository `administration`, `checks`,
-`contents`, `deployments`, `metadata`, `pull_requests`, and `statuses`; any declared write
-permission is rejected. A separately injected App JWT may read only App/installation identity and
-declares no repository permissions. Credential and response-body representations are redacted.
+`contents`, `deployments`, `metadata`, `pull_requests`, and `statuses`, plus organization
+`members`; any declared write permission is rejected. The allowlist includes only the exact
+organization/team membership and repository-permission GET paths needed for typed bypass
+resolution. A separately injected App JWT may read only App/installation identity and declares no
+repository permissions. Credential and response-body representations are redacted.
 
 These declarations do not authenticate the token's actual scope or prove its App/installation
 identity. A trusted issuance receipt plus positive App, installation, repository, actor, and bypass
@@ -187,7 +193,8 @@ canonical hashes, authority/repository/mission bindings, validity windows, reque
 pagination counts, snapshot completeness, exact authenticated controller candidate, controller
 Git-object receipt, diff hashes and totals, repository and PR state, independently recomputed
 path/protected/special-surface ceilings, the one classic layer plus all active
-rulesets, source-rule semantic hashes, allowed squash methods, bypass visibility, review decision,
+rulesets, source-rule semantic hashes, allowed squash methods, bypass visibility, exact-coverage
+typed team/repository-role/organization-admin membership resolution, review decision,
 latest effective permission-qualified and host-attested independent-human reviews, current
 threads/requests, check-creator exclusion, and exact check context/App/SHA/status proof. Inputs are
 never mutated.
@@ -225,7 +232,7 @@ independently evaluates an initial and final complete snapshot. The final collec
 strictly after the first completes and have a new evidence id/hash, policy-read receipt, and
 disjoint request ids for the full required surface. It compares whole normalized authority/policy
 binding, repository, actor, PR
-head/base and merge state, diff, classic/ruleset, review/decision, check, and completeness domains.
+head/base and merge state, diff, classic/ruleset/bypass-membership, review/decision, check, and completeness domains.
 Any mismatch is typed unknown and invalidates the attempt; consumers must start a new complete
 two-snapshot cycle and may not patch or retain an earlier green domain. Success returns a distinct,
 immutable, closed, canonical readiness proof binding both snapshots; failure returns no proof.

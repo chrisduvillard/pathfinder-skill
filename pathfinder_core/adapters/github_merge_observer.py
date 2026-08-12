@@ -13,6 +13,10 @@ from jsonschema.exceptions import SchemaError, ValidationError
 from ..merge_bypass import (
     AMBIGUOUS_MEMBERSHIP_TYPES,
     bypass_actor_type,
+    bypass_membership_assessment,
+    bypass_membership_endpoint,
+    bypass_membership_key,
+    bypass_membership_status,
     ruleset_bypass_actor_identity,
     ruleset_bypass_actor_key,
 )
@@ -55,6 +59,9 @@ class RequestAudit:
     request_id: str
     observed_at: str
     etag: str | None = None
+    target: str | None = None
+    status: int | None = None
+    permission_qualified: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +100,7 @@ class GitHubMergeObservationBackend(Protocol):
     def read_classic_protection(self) -> EndpointResponse: ...
     def read_active_rules(self) -> PageResponse: ...
     def read_source_rulesets(self) -> tuple[PageResponse, PageResponse]: ...
+    def read_bypass_memberships(self) -> PageResponse: ...
     def read_reviews(self) -> PageResponse: ...
     def read_review_requests(self) -> PageResponse: ...
     def read_review_threads(self) -> PageResponse: ...
@@ -248,6 +256,7 @@ class GitHubMergeObserver:
             "active-rules": active_rules,
             "source-rulesets": source_rulesets,
             "bypass-actors": bypass_actors,
+            "bypass-memberships": self.backend.read_bypass_memberships(),
             "reviews": self.backend.read_reviews(),
             "review-requests": self.backend.read_review_requests(),
             "review-threads": self.backend.read_review_threads(),
@@ -298,20 +307,22 @@ class GitHubMergeObserver:
             raw["classic-protection"], raw["active-rules"], repository,
             unknowns, unknown_reasons,
         )
-        bypass_keys = set(classic["bypass_actor_keys"])
-        bypass_keys.update(
+        bypass_memberships, membership_assessment = self._bypass_memberships(
+            raw["bypass-memberships"], classic, source_rulesets, repository, actor,
+            unknowns, unknown_reasons,
+        )
+        direct_bypass_keys = {
+            key for key in classic["bypass_actor_keys"]
+            if bypass_actor_type(key) not in AMBIGUOUS_MEMBERSHIP_TYPES
+        }
+        direct_bypass_keys.update(
             ruleset_bypass_actor_identity(key)
             for ruleset in source_rulesets
             for key in ruleset["bypass_actor_keys"]
+            if bypass_actor_type(key) not in AMBIGUOUS_MEMBERSHIP_TYPES
         )
-        membership_ambiguous = any(
-            bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
-            for key in bypass_keys
-        )
-        if membership_ambiguous:
-            unknown_reasons.append("bypass-visibility-unknown")
         if (
-            membership_ambiguous
+            membership_assessment == "unknown"
             or any(
                 ruleset["bypass_visibility"] == "unknown"
                 for ruleset in source_rulesets
@@ -320,7 +331,12 @@ class GitHubMergeObserver:
             actor["bypass_assessment"] = "unknown"
         else:
             actor_keys = {f"Integration:{actor['app_id']}", f"User:{actor['actor_id']}"}
-            actor["bypass_assessment"] = "match" if actor_keys & bypass_keys else "no-match"
+            actor["bypass_assessment"] = (
+                "match"
+                if membership_assessment == "match"
+                or actor_keys & direct_bypass_keys
+                else "no-match"
+            )
 
         reviews = self._reviews(raw["reviews"], unknowns)
         review_requests = self._review_requests(raw["review-requests"], unknowns)
@@ -335,6 +351,7 @@ class GitHubMergeObserver:
             "active_rules": _page(paged["active-rules"]),
             "source_rulesets": _page(paged["source-rulesets"]),
             "bypass_actors": _page(paged["bypass-actors"]),
+            "bypass_memberships": _page(paged["bypass-memberships"]),
             "reviews": _page(paged["reviews"]),
             "review_requests": _page(paged["review-requests"]),
             "review_threads": _page(paged["review-threads"]),
@@ -372,6 +389,7 @@ class GitHubMergeObserver:
             "classic_protection": classic,
             "active_rules": active_rules,
             "source_rulesets": source_rulesets,
+            "bypass_memberships": bypass_memberships,
             "reviews": reviews,
             "review_requests": review_requests,
             "review_threads": review_threads,
@@ -396,12 +414,19 @@ class GitHubMergeObserver:
         for surface, response in raw.items():
             source = response.audits if isinstance(response, PageResponse) else (response.audit,)
             for audit in source:
-                result.append({
+                item = {
                     "surface": surface,
                     "request_id": audit.request_id,
                     "etag": audit.etag,
                     "observed_at": audit.observed_at,
-                })
+                }
+                if audit.target is not None:
+                    item.update({
+                        "target": audit.target,
+                        "status": audit.status,
+                        "permission_qualified": audit.permission_qualified,
+                    })
+                result.append(item)
         return result
 
     @staticmethod
@@ -675,10 +700,12 @@ class GitHubMergeObserver:
         unknown_reasons: list[str],
     ) -> list[dict]:
         bypass_by_ruleset: dict[object, list[str]] = {}
+        bypass_metadata_by_ruleset: dict[object, list[dict]] = {}
         for index, value in enumerate(bypass_page.items):
             raw = _take(
                 value,
                 required={"ruleset_id", "actor_type", "actor_id", "bypass_mode"},
+                optional={"actor_name"},
                 surface=f"bypass-actors[{index}]", unknowns=unknowns,
             )
             if (
@@ -699,11 +726,22 @@ class GitHubMergeObserver:
                     },
                 })
                 continue
-            bypass_by_ruleset.setdefault(raw["ruleset_id"], []).append(
-                ruleset_bypass_actor_key(
-                    raw["actor_type"], raw["actor_id"], raw["bypass_mode"]
-                )
+            key = ruleset_bypass_actor_key(
+                raw["actor_type"], raw["actor_id"], raw["bypass_mode"]
             )
+            actor_name = raw.get("actor_name")
+            if raw["actor_type"] in {"Team", "RepositoryRole"} and (
+                not isinstance(actor_name, str) or not actor_name
+            ):
+                unknown_reasons.append("bypass-visibility-unknown")
+                unknowns.append({
+                    "surface": f"bypass-actors[{index}]",
+                    "fields": {"actor_name": actor_name},
+                })
+            bypass_by_ruleset.setdefault(raw["ruleset_id"], []).append(key)
+            bypass_metadata_by_ruleset.setdefault(raw["ruleset_id"], []).append({
+                "key": key, "actor_name": actor_name,
+            })
 
         result = []
         required = {"id", "source_type", "source_id", "enforcement", "conditions", "rules", "updated_at"}
@@ -729,11 +767,174 @@ class GitHubMergeObserver:
                 "updated_at": raw["updated_at"],
                 "bypass_visibility": visibility,
                 "bypass_actor_keys": sorted(set(bypass_by_ruleset.get(raw["id"], []))),
+                "bypass_actor_metadata": sorted(
+                    bypass_metadata_by_ruleset.get(raw["id"], []),
+                    key=lambda item: (item["key"], item["actor_name"] or ""),
+                ),
             })
         known_ids = {item["id"] for item in result}
         if set(bypass_by_ruleset) - known_ids:
             raise _Stop(ObservationOutcome.RULESET_EVIDENCE_INCOMPLETE, "bypass-actors", "bypass actor names an unattributed ruleset")
         return sorted(result, key=lambda item: int(item["id"]))
+
+    @staticmethod
+    def _bypass_memberships(
+        page: PageResponse,
+        classic: Mapping[str, object],
+        source_rulesets: list[dict],
+        repository: Mapping[str, object],
+        actor: Mapping[str, object],
+        unknowns: list[dict],
+        unknown_reasons: list[str],
+    ) -> tuple[list[dict], str]:
+        expected = {
+            ("classic-protection", None, key, None)
+            for key in classic["bypass_actor_keys"]
+            if bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
+        }
+        expected.update(
+            (
+                "ruleset",
+                ruleset["id"],
+                ruleset_bypass_actor_identity(key),
+                key.rsplit(":", 1)[1],
+            )
+            for ruleset in source_rulesets
+            for key in ruleset["bypass_actor_keys"]
+            if bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
+        )
+        source_names: dict[tuple[object, ...], list[object]] = {}
+        for metadata in classic["bypass_actor_metadata"]:
+            key = ("classic-protection", None, metadata["key"], None)
+            if key in expected:
+                source_names.setdefault(key, []).append(metadata["actor_name"])
+        for ruleset in source_rulesets:
+            for metadata in ruleset["bypass_actor_metadata"]:
+                key = (
+                    "ruleset", ruleset["id"],
+                    ruleset_bypass_actor_identity(metadata["key"]),
+                    metadata["key"].rsplit(":", 1)[1],
+                )
+                if key in expected:
+                    source_names.setdefault(key, []).append(metadata["actor_name"])
+        common = {
+            "policy_source", "ruleset_id", "actor_type", "actor_id",
+            "bypass_mode", "subject_actor_id", "subject_login", "request_id",
+        }
+        type_fields = {
+            "Team": {
+                "organization_login", "team_slug", "membership_state",
+                "membership_role",
+            },
+            "OrganizationAdmin": {
+                "organization_login", "membership_state", "organization_role",
+            },
+            "RepositoryRole": {
+                "bypass_role_name", "subject_role_name", "subject_permission",
+            },
+        }
+        result = []
+        seen: set[tuple[object, ...]] = set()
+        seen_request_ids: set[str] = set()
+        assessments = []
+        membership_audits = {audit.request_id: audit for audit in page.audits}
+        if len(membership_audits) != len(page.audits):
+            raise _Stop(
+                ObservationOutcome.FIELD_UNKNOWN,
+                "bypass-memberships",
+                "membership request ids are duplicated",
+            )
+        for index, value in enumerate(page.items):
+            preview = _mapping(value, f"bypass-memberships[{index}]")
+            actor_type = preview.get("actor_type")
+            if actor_type not in type_fields:
+                raise _Stop(
+                    ObservationOutcome.MALFORMED_RESPONSE,
+                    f"bypass-memberships[{index}]",
+                    "membership actor type is outside the closed projection",
+                )
+            raw = _take(
+                value, required=common | type_fields[actor_type],
+                surface=f"bypass-memberships[{index}]", unknowns=unknowns,
+            )
+            normalized = {key: raw[key] for key in sorted(common | type_fields[actor_type])}
+            if (
+                normalized["subject_actor_id"] != actor["actor_id"]
+                or normalized["subject_login"] != actor["login"]
+            ):
+                raise _Stop(
+                    ObservationOutcome.ACTOR_IDENTITY_UNKNOWN,
+                    f"bypass-memberships[{index}]",
+                    "membership subject differs from the credential actor",
+                )
+            if actor_type in {"Team", "OrganizationAdmin"} and (
+                normalized["organization_login"] != repository["owner"]
+            ):
+                raise _Stop(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    f"bypass-memberships[{index}]",
+                    "membership organization differs from the repository owner",
+                )
+            key = bypass_membership_key(normalized)
+            if key not in expected:
+                raise _Stop(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    f"bypass-memberships[{index}]",
+                    "membership resolution does not name an observed bypass actor",
+                )
+            names = source_names.get(key, [])
+            if len(names) != 1 or (
+                actor_type == "Team" and normalized["team_slug"] != names[0]
+            ) or (
+                actor_type == "RepositoryRole"
+                and normalized["bypass_role_name"] != names[0]
+            ):
+                raise _Stop(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    f"bypass-memberships[{index}]",
+                    "membership source metadata differs from the bypass actor",
+                )
+            request_id = normalized["request_id"]
+            audit = membership_audits.get(request_id)
+            if request_id in seen_request_ids or audit is None or (
+                audit.target != bypass_membership_endpoint(normalized, repository)
+                or audit.status != bypass_membership_status(normalized)
+                or audit.permission_qualified is not True
+            ):
+                raise _Stop(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    f"bypass-memberships[{index}]",
+                    "membership request audit is missing, shared, or not qualified",
+                )
+            seen_request_ids.add(request_id)
+            if key in seen:
+                unknown_reasons.append("bypass-visibility-unknown")
+                unknowns.append({
+                    "surface": f"bypass-memberships[{index}]",
+                    "fields": {"duplicate_resolution": list(key)},
+                })
+            seen.add(key)
+            assessments.append(bypass_membership_assessment(normalized))
+            result.append(normalized)
+
+        if seen_request_ids != set(membership_audits):
+            raise _Stop(
+                ObservationOutcome.FIELD_UNKNOWN,
+                "bypass-memberships",
+                "membership request audits do not have exact resolution coverage",
+            )
+        if seen != expected or "unknown" in assessments:
+            unknown_reasons.append("bypass-visibility-unknown")
+        if "match" in assessments:
+            assessment = "match"
+        elif seen == expected and "unknown" not in assessments:
+            assessment = "no-match"
+        else:
+            assessment = "unknown"
+        return sorted(
+            result,
+            key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")),
+        ), assessment
 
     @staticmethod
     def _source_rule_signature(rules, surface: str, unknowns: list[dict]) -> str:
@@ -840,15 +1041,45 @@ class GitHubMergeObserver:
         bypass = []
         if not isinstance(raw["bypass_actors"], list):
             raise _Stop(ObservationOutcome.MALFORMED_RESPONSE, "classic-protection", "bypass actors must be a list")
+        bypass_metadata = []
         for index, value in enumerate(raw["bypass_actors"]):
-            item = _take(value, required={"actor_type", "actor_id"}, surface=f"classic-protection.bypass[{index}]", unknowns=unknowns)
-            bypass.append(f"{item['actor_type']}:{item['actor_id']}")
+            item = _take(
+                value, required={"actor_type", "actor_id"}, optional={"actor_name"},
+                surface=f"classic-protection.bypass[{index}]", unknowns=unknowns,
+            )
+            if (
+                item["actor_type"] not in {"User", "Team", "Integration"}
+                or not isinstance(item["actor_id"], int)
+                or isinstance(item["actor_id"], bool)
+                or item["actor_id"] < 1
+            ):
+                raise _Stop(
+                    ObservationOutcome.MALFORMED_RESPONSE,
+                    f"classic-protection.bypass[{index}]",
+                    "classic bypass actor is outside the closed projection",
+                )
+            key = f"{item['actor_type']}:{item['actor_id']}"
+            actor_name = item.get("actor_name")
+            if item["actor_type"] == "Team" and (
+                not isinstance(actor_name, str) or not actor_name
+            ):
+                unknown_reasons.append("bypass-visibility-unknown")
+                unknowns.append({
+                    "surface": f"classic-protection.bypass[{index}]",
+                    "fields": {"actor_name": actor_name},
+                })
+            bypass.append(key)
+            bypass_metadata.append({"key": key, "actor_name": actor_name})
         return {
             "status": status,
             "settings_sha256": _sha256(raw["settings"]) if raw["settings"] is not None else None,
             "required_review_count": raw["required_review_count"],
             "required_checks": _checks(raw["required_checks"], "classic-protection.required-checks", unknowns),
             "bypass_visibility": visibility, "bypass_actor_keys": sorted(set(bypass)),
+            "bypass_actor_metadata": sorted(
+                bypass_metadata,
+                key=lambda item: (item["key"], item["actor_name"] or ""),
+            ),
             "enforce_admins": raw["enforce_admins"],
             "conversation_resolution_required": raw["conversation_resolution_required"],
             "last_push_approval_required": raw["last_push_approval_required"],

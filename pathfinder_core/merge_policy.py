@@ -15,6 +15,10 @@ from .errors import PolicyError, StateError
 from .merge_bypass import (
     AMBIGUOUS_MEMBERSHIP_TYPES,
     bypass_actor_type,
+    bypass_membership_assessment,
+    bypass_membership_endpoint,
+    bypass_membership_key,
+    bypass_membership_status,
     ruleset_bypass_actor_identity,
 )
 from .merge_diff import derive_special_files, object_evidence_sha256
@@ -424,6 +428,7 @@ class MergePolicyEvaluator:
             "bypass_actors": sum(
                 len(item["bypass_actor_keys"]) for item in evidence["source_rulesets"]
             ),
+            "bypass_memberships": len(evidence["bypass_memberships"]),
             "reviews": len(evidence["reviews"]),
             "review_requests": len(evidence["review_requests"]),
             "review_threads": len(evidence["review_threads"]),
@@ -690,6 +695,7 @@ class MergePolicyEvaluator:
             or classic["required_checks"]
             or classic["bypass_visibility"] != "not-applicable"
             or classic["bypass_actor_keys"]
+            or classic["bypass_actor_metadata"]
             or any(classic[key] is not None for key in (
                 "enforce_admins", "conversation_resolution_required",
                 "last_push_approval_required", "dismiss_stale_reviews",
@@ -781,24 +787,168 @@ class MergePolicyEvaluator:
             blocks.add(DenyCode.REQUIRED_CHECK_UNPROVEN, "checks", "GitHub does not enforce a pinned check")
 
         actor = evidence["actor"]
-        bypass_keys = set(classic["bypass_actor_keys"])
-        bypass_keys.update(
+        classic_metadata_keys = [
+            item["key"] for item in classic["bypass_actor_metadata"]
+        ]
+        if (
+            len(classic_metadata_keys) != len(set(classic_metadata_keys))
+            or any(key not in classic["bypass_actor_keys"] for key in classic_metadata_keys)
+        ):
+            blocks.add(
+                DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                "classic_protection.bypass_actor_metadata",
+                "classic bypass metadata differs from actor keys",
+            )
+        for source in evidence["source_rulesets"]:
+            metadata_keys = [
+                item["key"] for item in source["bypass_actor_metadata"]
+            ]
+            if (
+                len(metadata_keys) != len(set(metadata_keys))
+                or any(key not in source["bypass_actor_keys"] for key in metadata_keys)
+            ):
+                blocks.add(
+                    DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                    f"source_rulesets.{source['id']}.bypass_actor_metadata",
+                    "ruleset bypass metadata differs from actor keys",
+                )
+        direct_bypass_keys = {
+            key for key in classic["bypass_actor_keys"]
+            if bypass_actor_type(key) not in AMBIGUOUS_MEMBERSHIP_TYPES
+        }
+        direct_bypass_keys.update(
             ruleset_bypass_actor_identity(key)
             for source in evidence["source_rulesets"]
             for key in source["bypass_actor_keys"]
+            if bypass_actor_type(key) not in AMBIGUOUS_MEMBERSHIP_TYPES
         )
+        expected_memberships = {
+            ("classic-protection", None, key, None)
+            for key in classic["bypass_actor_keys"]
+            if bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
+        }
+        expected_memberships.update(
+            (
+                "ruleset", source["id"], ruleset_bypass_actor_identity(key),
+                key.rsplit(":", 1)[1],
+            )
+            for source in evidence["source_rulesets"]
+            for key in source["bypass_actor_keys"]
+            if bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
+        )
+        source_names: dict[tuple[object, ...], list[object]] = {}
+        for metadata in classic["bypass_actor_metadata"]:
+            key = ("classic-protection", None, metadata["key"], None)
+            if key in expected_memberships:
+                source_names.setdefault(key, []).append(metadata["actor_name"])
+        for source in evidence["source_rulesets"]:
+            for metadata in source["bypass_actor_metadata"]:
+                key = (
+                    "ruleset", source["id"],
+                    ruleset_bypass_actor_identity(metadata["key"]),
+                    metadata["key"].rsplit(":", 1)[1],
+                )
+                if key in expected_memberships:
+                    source_names.setdefault(key, []).append(metadata["actor_name"])
+        seen_memberships = set()
+        seen_membership_requests = set()
+        membership_assessments = []
+        membership_unknown = False
+        membership_audits = {
+            item["request_id"]: item for item in evidence["observation"]["requests"]
+            if item["surface"] == "bypass-memberships"
+        }
+        for index, membership in enumerate(evidence["bypass_memberships"]):
+            key = bypass_membership_key(membership)
+            names = source_names.get(key, [])
+            audit = membership_audits.get(membership["request_id"])
+            if (
+                membership["subject_actor_id"] != actor["actor_id"]
+                or membership["subject_login"] != actor["login"]
+                or (
+                    membership["actor_type"]
+                    in {"Team", "OrganizationAdmin"}
+                    and membership["organization_login"]
+                    != evidence["repository"]["owner"]
+                )
+                or key not in expected_memberships
+                or key in seen_memberships
+                or len(names) != 1
+                or (
+                    membership["actor_type"] == "Team"
+                    and membership["team_slug"] != names[0]
+                )
+                or (
+                    membership["actor_type"] == "RepositoryRole"
+                    and membership["bypass_role_name"] != names[0]
+                )
+                or membership["request_id"] in seen_membership_requests
+                or audit is None
+                or (
+                    audit is not None
+                    and (
+                        audit.get("target")
+                        != bypass_membership_endpoint(
+                            membership, evidence["repository"]
+                        )
+                        or audit.get("status") != bypass_membership_status(membership)
+                        or audit.get("permission_qualified") is not True
+                    )
+                )
+            ):
+                membership_unknown = True
+                blocks.add(
+                    DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                    f"bypass_memberships.{index}",
+                    "membership resolution identity or coverage differs",
+                )
+            seen_memberships.add(key)
+            seen_membership_requests.add(membership["request_id"])
+            membership_assessments.append(
+                bypass_membership_assessment(membership)
+            )
+        if seen_memberships != expected_memberships:
+            membership_unknown = True
+            blocks.add(
+                DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                "bypass_memberships",
+                "membership resolution coverage is incomplete",
+            )
+        if seen_membership_requests != set(membership_audits):
+            membership_unknown = True
+            blocks.add(
+                DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                "observation.requests",
+                "membership request audits do not have exact resolution coverage",
+            )
+        if "unknown" in membership_assessments:
+            membership_unknown = True
+            blocks.add(
+                DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                "bypass_memberships",
+                "membership state is not authoritative",
+            )
+        membership_match = "match" in membership_assessments
         actor_keys = {f"Integration:{actor['app_id']}", f"User:{actor['actor_id']}"}
-        if any(
-            bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
-            for key in bypass_keys
-        ):
-            blocks.add(DenyCode.BYPASS_VISIBILITY_UNKNOWN, "bypass_actors", "membership-based bypass cannot be excluded")
+        direct_match = bool(actor_keys & direct_bypass_keys)
+        if membership_unknown:
+            derived_assessment = "unknown"
+        elif membership_match or direct_match:
+            derived_assessment = "match"
+        else:
+            derived_assessment = "no-match"
+        if actor["bypass_assessment"] != derived_assessment:
+            blocks.add(
+                DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+                "actor.bypass_assessment",
+                "actor bypass assessment differs from typed evidence",
+            )
         if (
-            actor["bypass_assessment"] == "match" or actor_keys & bypass_keys
+            membership_match or direct_match
             or actor["administration_permission"] != "none"
         ):
             blocks.add(DenyCode.MERGE_ACTOR_CAN_BYPASS, "actor", "merge actor may bypass policy")
-        elif actor["bypass_assessment"] != "no-match":
+        elif derived_assessment != "no-match":
             blocks.add(DenyCode.BYPASS_VISIBILITY_UNKNOWN, "actor", "actor bypass assessment is unknown")
         if actor["suspended"]:
             blocks.add(DenyCode.ACTOR_IDENTITY_UNKNOWN, "actor", "merge actor is suspended")

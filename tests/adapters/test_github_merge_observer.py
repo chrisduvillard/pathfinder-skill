@@ -25,7 +25,10 @@ def load_json(path):
 
 
 def audit(raw):
-    return RequestAudit(raw["request_id"], raw["observed_at"], raw["etag"])
+    return RequestAudit(
+        raw["request_id"], raw["observed_at"], raw["etag"],
+        raw.get("target"), raw.get("status"), raw.get("permission_qualified"),
+    )
 
 
 class FixtureObservationBackend:
@@ -66,6 +69,7 @@ class FixtureObservationBackend:
     def read_active_rules(self): return self._page("active-rules")
     def read_source_rulesets(self):
         return self._page("source-rulesets"), self._page("bypass-actors")
+    def read_bypass_memberships(self): return self._page("bypass-memberships")
     def read_reviews(self): return self._page("reviews")
     def read_review_requests(self): return self._page("review-requests")
     def read_review_threads(self): return self._page("review-threads")
@@ -123,6 +127,7 @@ class GitHubMergeObserverTests(unittest.TestCase):
             evidence["source_rulesets"][0]["bypass_actor_keys"],
             ["Integration:86420:always"],
         )
+        self.assertEqual(evidence["bypass_memberships"], [])
         self.assertEqual(len(evidence["observation"]["requests"]), 16)
         request_ids = [item["request_id"] for item in evidence["observation"]["requests"]]
         encoded = json.dumps(request_ids, sort_keys=True, separators=(",", ":")).encode()
@@ -130,7 +135,7 @@ class GitHubMergeObserverTests(unittest.TestCase):
             evidence["observation"]["request_ids_sha256"],
             hashlib.sha256(encoded).hexdigest(),
         )
-        self.assertEqual(len(backend.calls), 16)
+        self.assertEqual(len(backend.calls), 17)
 
     def test_transport_failures_are_distinct_typed_outcomes(self):
         cases = (
@@ -276,7 +281,7 @@ class GitHubMergeObserverTests(unittest.TestCase):
         responses = copy.deepcopy(self.responses)
         responses["bypass-actors"]["items"] = [{
             "ruleset_id": 7001, "actor_type": "Team", "actor_id": 123,
-            "bypass_mode": "always",
+            "bypass_mode": "always", "actor_name": "release-engineering",
         }]
         responses["bypass-actors"]["page"]["total_count"] = 1
         result, _ = self.observe(responses)
@@ -297,6 +302,233 @@ class GitHubMergeObserverTests(unittest.TestCase):
         self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
         self.assertIn("unsupported-active-rule", result.evidence["unsupported_reasons"])
         self.assertIn("field-unknown", result.evidence["unknown_reasons"])
+
+    def test_typed_bypass_memberships_resolve_each_supported_actor_class(self):
+        cases = (
+            (
+                {
+                    "ruleset_id": 7001, "actor_type": "Team", "actor_id": 123,
+                    "bypass_mode": "always", "actor_name": "release-engineering",
+                },
+                {
+                    "policy_source": "ruleset", "ruleset_id": 7001,
+                    "actor_type": "Team", "actor_id": 123,
+                    "bypass_mode": "always", "subject_actor_id": 97531,
+                    "subject_login": "pathfinder-merge[bot]",
+                    "request_id": "req-bypass-membership-team",
+                    "organization_login": "example-owner",
+                    "team_slug": "release-engineering",
+                    "membership_state": "active", "membership_role": "member",
+                },
+                "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+            ),
+            (
+                {
+                    "ruleset_id": 7001, "actor_type": "RepositoryRole",
+                    "actor_id": 5, "bypass_mode": "pull_request",
+                    "actor_name": "maintain",
+                },
+                {
+                    "policy_source": "ruleset", "ruleset_id": 7001,
+                    "actor_type": "RepositoryRole", "actor_id": 5,
+                    "bypass_mode": "pull_request", "subject_actor_id": 97531,
+                    "subject_login": "pathfinder-merge[bot]",
+                    "request_id": "req-bypass-membership-role",
+                    "bypass_role_name": "maintain",
+                    "subject_role_name": "maintain", "subject_permission": "write",
+                },
+                "/repos/example-owner/example-repo/collaborators/pathfinder-merge%5Bbot%5D/permission",
+            ),
+            (
+                {
+                    "ruleset_id": 7001, "actor_type": "OrganizationAdmin",
+                    "actor_id": None, "bypass_mode": "exempt",
+                },
+                {
+                    "policy_source": "ruleset", "ruleset_id": 7001,
+                    "actor_type": "OrganizationAdmin", "actor_id": None,
+                    "bypass_mode": "exempt", "subject_actor_id": 97531,
+                    "subject_login": "pathfinder-merge[bot]",
+                    "request_id": "req-bypass-membership-admin",
+                    "organization_login": "example-owner",
+                    "membership_state": "active", "organization_role": "admin",
+                },
+                "/orgs/example-owner/memberships/pathfinder-merge%5Bbot%5D",
+            ),
+        )
+        for bypass_actor, membership, target in cases:
+            with self.subTest(actor_type=bypass_actor["actor_type"]):
+                responses = copy.deepcopy(self.responses)
+                responses["bypass-actors"]["items"] = [bypass_actor]
+                responses["bypass-actors"]["page"]["total_count"] = 1
+                responses["bypass-memberships"]["items"] = [membership]
+                responses["bypass-memberships"]["page"]["total_count"] = 1
+                responses["bypass-memberships"]["audits"] = [{
+                    "request_id": membership["request_id"], "etag": None,
+                    "observed_at": "2026-08-11T12:08:10+00:00",
+                    "target": target, "status": 200,
+                    "permission_qualified": True,
+                }]
+                result, _ = self.observe(responses)
+                self.assertEqual(result.outcome, ObservationOutcome.OBSERVED)
+                self.assertEqual(result.evidence["actor"]["bypass_assessment"], "match")
+                self.assertEqual(result.evidence["bypass_memberships"], [membership])
+
+    def test_membership_resolution_coverage_and_state_fail_closed(self):
+        responses = copy.deepcopy(self.responses)
+        responses["bypass-actors"]["items"] = [{
+            "ruleset_id": 7001, "actor_type": "Team", "actor_id": 123,
+            "bypass_mode": "always", "actor_name": "release-engineering",
+        }]
+        responses["bypass-actors"]["page"]["total_count"] = 1
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.BYPASS_VISIBILITY_UNKNOWN)
+        self.assertEqual(result.evidence["actor"]["bypass_assessment"], "unknown")
+
+        membership = {
+            "policy_source": "ruleset", "ruleset_id": 7001,
+            "actor_type": "Team", "actor_id": 123, "bypass_mode": "always",
+            "subject_actor_id": 97531,
+            "subject_login": "pathfinder-merge[bot]",
+            "request_id": "req-bypass-membership-team",
+            "organization_login": "example-owner", "team_slug": "release-engineering",
+            "membership_state": "pending", "membership_role": None,
+        }
+        responses["bypass-memberships"]["items"] = [membership]
+        responses["bypass-memberships"]["page"]["total_count"] = 1
+        responses["bypass-memberships"]["audits"] = [{
+            "request_id": membership["request_id"], "etag": None,
+            "observed_at": "2026-08-11T12:08:10+00:00",
+            "target": "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+            "status": 200, "permission_qualified": True,
+        }]
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.BYPASS_VISIBILITY_UNKNOWN)
+        self.assertEqual(result.evidence["actor"]["bypass_assessment"], "unknown")
+
+        membership["membership_state"] = "absent"
+        responses["bypass-memberships"]["audits"][0]["status"] = 404
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.OBSERVED)
+        self.assertEqual(result.evidence["actor"]["bypass_assessment"], "no-match")
+
+        membership["subject_actor_id"] = 1
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.ACTOR_IDENTITY_UNKNOWN)
+        self.assertIsNone(result.evidence)
+
+        membership["subject_actor_id"] = 97531
+        membership["team_slug"] = "unrelated-team"
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIsNone(result.evidence)
+
+        membership["team_slug"] = "release-engineering"
+        responses["bypass-memberships"]["audits"][0]["target"] = (
+            "/orgs/example-owner/teams/unrelated-team/memberships/"
+            "pathfinder-merge%5Bbot%5D"
+        )
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIsNone(result.evidence)
+
+        responses = copy.deepcopy(self.responses)
+        responses["bypass-actors"]["items"] = [{
+            "ruleset_id": 7001, "actor_type": "RepositoryRole", "actor_id": 5,
+            "bypass_mode": "always", "actor_name": "maintain",
+        }]
+        responses["bypass-actors"]["page"]["total_count"] = 1
+        responses["bypass-memberships"]["items"] = [{
+            "policy_source": "ruleset", "ruleset_id": 7001,
+            "actor_type": "RepositoryRole", "actor_id": 5,
+            "bypass_mode": "always", "subject_actor_id": 97531,
+            "subject_login": "pathfinder-merge[bot]",
+            "request_id": "req-bypass-membership-role",
+            "bypass_role_name": "maintain", "subject_role_name": "admin",
+            "subject_permission": "admin",
+        }]
+        responses["bypass-memberships"]["page"]["total_count"] = 1
+        responses["bypass-memberships"]["audits"] = [{
+            "request_id": "req-bypass-membership-role", "etag": None,
+            "observed_at": "2026-08-11T12:08:10+00:00",
+            "target": "/repos/example-owner/example-repo/collaborators/pathfinder-merge%5Bbot%5D/permission",
+            "status": 200, "permission_qualified": True,
+        }]
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.BYPASS_VISIBILITY_UNKNOWN)
+        self.assertEqual(result.evidence["actor"]["bypass_assessment"], "unknown")
+
+    def test_classic_team_membership_uses_the_same_exact_coverage_contract(self):
+        responses = copy.deepcopy(self.responses)
+        responses["classic-protection"]["data"]["bypass_actors"] = [{
+            "actor_type": "Team", "actor_id": 123,
+            "actor_name": "release-engineering",
+        }]
+        membership = {
+            "policy_source": "classic-protection", "ruleset_id": None,
+            "actor_type": "Team", "actor_id": 123, "bypass_mode": None,
+            "subject_actor_id": 97531,
+            "subject_login": "pathfinder-merge[bot]",
+            "request_id": "req-bypass-membership-classic-team",
+            "organization_login": "example-owner", "team_slug": "release-engineering",
+            "membership_state": "active", "membership_role": "maintainer",
+        }
+        responses["bypass-memberships"]["items"] = [membership]
+        responses["bypass-memberships"]["page"]["total_count"] = 1
+        responses["bypass-memberships"]["audits"] = [{
+            "request_id": membership["request_id"], "etag": None,
+            "observed_at": "2026-08-11T12:08:10+00:00",
+            "target": "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+            "status": 200, "permission_qualified": True,
+        }]
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.OBSERVED)
+        self.assertEqual(result.evidence["actor"]["bypass_assessment"], "match")
+        self.assertEqual(result.evidence["bypass_memberships"], [membership])
+
+    def test_each_membership_requires_its_own_qualified_request_audit(self):
+        responses = copy.deepcopy(self.responses)
+        responses["bypass-actors"]["items"] = [
+            {
+                "ruleset_id": 7001, "actor_type": "Team", "actor_id": 123,
+                "bypass_mode": "always", "actor_name": "release-engineering",
+            },
+            {
+                "ruleset_id": 7001, "actor_type": "OrganizationAdmin",
+                "actor_id": None, "bypass_mode": "always",
+            },
+        ]
+        responses["bypass-actors"]["page"]["total_count"] = 2
+        request_id = "req-shared-membership"
+        responses["bypass-memberships"]["items"] = [
+            {
+                "policy_source": "ruleset", "ruleset_id": 7001,
+                "actor_type": "Team", "actor_id": 123, "bypass_mode": "always",
+                "subject_actor_id": 97531,
+                "subject_login": "pathfinder-merge[bot]", "request_id": request_id,
+                "organization_login": "example-owner",
+                "team_slug": "release-engineering",
+                "membership_state": "absent", "membership_role": None,
+            },
+            {
+                "policy_source": "ruleset", "ruleset_id": 7001,
+                "actor_type": "OrganizationAdmin", "actor_id": None,
+                "bypass_mode": "always", "subject_actor_id": 97531,
+                "subject_login": "pathfinder-merge[bot]", "request_id": request_id,
+                "organization_login": "example-owner",
+                "membership_state": "active", "organization_role": "member",
+            },
+        ]
+        responses["bypass-memberships"]["page"]["total_count"] = 2
+        responses["bypass-memberships"]["audits"] = [{
+            "request_id": request_id, "etag": None,
+            "observed_at": "2026-08-11T12:08:10+00:00",
+            "target": "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+            "status": 404, "permission_qualified": True,
+        }]
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIsNone(result.evidence)
 
     def test_unattributed_ruleset_and_ambiguous_actor_stop_without_evidence(self):
         responses = copy.deepcopy(self.responses)
@@ -386,6 +618,14 @@ class GitHubMergeObserverTests(unittest.TestCase):
 
         responses = copy.deepcopy(self.responses)
         del responses["bypass-actors"]["items"][0]["bypass_mode"]
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.MALFORMED_RESPONSE)
+        self.assertIsNone(result.evidence)
+
+        responses = copy.deepcopy(self.responses)
+        responses["classic-protection"]["data"]["bypass_actors"] = [{
+            "actor_type": "OrganizationAdmin", "actor_id": 1,
+        }]
         result, _ = self.observe(responses)
         self.assertEqual(result.outcome, ObservationOutcome.MALFORMED_RESPONSE)
         self.assertIsNone(result.evidence)

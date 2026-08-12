@@ -49,7 +49,27 @@
       "actor_id": 86420,
       "bypass_mode": "always",
       "normalized_key": "Integration:86420:always"
-    }
+    },
+    "membership_bypass_cases": [
+      {
+        "normalized_key": "Team:123:always",
+        "bypass_actor": {"ruleset_id": 7001, "actor_type": "Team", "actor_id": 123, "bypass_mode": "always", "actor_name": "release-engineering"},
+        "membership": {"policy_source": "ruleset", "ruleset_id": 7001, "actor_type": "Team", "actor_id": 123, "bypass_mode": "always", "subject_actor_id": 97531, "subject_login": "pathfinder-merge[bot]", "request_id": "req-bypass-membership-team", "organization_login": "example-owner", "team_slug": "release-engineering", "membership_state": "active", "membership_role": "member"},
+        "target": "/orgs/example-owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D"
+      },
+      {
+        "normalized_key": "RepositoryRole:5:pull_request",
+        "bypass_actor": {"ruleset_id": 7001, "actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "pull_request", "actor_name": "maintain"},
+        "membership": {"policy_source": "ruleset", "ruleset_id": 7001, "actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "pull_request", "subject_actor_id": 97531, "subject_login": "pathfinder-merge[bot]", "request_id": "req-bypass-membership-role", "bypass_role_name": "maintain", "subject_role_name": "maintain", "subject_permission": "write"},
+        "target": "/repos/example-owner/example-repo/collaborators/pathfinder-merge%5Bbot%5D/permission"
+      },
+      {
+        "normalized_key": "OrganizationAdmin:all:exempt",
+        "bypass_actor": {"ruleset_id": 7001, "actor_type": "OrganizationAdmin", "actor_id": null, "bypass_mode": "exempt"},
+        "membership": {"policy_source": "ruleset", "ruleset_id": 7001, "actor_type": "OrganizationAdmin", "actor_id": null, "bypass_mode": "exempt", "subject_actor_id": 97531, "subject_login": "pathfinder-merge[bot]", "request_id": "req-bypass-membership-admin", "organization_login": "example-owner", "membership_state": "active", "organization_role": "admin"},
+        "target": "/orgs/example-owner/memberships/pathfinder-merge%5Bbot%5D"
+      }
+    ]
   },
   "review": {
     "actor_id": 44444,
