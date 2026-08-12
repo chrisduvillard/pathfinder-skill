@@ -4,7 +4,7 @@
   "title": "Pathfinder Conditional Merge Policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "policy_id", "merge_enabled", "authority", "repository", "path_policy", "diff_limits", "review_requirements", "hard_floors", "merge_method", "workflow_side_effects", "issued_at", "expires_at", "policy_sha256"],
+  "required": ["schema_version", "policy_id", "merge_enabled", "authority", "repository", "path_policy", "diff_limits", "freshness", "review_requirements", "hard_floors", "merge_method", "workflow_side_effects", "issued_at", "expires_at", "policy_sha256"],
   "properties": {
     "schema_version": {"const": 1},
     "policy_id": {"type": "string", "pattern": "^merge_policy_[a-z0-9][a-z0-9_-]{7,63}$"},
@@ -49,11 +49,19 @@
         "max_patch_bytes": {"type": "integer", "minimum": 1, "maximum": 262144}
       }
     },
+    "freshness": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_snapshot_age_seconds"],
+      "properties": {
+        "max_snapshot_age_seconds": {"type": "integer", "minimum": 1, "maximum": 60}
+      }
+    },
     "review_requirements": {
       "type": "object", "additionalProperties": false,
-      "required": ["independent_approval_floor", "required_checks"],
+      "required": ["independent_approval_floor", "human_reviewer_actor_ids", "required_checks"],
       "properties": {
         "independent_approval_floor": {"type": "integer", "minimum": 1, "maximum": 100},
+        "human_reviewer_actor_ids": {"type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
         "required_checks": {
           "type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true,
           "items": {

@@ -24,8 +24,9 @@ Conditional merge requires both keys below. Neither key can be inferred or inher
    required check identities, approval floor, merge method, issue/expiry time, and acceptance of
    ordinary merge-triggered notifications/workflows.
 2. A fresh current-run authorization from the user or an authenticated host approval store names
-   merge authority, the repository, policy hash, mission/binding/authorization ids, expiry, and a
-   budget of one PR and one merge intent.
+   merge authority, the repository, policy hash, mission/binding/authorization ids, exact
+   controller publication/PR/refs/diff, implementation actors, expiry, and a budget of one PR and
+   one merge intent.
 
 A checked-in policy file may document intent but cannot supply either key. Bare `/goal`,
 `/pathfinder auto`, `run all`, resolved intent, a previous approval, a Goal Binding, or an
@@ -77,6 +78,8 @@ do not authenticate themselves and add no executable route.
 Every condition is required; policy can only make it stricter.
 
 - Repository, policy, run, mission, PR, branch, diff, actor, and method identities/hashes match.
+- The observed PR and canonical API/controller diff match the exact authenticated controller
+  candidate; a merely controller-shaped branch name is insufficient.
 - The repository is not archived/disabled and the target is the policy-bound default/base branch.
 - The PR is same-repository, open, non-draft, current, conflict-free, clean, and up to date.
 - The complete API changed-file set matches controller evidence, stays inside the allowlist and
@@ -85,7 +88,8 @@ Every condition is required; policy can only make it stricter.
 - GitHub itself enforces at least one independent human approval and one required check with an
   expected app id. The greater approval/check requirements from shipped policy, host policy,
   classic protection, and all active rulesets apply.
-- Latest effective reviews are evaluated per reviewer. Author/agent/bot/app/last-pusher,
+- Latest effective reviews are evaluated per reviewer. Only host-attested human actor ids can
+  count. Author/agent/bot/app/last-pusher and every check creator,
   dismissed, stale, pending, and unknown-association reviews do not count. Any effective change
   request, required code-owner gap, or unresolved current thread blocks.
 - Every required check/status is complete and successful on the exact head or test merge commit
@@ -96,8 +100,9 @@ Every condition is required; policy can only make it stricter.
 - Only supported classic settings and ruleset rules are active. Merge queue, required deployment,
   required signature, code scanning/quality/coverage, file/metadata restriction, or an unknown
   rule is an initial typed blocker.
-- A complete snapshot is no more than 60 seconds old. A repository, actor, PR head/base, ruleset,
-  review, check, diff, or policy change requires a complete new snapshot.
+- A complete snapshot is no older than the shortest of host expiry, host-policy lifetime, and 60
+  seconds. It includes a host-policy-store read receipt. A repository, actor, PR head/base,
+  ruleset, review, check, diff, or policy change requires a complete new snapshot.
 
 ## GitHub API evidence map
 
@@ -113,7 +118,7 @@ For GraphQL, persist the exact query hash; absent fields and unknown enum values
 | Repository identity/settings | `GET /repos/{owner}/{repo}`: `id`, `node_id`, `full_name`, owner id, `visibility`, `archived`, `disabled`, `default_branch`, merge-method flags, and permissions. [Repository endpoint](https://docs.github.com/en/rest/repos/repos#get-a-repository) |
 | Merge App identity | With a separately protected App JWT, `GET /app` and `GET /app/installations/{installation_id}` (or exact repository installation): App id/node id/slug, installation id/account, repository selection, permissions, and suspension. Separately bind issued/expiry times from the host's access-token issuance receipt. User/PAT writers are unsupported. [GitHub App endpoints](https://docs.github.com/en/rest/apps/apps) |
 | Exact PR | `GET /repos/{owner}/{repo}/pulls/{number}`: id/node id/number, state, draft/merged, author, head/base repo ids/refs/SHAs, mergeability, test/real `merge_commit_sha`, `merged_at`, `merged_by`, and changed-file totals. [Pull request endpoints](https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request) |
-| API diff | Fully paginate `GET /repos/{owner}/{repo}/pulls/{number}/files`: filename, previous filename, status, SHA, additions/deletions/changes. The endpoint's 3,000-file ceiling is above the hard policy ceiling; reaching any ceiling blocks. [PR files](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files) |
+| API diff | Fully paginate `GET /repos/{owner}/{repo}/pulls/{number}/files`: filename, previous filename, status, SHA, additions/deletions/changes. Cross-check the complete path set against an authenticated controller Git-diff receipt carrying regular/symlink/submodule and binary evidence; the observer derives special-file labels and the authorization binds its canonical hash. Missing or mismatched object evidence blocks. The endpoint's 3,000-file ceiling is above the hard policy ceiling; reaching any ceiling blocks. [PR files](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files) |
 | Classic protection | `GET /repos/{owner}/{repo}/branches/{base}/protection`: required checks and strict/app ids, `enforce_admins`, required review count, stale/code-owner/last-push rules, dismissal and bypass allowances, restrictions, linear history, signatures, and conversation resolution. [Protected branches](https://docs.github.com/en/rest/branches/branch-protection#get-branch-protection) |
 | Applicable rules | Fully paginate `GET /repos/{owner}/{repo}/rules/branches/{base}`: every active rule's type, parameters, ruleset id/source/source type, allowed merge methods, review count, and pinned check identities. Disabled/evaluate-only rules do not satisfy a floor. Hash the normalized type/parameter set and require every fetched source ruleset to produce the same semantic hash. [Rules for a branch](https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch) |
 | Ruleset sources/bypass | Fully paginate `GET /repos/{owner}/{repo}/rulesets?includes_parents=true`, then each referenced ruleset: id/node id, source/source type, target, enforcement, conditions, rules, timestamps, and complete `bypass_actors` including actor id/type/mode. Omitted bypass actors are unknown, not empty. Cross-check GraphQL `RepositoryRuleset.bypassActors`, `conditions`, `rules`, `source`, and `updatedAt` when needed. [REST rulesets](https://docs.github.com/en/rest/repos/rules) · [GraphQL rulesets](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/repos#repositoryruleset) |
@@ -169,18 +174,35 @@ At minimum the observer/evaluator must distinguish:
 - `auth-error`, `rate-limited`, `permission-missing`, `api-unavailable`, `policy-blocked`,
   `reconcile-required`, `not-merged`, and `merged`.
 
-`eligible` is a dry-run verdict, not authority and not a merge result.
+`eligible` on one snapshot is a dry-run verdict, not authority and not a merge result. Only a
+schema-valid `intent-ready` proof from two complete, ordered, disjoint snapshots can be bound by a
+future intent.
 
 ### Implemented pure eligibility evaluator
 
-The unused evaluator accepts only a closed host policy, current-run authorization, normalized
-evidence snapshot, and an offset-aware evaluation time. It validates all three schemas and
+The unused evaluator accepts only a closed host policy, current-run authorization, the exact
+effective protected-surface policy document, a normalized evidence snapshot, and an offset-aware
+evaluation time. It validates the closed schemas and
 canonical hashes, authority/repository/mission bindings, validity windows, request audits,
-pagination counts, snapshot completeness, diff hashes and totals, controller branch shape,
-repository and PR state, path/protected-surface ceilings, the one classic layer plus all active
+pagination counts, snapshot completeness, exact authenticated controller candidate, controller
+Git-object receipt, diff hashes and totals, repository and PR state, independently recomputed
+path/protected/special-surface ceilings, the one classic layer plus all active
 rulesets, source-rule semantic hashes, allowed squash methods, bypass visibility, review decision,
-latest effective permission-qualified independent-human reviews, current threads/requests, and exact check
-context/App/SHA/status proof. Inputs are never mutated.
+latest effective permission-qualified and host-attested independent-human reviews, current
+threads/requests, check-creator exclusion, and exact check context/App/SHA/status proof. Inputs are
+never mutated.
+
+The classic layer exposes its safety-relevant settings as closed normalized fields rather than
+trusting only an opaque settings hash: stale-review dismissal, code-owner review, linear history,
+required signatures, push restrictions, and review-dismissal restrictions. Unknown values block.
+Required signatures are typed unsupported; active classic code-owner or restriction semantics are
+also unsupported until evidence can attribute and evaluate them without guessing. Squash satisfies
+an explicit linear-history requirement, while commit-SHA-pinned review evidence makes either known
+stale-review setting evaluable.
+
+The protected-surface baseline is loaded from the shipped registry. The evaluator accepts only that
+exact baseline or a schema-valid additive override tied to its policy id; a weaker caller-provided
+replacement baseline is invalid even if the caller recomputes every downstream hash.
 
 Restrictions form one AND-only lattice: shipped floors, host policy, classic protection, and every
 active ruleset can add requirements but cannot cancel an earlier requirement. Required checks are
@@ -195,22 +217,35 @@ required GraphQL review-decision/thread/queue evidence. Live conditional merge t
 unsupported, and no ordinary `/goal`, mission, publication, or resume path evaluates or acts on a
 verdict.
 
-Snapshot validity ends at the earlier of the authenticated host's `expires_at` and exactly 60
-seconds after `observed_at`; `completed_at` and every request audit must stay inside that window.
-Thus a host can shorten the lifetime but cannot extend the shipped ceiling. The pure reread path
+Snapshot validity ends at the earliest of the authenticated host's `expires_at`, the policy's
+maximum age, and exactly 60 seconds after `observed_at`; `completed_at`, the policy read, and every
+request audit must stay inside that window. Thus a host can shorten the lifetime but cannot extend
+the shipped ceiling. The pure reread path
 independently evaluates an initial and final complete snapshot. The final collection must begin
-after the first completes and have a new evidence id/hash plus disjoint request ids for the full
-required surface. It compares whole normalized authority/policy binding, repository, actor, PR
+strictly after the first completes and have a new evidence id/hash, policy-read receipt, and
+disjoint request ids for the full required surface. It compares whole normalized authority/policy
+binding, repository, actor, PR
 head/base and merge state, diff, classic/ruleset, review/decision, check, and completeness domains.
 Any mismatch is typed unknown and invalidates the attempt; consumers must start a new complete
-two-snapshot cycle and may not patch or retain an earlier green domain.
+two-snapshot cycle and may not patch or retain an earlier green domain. Success returns a distinct,
+immutable, closed, canonical readiness proof binding both snapshots; failure returns no proof.
+The future journal must retain both complete evidence documents and reproduce the same proof by
+running this evaluator at the intent time. Summary-only snapshot metadata is insufficient. A proof
+that has crossed a process boundary is still untrusted until its host-owned storage or attestation
+envelope is authenticated.
 
 ## Future mutation and crash reconciliation
 
-Before any future remote call, a write-once intent must bind policy, authorization and evidence
-hashes; repository and PR ids; exact head/base SHAs; diff; merge App/installation; squash method;
-endpoint class; start time; and one-use operation id. The executor may send one synchronous,
-SHA-bound request only.
+Before any future remote call, a write-once intent must bind the two-snapshot readiness-proof hash,
+both evidence ids/hashes, policy and authorization hashes; repository and PR ids; exact head/base
+SHAs; diff; merge App/installation; squash method; endpoint class; start time; and one-use operation
+id. A single advisory verdict is never accepted. The executor may send one synchronous, SHA-bound
+request only.
+
+The current-run authorization additionally carries an authenticated controller Goal-risk binding.
+Only `low-risk-code-change` with release, deployment, data mutation, and real-world-side-effect
+flags all false can validate. This makes the existing hard-stop class representable before merge
+eligibility is evaluated; repo content cannot mint the binding.
 
 `merged` requires a successful response plus exact follow-up observation, or exact follow-up proof
 after a lost response. `409`, `405`, malformed success, connection loss, or PR closure never implies

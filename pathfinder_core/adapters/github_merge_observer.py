@@ -10,6 +10,7 @@ from typing import Mapping, Protocol
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError, ValidationError
 
+from ..merge_diff import derive_special_files, object_evidence_sha256
 
 SCHEMA_PATH = (
     Path(__file__).resolve().parents[2]
@@ -32,6 +33,7 @@ class ObservationOutcome(str, Enum):
     BYPASS_VISIBILITY_UNKNOWN = "bypass-visibility-unknown"
     ACTOR_IDENTITY_UNKNOWN = "actor-identity-unknown"
     RULESET_EVIDENCE_INCOMPLETE = "ruleset-evidence-incomplete"
+    DIFF_INCOMPLETE = "diff-incomplete"
     FIELD_UNKNOWN = "field-unknown"
 
 
@@ -187,6 +189,8 @@ class GitHubMergeObserver:
         completed_at: str,
         expires_at: str,
         graphql_query_sha256: str,
+        policy_read: Mapping[str, object],
+        object_evidence: Mapping[str, object],
     ) -> ObservationResult:
         try:
             raw = self._read_all()
@@ -198,6 +202,8 @@ class GitHubMergeObserver:
                 completed_at=completed_at,
                 expires_at=expires_at,
                 graphql_query_sha256=graphql_query_sha256,
+                policy_read=policy_read,
+                object_evidence=object_evidence,
             )
             self.validator.validate(evidence)
             return ObservationResult(outcome, evidence, surface, detail)
@@ -257,10 +263,14 @@ class GitHubMergeObserver:
             raw["pull-request"], raw["refs"], raw["merged-state"], unknowns
         )
         changed_files = self._changed_files(raw["changed-files"], unknowns)
+        object_evidence = self._bind_object_evidence(
+            changed_files, context["object_evidence"], unknowns
+        )
         patch_bytes = sum(int(item.pop("_patch_bytes")) for item in changed_files)
         diff = {
             "diff_sha256": "0" * 64,
             "changed_files_sha256": _sha256(changed_files),
+            "object_evidence": object_evidence,
             "changed_files": changed_files,
             "changed_file_count": len(changed_files),
             "total_line_changes": sum(int(item["changes"]) for item in changed_files),
@@ -324,6 +334,7 @@ class GitHubMergeObserver:
             "observation": {
                 "rest_api_version": "2026-03-10",
                 "graphql_query_sha256": context["graphql_query_sha256"],
+                "policy_read": dict(context["policy_read"]),
                 "request_ids_sha256": _sha256(request_ids),
                 "requests": audits,
                 "unknown_payloads_sha256": _sha256(unknowns) if unknowns else None,
@@ -476,7 +487,7 @@ class GitHubMergeObserver:
     @staticmethod
     def _changed_files(page: PageResponse, unknowns: list[dict]) -> list[dict]:
         result = []
-        required = {"filename", "previous_filename", "status", "sha", "additions", "deletions", "changes", "patch_bytes", "protected_categories", "special_files"}
+        required = {"filename", "previous_filename", "status", "sha", "additions", "deletions", "changes", "patch_bytes"}
         for index, value in enumerate(page.items):
             raw = _take(value, required=required, surface=f"changed-files[{index}]", unknowns=unknowns)
             result.append({
@@ -484,11 +495,60 @@ class GitHubMergeObserver:
                 "status": raw["status"], "blob_sha": raw["sha"],
                 "additions": raw["additions"], "deletions": raw["deletions"],
                 "changes": raw["changes"],
-                "protected_categories": sorted(raw["protected_categories"]),
-                "special_files": sorted(raw["special_files"]),
+                "protected_categories": [],
                 "_patch_bytes": raw["patch_bytes"],
             })
         return sorted(result, key=lambda item: str(item["path"]))
+
+    @staticmethod
+    def _bind_object_evidence(
+        changed_files: list[dict], receipt: object, unknowns: list[dict]
+    ) -> dict:
+        raw = _take(
+            receipt,
+            required={"source", "receipt_id", "files"},
+            surface="controller-object-evidence",
+            unknowns=unknowns,
+        )
+        if raw["source"] != "authenticated-controller-git-diff":
+            raise _Stop(
+                ObservationOutcome.DIFF_INCOMPLETE,
+                "controller-object-evidence",
+                "object evidence is not from the authenticated controller diff",
+            )
+        if not isinstance(raw["files"], list):
+            raise _Stop(
+                ObservationOutcome.DIFF_INCOMPLETE,
+                "controller-object-evidence.files",
+                "object evidence files must be a complete list",
+            )
+        records = []
+        for index, value in enumerate(raw["files"]):
+            record = _take(
+                value,
+                required={"path", "previous_path", "object_kind", "binary"},
+                surface=f"controller-object-evidence.files[{index}]",
+                unknowns=unknowns,
+            )
+            records.append(dict(record))
+        records.sort(key=lambda item: str(item["path"]))
+        paths = [(item["path"], item["previous_path"]) for item in changed_files]
+        receipt_paths = [(item["path"], item["previous_path"]) for item in records]
+        if paths != receipt_paths:
+            raise _Stop(
+                ObservationOutcome.DIFF_INCOMPLETE,
+                "controller-object-evidence.files",
+                "controller object evidence does not match the complete API path set",
+            )
+        for item, record in zip(changed_files, records, strict=True):
+            item["object_kind"] = record["object_kind"]
+            item["binary"] = record["binary"]
+            item["special_files"] = list(derive_special_files(item))
+        return {
+            "source": raw["source"],
+            "receipt_id": raw["receipt_id"],
+            "files_sha256": object_evidence_sha256(changed_files),
+        }
 
     @staticmethod
     def _active_rules(page: PageResponse, unknowns: list[dict], unsupported: list[str]) -> list[dict]:
@@ -527,6 +587,7 @@ class GitHubMergeObserver:
                     "rule parameters must be an object",
                 )
             allowed_merge_methods = []
+            code_owner_review_required = None
             if rule_type == "pull_request":
                 parsed = _take(
                     parameters,
@@ -540,8 +601,12 @@ class GitHubMergeObserver:
                     surface=f"active-rules[{index}].parameters", unknowns=unknowns,
                 )
                 allowed_merge_methods = sorted(parsed["allowed_merge_methods"])
+                code_owner_review_required = parsed[
+                    "require_code_owner_review"
+                ]
                 if (
                     raw["approval_count"] != parsed["required_approving_review_count"]
+                    or code_owner_review_required
                     or parsed.get("dismissal_restriction")
                     or parsed.get("required_reviewers")
                 ):
@@ -576,6 +641,7 @@ class GitHubMergeObserver:
                 "parameters_sha256": _sha256(raw["parameters"]),
                 "approval_count": raw["approval_count"],
                 "allowed_merge_methods": allowed_merge_methods,
+                "code_owner_review_required": code_owner_review_required,
                 "required_checks": _checks(raw["required_checks"], f"active-rules[{index}].required-checks", unknowns),
                 "strict": raw["strict"],
             })
@@ -670,11 +736,46 @@ class GitHubMergeObserver:
     ) -> dict:
         raw = _take(
             response.data,
-            required={"status", "settings", "required_review_count", "required_checks", "bypass_actors", "enforce_admins", "conversation_resolution_required", "last_push_approval_required"},
+            required={
+                "status", "settings", "required_review_count", "required_checks",
+                "bypass_actors", "enforce_admins",
+                "conversation_resolution_required", "last_push_approval_required",
+                "dismiss_stale_reviews", "code_owner_review_required",
+                "required_linear_history", "required_signatures",
+                "restrictions_present", "dismissal_restrictions_present",
+            },
             optional={"bypass_visibility", "absence_proof"},
             surface="classic-protection", unknowns=unknowns,
         )
         status = raw["status"]
+        semantic_fields = {
+            "required_review_count", "required_checks", "enforce_admins",
+            "conversation_resolution_required", "last_push_approval_required",
+            "dismiss_stale_reviews", "code_owner_review_required",
+            "required_linear_history", "required_signatures",
+            "restrictions_present", "dismissal_restrictions_present",
+        }
+        if status == "present":
+            if not isinstance(raw["settings"], Mapping):
+                raise _Stop(
+                    ObservationOutcome.MALFORMED_RESPONSE,
+                    "classic-protection.settings",
+                    "present classic protection requires a settings object",
+                )
+            normalized_settings = _take(
+                raw["settings"], required=semantic_fields,
+                surface="classic-protection.settings", unknowns=unknowns,
+            )
+            mismatched = {
+                field: "semantic cross-check differs"
+                for field in sorted(semantic_fields)
+                if normalized_settings[field] != raw[field]
+            }
+            if mismatched:
+                unknowns.append({
+                    "surface": "classic-protection.settings",
+                    "fields": mismatched,
+                })
         if status == "absent":
             proof = raw.get("absence_proof")
             valid_proof = False
@@ -716,6 +817,14 @@ class GitHubMergeObserver:
             "enforce_admins": raw["enforce_admins"],
             "conversation_resolution_required": raw["conversation_resolution_required"],
             "last_push_approval_required": raw["last_push_approval_required"],
+            "dismiss_stale_reviews": raw["dismiss_stale_reviews"],
+            "code_owner_review_required": raw["code_owner_review_required"],
+            "required_linear_history": raw["required_linear_history"],
+            "required_signatures": raw["required_signatures"],
+            "restrictions_present": raw["restrictions_present"],
+            "dismissal_restrictions_present": raw[
+                "dismissal_restrictions_present"
+            ],
         }
 
     @staticmethod
@@ -785,7 +894,9 @@ class GitHubMergeObserver:
             app = _take(raw["app"], required={"id"}, surface=f"check-runs[{index}].app", unknowns=unknowns)
             result.append({
                 "id": raw["id"], "source": "check-run", "context": raw["name"],
-                "app_id": app["id"], "sha": raw["head_sha"], "required": raw["required"],
+                "app_id": app["id"], "creator_actor_id": app["id"],
+                "creator_actor_type": "Integration", "sha": raw["head_sha"],
+                "required": raw["required"],
                 "status": raw["status"], "conclusion": raw["conclusion"],
                 "completed_at": raw["completed_at"],
             })
@@ -795,15 +906,21 @@ class GitHubMergeObserver:
         }
         for index, value in enumerate(status_page.items):
             raw = _take(
-                value, required={"id", "context", "sha", "required", "state", "updated_at"},
+                value, required={"id", "context", "creator", "sha", "required", "state", "updated_at"},
                 surface=f"commit-statuses[{index}]", unknowns=unknowns,
+            )
+            creator = _take(
+                raw["creator"], required={"id", "type"},
+                surface=f"commit-statuses[{index}].creator", unknowns=unknowns,
             )
             if raw["state"] not in states:
                 raise _Stop(ObservationOutcome.MALFORMED_RESPONSE, "commit-statuses", f"unknown status state: {raw['state']}")
             status, conclusion = states[raw["state"]]
             result.append({
                 "id": raw["id"], "source": "commit-status", "context": raw["context"],
-                "app_id": None, "sha": raw["sha"], "required": raw["required"],
+                "app_id": None, "creator_actor_id": creator["id"],
+                "creator_actor_type": creator["type"], "sha": raw["sha"],
+                "required": raw["required"],
                 "status": status, "conclusion": conclusion,
                 "completed_at": raw["updated_at"] if status == "completed" else None,
             })

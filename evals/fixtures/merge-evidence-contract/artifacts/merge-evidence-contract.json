@@ -1,0 +1,66 @@
+{
+  "repository": {
+    "permission": "write",
+    "merge_methods": {"squash": true, "merge_commit": false, "rebase": false}
+  },
+  "permission_response": {
+    "endpoint": "/repos/example-owner/example-repo/collaborators/reviewer/permission",
+    "requested_reviewer": {"id": 44444, "login": "reviewer"},
+    "user": {"id": 44444, "login": "reviewer"},
+    "permission": "write"
+  },
+  "pull_request": {
+    "id": 987654321,
+    "node_id": "PR_kwDOExample1",
+    "number": 72,
+    "head_ref": "pathfinder/auto/example1",
+    "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+    "base_ref": "main",
+    "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "review_decision": "APPROVED"
+  },
+  "candidate": {
+    "pull_request": {
+      "id": 987654321,
+      "node_id": "PR_kwDOExample1",
+      "number": 72,
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "base_ref": "main",
+      "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "diff": {
+      "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb",
+      "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
+      "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
+    }
+  },
+  "observed_diff": {
+    "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb",
+    "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
+    "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
+  },
+  "rules": {
+    "active_pull_request": {"allowed_merge_methods": ["squash"]},
+    "active_rules_sha256": "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365",
+    "source_rules_sha256": "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365"
+  },
+  "review": {
+    "actor_id": 44444,
+    "actor_type": "User",
+    "repository_permission": "write",
+    "state": "APPROVED"
+  },
+  "check": {
+    "app_id": 15368,
+    "creator_actor_id": 15368,
+    "creator_actor_type": "Integration",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "policy_read": {
+    "source": "host-policy-store",
+    "receipt_id": "policy_read_example1",
+    "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176"
+  }
+}

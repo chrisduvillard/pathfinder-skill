@@ -10,8 +10,11 @@ from pathfinder_core.merge_policy import (
     DenyCode,
     EligibilityOutcome,
     MergePolicyEvaluator,
+    READINESS_VALIDATOR,
     canonical_sha256,
 )
+from pathfinder_core.merge_diff import object_evidence_sha256
+from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +41,7 @@ def normalize_diff(evidence):
     diff["special_files"] = sorted({
         value for item in files for value in item["special_files"]
     })
+    diff["object_evidence"]["files_sha256"] = object_evidence_sha256(files)
     diff["changed_files_sha256"] = canonical_sha256(files)
     diff["diff_sha256"] = canonical_sha256(diff, "diff_sha256")
 
@@ -67,6 +71,10 @@ def complete_reread(evidence):
         "observed_at": "2026-08-11T12:08:21+00:00",
         "completed_at": "2026-08-11T12:08:40+00:00",
         "expires_at": "2026-08-11T12:09:40+00:00",
+    })
+    observation["policy_read"].update({
+        "receipt_id": "policy_read_example1_reread",
+        "observed_at": "2026-08-11T12:08:22+00:00",
     })
     for item in observation["requests"]:
         item["request_id"] = f"{item['request_id']}-reread"
@@ -98,10 +106,15 @@ def rebind_authority(policy, authorization, evidence):
         "mission_authorization_id": authorization["mission"]["mission_authorization_id"],
         "protected_policy_sha256": policy["path_policy"]["protected_policy_sha256"],
     })
+    evidence["observation"]["policy_read"].update({
+        "policy_id": policy["policy_id"],
+        "policy_sha256": policy["policy_sha256"],
+    })
     rehash_evidence(evidence)
 
 
 def codes(verdict):
+    verdict = getattr(verdict, "verdict", verdict)
     return {block.code for block in verdict.blocks}
 
 
@@ -111,12 +124,14 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.policy = authority["policy"]
         self.authorization = authority["authorization"]
         self.evidence = load_json(EVIDENCE_FIXTURE)["evidence"]
+        self.protected_policy = ProtectedSurfaceRegistry.load().to_document()
         self.evaluator = MergePolicyEvaluator()
 
     def evaluate(self, policy=None, authorization=None, evidence=None, *, now=NOW):
         return self.evaluator.evaluate(
             self.policy if policy is None else policy,
             self.authorization if authorization is None else authorization,
+            self.protected_policy,
             self.evidence if evidence is None else evidence,
             now=now,
         )
@@ -128,6 +143,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(first.outcome, EligibilityOutcome.ELIGIBLE)
         self.assertTrue(first.eligible)
+        self.assertFalse(first.intent_ready)
         self.assertEqual(first.blocks, ())
         self.assertEqual(first.required_approvals, 1)
         self.assertEqual(first.approval_actor_ids, (44444,))
@@ -138,14 +154,27 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
 
     def test_missing_malformed_hash_and_clock_inputs_fail_closed(self):
         missing = (
-            (None, self.authorization, self.evidence, DenyCode.POLICY_MISSING),
-            (self.policy, None, self.evidence, DenyCode.AUTHORIZATION_MISSING),
-            (self.policy, self.authorization, None, DenyCode.EVIDENCE_MISSING),
+            (
+                None, self.authorization, self.protected_policy, self.evidence,
+                DenyCode.POLICY_MISSING,
+            ),
+            (
+                self.policy, None, self.protected_policy, self.evidence,
+                DenyCode.AUTHORIZATION_MISSING,
+            ),
+            (
+                self.policy, self.authorization, None, self.evidence,
+                DenyCode.PROTECTED_POLICY_MISSING,
+            ),
+            (
+                self.policy, self.authorization, self.protected_policy, None,
+                DenyCode.EVIDENCE_MISSING,
+            ),
         )
-        for policy, authorization, evidence, code in missing:
+        for policy, authorization, protected_policy, evidence, code in missing:
             with self.subTest(code=code):
                 verdict = self.evaluator.evaluate(
-                    policy, authorization, evidence, now=NOW
+                    policy, authorization, protected_policy, evidence, now=NOW
                 )
                 self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
                 self.assertIn(code, codes(verdict))
@@ -163,6 +192,11 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         verdict = self.evaluate(now=datetime.fromisoformat("2026-08-11T12:08:30"))
         self.assertIn(DenyCode.INPUT_INVALID, codes(verdict))
         verdict = self.evaluate(now="2026-08-11T12:08:30+00:00")
+        self.assertIn(DenyCode.INPUT_INVALID, codes(verdict))
+
+        verdict = self.evaluator.evaluate(
+            self.policy, self.authorization, {}, self.evidence, now=NOW
+        )
         self.assertIn(DenyCode.INPUT_INVALID, codes(verdict))
 
     def test_authority_and_evidence_windows_are_independently_current(self):
@@ -203,24 +237,87 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
         self.assertIn(DenyCode.EVIDENCE_EXPIRED, codes(verdict))
 
+    def test_host_policy_shortens_freshness_and_each_snapshot_has_a_policy_receipt(self):
+        policy = copy.deepcopy(self.policy)
+        authorization = copy.deepcopy(self.authorization)
+        evidence = copy.deepcopy(self.evidence)
+        policy["freshness"]["max_snapshot_age_seconds"] = 20
+        rebind_authority(policy, authorization, evidence)
+        verdict = self.evaluate(
+            policy, authorization, evidence,
+            now=datetime.fromisoformat("2026-08-11T12:08:20+00:00"),
+        )
+        self.assertIn(DenyCode.EVIDENCE_EXPIRED, codes(verdict))
+
+        evidence = copy.deepcopy(self.evidence)
+        evidence["observation"]["policy_read"]["policy_sha256"] = "f" * 64
+        rehash_evidence(evidence)
+        self.assertIn(DenyCode.IDENTITY_DRIFT, codes(self.evaluate(evidence=evidence)))
+
+        reread = complete_reread(self.evidence)
+        reread["observation"]["policy_read"]["receipt_id"] = self.evidence[
+            "observation"
+        ]["policy_read"]["receipt_id"]
+        rehash_evidence(reread)
+        result = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, reread, now=REREAD_NOW
+        )
+        self.assertIn(DenyCode.IDENTITY_DRIFT, codes(result))
+
     def test_complete_disjoint_reread_is_required_and_stays_pure(self):
         reread = complete_reread(self.evidence)
         original = copy.deepcopy((self.policy, self.authorization, self.evidence, reread))
-        verdict = self.evaluator.evaluate_reread(
-            self.policy, self.authorization, self.evidence, reread, now=REREAD_NOW
+        result = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, reread, now=REREAD_NOW
         )
+        verdict = result.verdict
+        self.assertTrue(result.intent_ready)
         self.assertTrue(verdict.eligible)
         self.assertEqual(verdict.evidence_sha256, reread["evidence_sha256"])
+        self.assertIsNotNone(result.proof)
+        proof = result.proof.to_document()
+        READINESS_VALIDATOR.validate(proof)
+        self.assertEqual(
+            proof["proof_sha256"], canonical_sha256(proof, "proof_sha256")
+        )
+        repeated = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, reread, now=REREAD_NOW
+        )
+        self.assertEqual(result, repeated)
         self.assertEqual((self.policy, self.authorization, self.evidence, reread), original)
 
+        stale_at_intent = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, reread,
+            now=datetime.fromisoformat("2026-08-11T12:09:00+00:00"),
+        )
+        self.assertFalse(stale_at_intent.intent_ready)
+        self.assertIn(DenyCode.EVIDENCE_EXPIRED, codes(stale_at_intent))
+
         reused = self.evaluator.evaluate_reread(
-            self.policy, self.authorization, self.evidence, self.evidence, now=NOW
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, self.evidence, now=NOW
         )
         self.assertIn(DenyCode.IDENTITY_DRIFT, codes(reused))
         missing = self.evaluator.evaluate_reread(
-            self.policy, self.authorization, self.evidence, None, now=NOW
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, None, now=NOW
         )
         self.assertIn(DenyCode.EVIDENCE_MISSING, codes(missing))
+
+        touching = complete_reread(self.evidence)
+        touching["observation"]["observed_at"] = self.evidence["observation"][
+            "completed_at"
+        ]
+        rehash_evidence(touching)
+        verdict = self.evaluator.evaluate_reread(
+            self.policy, self.authorization, self.protected_policy,
+            self.evidence, touching, now=REREAD_NOW
+        )
+        self.assertIn(DenyCode.EVIDENCE_EXPIRED, codes(verdict))
 
     def test_reread_drift_matrix_forces_a_new_complete_snapshot_cycle(self):
         cases = []
@@ -276,16 +373,20 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         for name, code, reread in cases:
             with self.subTest(case=name):
                 rehash_evidence(reread)
-                verdict = self.evaluator.evaluate_reread(
+                result = self.evaluator.evaluate_reread(
                     self.policy,
                     self.authorization,
+                    self.protected_policy,
                     self.evidence,
                     reread,
                     now=REREAD_NOW,
                 )
-                self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
-                self.assertIn(code, codes(verdict))
-                self.assertFalse(verdict.eligible)
+                self.assertEqual(
+                    result.verdict.outcome, EligibilityOutcome.UNKNOWN
+                )
+                self.assertIn(code, codes(result))
+                self.assertFalse(result.intent_ready)
+                self.assertIsNone(result.proof)
 
     def test_fixture_driven_candidate_matrix_returns_exact_codes(self):
         for case in load_json(CASE_FIXTURE)["cases"]:
@@ -327,6 +428,116 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         for index, evidence in enumerate(cases):
             with self.subTest(case=index):
                 self.assertIn(DenyCode.IDENTITY_DRIFT, codes(self.evaluate(evidence=evidence)))
+
+    def test_rehashed_different_controller_shaped_pull_request_is_not_the_candidate(self):
+        evidence = copy.deepcopy(self.evidence)
+        evidence["pull_request"].update({
+            "id": 999999999,
+            "node_id": "PR_kwDODifferent9",
+            "number": 999,
+            "head_ref": "pathfinder/auto/unrelated-pr",
+        })
+        rehash_evidence(evidence)
+        verdict = self.evaluate(evidence=evidence)
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+        self.assertIn(DenyCode.IDENTITY_DRIFT, codes(verdict))
+        self.assertFalse(verdict.eligible)
+
+    def test_effective_registry_is_hash_bound_and_recomputes_all_changed_paths(self):
+        changed_registry = copy.deepcopy(self.protected_policy)
+        changed_registry["rules"][0]["patterns"].append("another-auth/**")
+        verdict = self.evaluator.evaluate(
+            self.policy, self.authorization, changed_registry, self.evidence, now=NOW
+        )
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+        self.assertIn(DenyCode.INPUT_INVALID, codes(verdict))
+
+        weak_registry = copy.deepcopy(self.protected_policy)
+        weak_registry["rules"][0]["patterns"] = ["never-matches/**"]
+        weak = ProtectedSurfaceRegistry(weak_registry)
+        policy = copy.deepcopy(self.policy)
+        authorization = copy.deepcopy(self.authorization)
+        evidence = copy.deepcopy(self.evidence)
+        policy["path_policy"]["protected_policy_sha256"] = weak.sha256
+        evidence["bindings"]["protected_policy_sha256"] = weak.sha256
+        rebind_authority(policy, authorization, evidence)
+        verdict = self.evaluator.evaluate(
+            policy, authorization, weak.to_document(), evidence, now=NOW
+        )
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+        self.assertIn(DenyCode.INPUT_INVALID, codes(verdict))
+
+        additive = {
+            "schema_version": 1,
+            "policy_id": "protected-policy-example-additive",
+            "mode": "additive",
+            "base_policy_id": self.protected_policy["policy_id"],
+            "rules": [{
+                "rule_id": "protected-rule-example-extra",
+                "category": "example-extra",
+                "description": "Additional host-owned protected surface.",
+                "patterns": ["extra-protected/**"],
+            }],
+        }
+        effective = ProtectedSurfaceRegistry(self.protected_policy, additive)
+        policy = copy.deepcopy(self.policy)
+        authorization = copy.deepcopy(self.authorization)
+        evidence = copy.deepcopy(self.evidence)
+        policy["path_policy"]["protected_policy_sha256"] = effective.sha256
+        rebind_authority(policy, authorization, evidence)
+        verdict = self.evaluator.evaluate(
+            policy, authorization, additive, evidence, now=NOW
+        )
+        self.assertTrue(verdict.eligible)
+
+        policy = copy.deepcopy(self.policy)
+        authorization = copy.deepcopy(self.authorization)
+        evidence = copy.deepcopy(self.evidence)
+        policy["path_policy"]["allowed_paths"].append("auth/**")
+        item = evidence["diff"]["changed_files"][0]
+        item["path"] = "auth/session.py"
+        item["protected_categories"] = []
+        normalize_diff(evidence)
+        authorization["candidate"]["diff"] = {
+            "diff_sha256": evidence["diff"]["diff_sha256"],
+            "changed_files_sha256": evidence["diff"]["changed_files_sha256"],
+            "object_evidence_sha256": evidence["diff"]["object_evidence"][
+                "files_sha256"
+            ],
+        }
+        rebind_authority(policy, authorization, evidence)
+        verdict = self.evaluate(policy, authorization, evidence)
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+        self.assertIn(DenyCode.DIFF_DRIFT, codes(verdict))
+        self.assertIn(DenyCode.PROTECTED_SURFACE, codes(verdict))
+        self.assertFalse(verdict.eligible)
+
+    def test_authenticated_git_object_evidence_drives_special_file_blocking(self):
+        authorization = copy.deepcopy(self.authorization)
+        evidence = copy.deepcopy(self.evidence)
+        item = evidence["diff"]["changed_files"][0]
+        item["object_kind"] = "symlink"
+        item["special_files"] = []
+        normalize_diff(evidence)
+        authorization["candidate"]["diff"] = {
+            "diff_sha256": evidence["diff"]["diff_sha256"],
+            "changed_files_sha256": evidence["diff"]["changed_files_sha256"],
+            "object_evidence_sha256": evidence["diff"]["object_evidence"][
+                "files_sha256"
+            ],
+        }
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        evidence["bindings"]["authorization_sha256"] = authorization[
+            "authorization_sha256"
+        ]
+        rehash_evidence(evidence)
+        verdict = self.evaluate(self.policy, authorization, evidence)
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNKNOWN)
+        self.assertIn(DenyCode.DIFF_DRIFT, codes(verdict))
+        self.assertIn(DenyCode.PROTECTED_SURFACE, codes(verdict))
+        self.assertFalse(verdict.eligible)
 
     def test_diff_hash_paths_protected_surfaces_and_effective_limits(self):
         evidence = copy.deepcopy(self.evidence)
@@ -493,7 +704,9 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
                     "ruleset_id": 7001, "source_type": "Repository",
                     "source_id": 123456789, "rule_type": rule_type,
                     "parameters_sha256": "9" * 64, "approval_count": None,
-                    "allowed_merge_methods": [], "required_checks": [], "strict": None,
+                    "allowed_merge_methods": [],
+                    "code_owner_review_required": None,
+                    "required_checks": [], "strict": None,
                 })
                 evidence["active_rules"].sort(
                     key=lambda item: (item["ruleset_id"], item["rule_type"])
@@ -514,11 +727,59 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertIn(DenyCode.UNSUPPORTED_ACTIVE_RULE, codes(verdict))
         self.assertEqual(verdict.outcome, EligibilityOutcome.UNSUPPORTED)
 
+        evidence = copy.deepcopy(self.evidence)
+        pull_rule = next(
+            item for item in evidence["active_rules"]
+            if item["rule_type"] == "pull_request"
+        )
+        pull_rule["code_owner_review_required"] = True
+        rehash_evidence(evidence)
+        verdict = self.evaluate(evidence=evidence)
+        self.assertIn(DenyCode.UNSUPPORTED_ACTIVE_RULE, codes(verdict))
+        self.assertEqual(verdict.outcome, EligibilityOutcome.UNSUPPORTED)
+
+    def test_classic_protection_semantics_are_explicit_and_fail_closed(self):
+        cases = (
+            (
+                "required_signatures",
+                DenyCode.UNSUPPORTED_REQUIRED_SIGNATURES,
+            ),
+            ("code_owner_review_required", DenyCode.UNSUPPORTED_ACTIVE_RULE),
+            ("restrictions_present", DenyCode.UNSUPPORTED_ACTIVE_RULE),
+            (
+                "dismissal_restrictions_present",
+                DenyCode.UNSUPPORTED_ACTIVE_RULE,
+            ),
+        )
+        for field, expected in cases:
+            with self.subTest(field=field):
+                evidence = copy.deepcopy(self.evidence)
+                evidence["classic_protection"][field] = True
+                rehash_evidence(evidence)
+                verdict = self.evaluate(evidence=evidence)
+                self.assertIn(expected, codes(verdict))
+                self.assertEqual(verdict.outcome, EligibilityOutcome.UNSUPPORTED)
+
+        for field in (
+            "dismiss_stale_reviews", "code_owner_review_required",
+            "required_linear_history", "required_signatures",
+            "restrictions_present", "dismissal_restrictions_present",
+        ):
+            with self.subTest(incomplete=field):
+                evidence = copy.deepcopy(self.evidence)
+                evidence["classic_protection"][field] = None
+                rehash_evidence(evidence)
+                self.assertIn(
+                    DenyCode.CLASSIC_PROTECTION_UNKNOWN,
+                    codes(self.evaluate(evidence=evidence)),
+                )
+
     def test_latest_effective_independent_human_review_only(self):
         mutations = (
             ("author", {"actor_id": 22222}),
             ("last-pusher", {"actor_id": 33333}),
             ("merge-actor", {"actor_id": 97531}),
+            ("unattested-user", {"actor_id": 66666}),
             ("bot", {"actor_type": "Bot"}),
             ("read-only", {"repository_permission": "read"}),
             ("dismissed", {"dismissed": True}),
@@ -548,6 +809,32 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             DenyCode.INDEPENDENT_REVIEW_MISSING,
             codes(self.evaluate(evidence=evidence)),
         )
+
+        authorization = copy.deepcopy(self.authorization)
+        evidence = copy.deepcopy(self.evidence)
+        authorization["implementation_actor_ids"].append(44444)
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        evidence["bindings"]["authorization_sha256"] = authorization[
+            "authorization_sha256"
+        ]
+        rehash_evidence(evidence)
+        verdict = self.evaluate(self.policy, authorization, evidence)
+        self.assertIn(DenyCode.INDEPENDENT_REVIEW_MISSING, codes(verdict))
+
+        evidence = copy.deepcopy(self.evidence)
+        status = next(
+            item for item in evidence["checks"]
+            if item["source"] == "commit-status"
+        )
+        status.update({
+            "creator_actor_id": 44444,
+            "creator_actor_type": "User",
+        })
+        rehash_evidence(evidence)
+        verdict = self.evaluate(evidence=evidence)
+        self.assertIn(DenyCode.INDEPENDENT_REVIEW_MISSING, codes(verdict))
 
     def test_review_changes_code_owner_and_threads_are_independent_blocks(self):
         evidence = copy.deepcopy(self.evidence)
@@ -597,6 +884,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         evidence["checks"].append({
             "id": 8003, "source": "commit-status",
             "context": "preflight (ubuntu-latest)", "app_id": None,
+            "creator_actor_id": 66666, "creator_actor_type": "User",
             "sha": "c" * 40, "required": True, "status": "in_progress",
             "conclusion": None, "completed_at": None,
         })
@@ -627,6 +915,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         evidence["checks"].append({
             "id": 8003, "source": "check-run",
             "context": "preflight (ubuntu-latest)", "app_id": 15368,
+            "creator_actor_id": 15368, "creator_actor_type": "Integration",
             "sha": "c" * 40, "required": True, "status": "in_progress",
             "conclusion": None, "completed_at": None,
         })
@@ -654,7 +943,8 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         status_rule["required_checks"] = [{"context": "rules/scan", "app_id": 999}]
         evidence["checks"].append({
             "id": 8003, "source": "check-run", "context": "rules/scan",
-            "app_id": 999, "sha": "c" * 40, "required": True,
+            "app_id": 999, "creator_actor_id": 999,
+            "creator_actor_type": "Integration", "sha": "c" * 40, "required": True,
             "status": "completed", "conclusion": "success",
             "completed_at": "2026-08-11T12:07:40+00:00",
         })
@@ -708,7 +998,8 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
 
         evidence["checks"].append({
             "id": 8003, "source": "check-run", "context": "host/lint",
-            "app_id": 999, "sha": "c" * 40, "required": False,
+            "app_id": 999, "creator_actor_id": 999,
+            "creator_actor_type": "Integration", "sha": "c" * 40, "required": False,
             "status": "completed", "conclusion": "success",
             "completed_at": "2026-08-11T12:07:40+00:00",
         })

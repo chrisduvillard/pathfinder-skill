@@ -16,7 +16,9 @@ def _time(value: str) -> datetime:
     return parsed
 
 
-def evaluate_reviews(evidence, required_approvals: int, blocks) -> tuple[int, ...]:
+def evaluate_reviews(
+    policy, authorization, evidence, required_approvals: int, blocks
+) -> tuple[int, ...]:
     pull = evidence["pull_request"]
     completed = _time(evidence["observation"]["completed_at"])
     decision = evidence["mergeability"]["review_decision"]
@@ -57,7 +59,14 @@ def evaluate_reviews(evidence, required_approvals: int, blocks) -> tuple[int, ..
         ):
             effective[review["actor_id"]] = review
 
-    excluded = {pull["author_id"], pull["last_pusher_id"], evidence["actor"]["actor_id"]}
+    excluded = {
+        pull["author_id"], pull["last_pusher_id"], evidence["actor"]["actor_id"],
+        *authorization["implementation_actor_ids"],
+        *(item["creator_actor_id"] for item in evidence["checks"]),
+    }
+    human_reviewers = set(
+        policy["review_requirements"]["human_reviewer_actor_ids"]
+    )
     approvals = []
     for actor_id, review in sorted(effective.items()):
         if review["state"] == "CHANGES_REQUESTED" and not review["dismissed"]:
@@ -68,6 +77,7 @@ def evaluate_reviews(evidence, required_approvals: int, blocks) -> tuple[int, ..
             and review["actor_type"] == "User"
             and review["repository_permission"] in ELIGIBLE_PERMISSIONS
             and review["author_association"] in ELIGIBLE_ASSOCIATIONS
+            and actor_id in human_reviewers
             and actor_id not in excluded
         ):
             approvals.append(actor_id)

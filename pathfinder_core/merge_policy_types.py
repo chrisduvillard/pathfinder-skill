@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from enum import Enum
 
@@ -15,6 +17,7 @@ class DenyCode(str, Enum):
     POLICY_MISSING = "policy-missing"
     AUTHORIZATION_MISSING = "authorization-missing"
     EVIDENCE_MISSING = "evidence-missing"
+    PROTECTED_POLICY_MISSING = "protected-policy-missing"
     INPUT_INVALID = "input-invalid"
     POLICY_EXPIRED = "policy-expired"
     AUTHORIZATION_EXPIRED = "authorization-expired"
@@ -70,7 +73,8 @@ class DenyCode(str, Enum):
 
 UNKNOWN_CODES = frozenset({
     DenyCode.POLICY_MISSING, DenyCode.AUTHORIZATION_MISSING,
-    DenyCode.EVIDENCE_MISSING, DenyCode.INPUT_INVALID, DenyCode.POLICY_EXPIRED,
+    DenyCode.EVIDENCE_MISSING, DenyCode.PROTECTED_POLICY_MISSING,
+    DenyCode.INPUT_INVALID, DenyCode.POLICY_EXPIRED,
     DenyCode.AUTHORIZATION_EXPIRED, DenyCode.EVIDENCE_EXPIRED,
     DenyCode.IDENTITY_DRIFT, DenyCode.DIFF_DRIFT, DenyCode.API_VERSION_UNKNOWN,
     DenyCode.PAGINATION_INCOMPLETE, DenyCode.CLASSIC_PROTECTION_UNKNOWN,
@@ -116,3 +120,107 @@ class MergeEligibilityVerdict:
     @property
     def eligible(self) -> bool:
         return self.outcome is EligibilityOutcome.ELIGIBLE
+
+    @property
+    def intent_ready(self) -> bool:
+        """A single snapshot is advisory and can never authorize merge intent."""
+        return False
+
+
+@dataclass(frozen=True)
+class EvidenceSnapshotBinding:
+    evidence_id: str
+    evidence_sha256: str
+    policy_read_receipt_id: str
+    request_ids_sha256: str
+    observed_at: str
+    completed_at: str
+    expires_at: str
+
+    @classmethod
+    def from_evidence(cls, evidence) -> "EvidenceSnapshotBinding":
+        observation = evidence["observation"]
+        return cls(
+            evidence["evidence_id"],
+            evidence["evidence_sha256"],
+            observation["policy_read"]["receipt_id"],
+            observation["request_ids_sha256"],
+            observation["observed_at"],
+            observation["completed_at"],
+            observation["expires_at"],
+        )
+
+    def to_document(self) -> dict:
+        return {
+            "evidence_id": self.evidence_id,
+            "evidence_sha256": self.evidence_sha256,
+            "policy_read_receipt_id": self.policy_read_receipt_id,
+            "request_ids_sha256": self.request_ids_sha256,
+            "observed_at": self.observed_at,
+            "completed_at": self.completed_at,
+            "expires_at": self.expires_at,
+        }
+
+
+@dataclass(frozen=True)
+class MergeReadinessProof:
+    policy_id: str
+    policy_sha256: str
+    merge_authorization_id: str
+    authorization_sha256: str
+    protected_policy_sha256: str
+    initial_snapshot: EvidenceSnapshotBinding
+    reread_snapshot: EvidenceSnapshotBinding
+    proof_sha256: str
+
+    @classmethod
+    def build(cls, policy, authorization, initial, reread) -> "MergeReadinessProof":
+        values = {
+            "policy_id": policy["policy_id"],
+            "policy_sha256": policy["policy_sha256"],
+            "merge_authorization_id": authorization["merge_authorization_id"],
+            "authorization_sha256": authorization["authorization_sha256"],
+            "protected_policy_sha256": policy["path_policy"][
+                "protected_policy_sha256"
+            ],
+            "initial_snapshot": EvidenceSnapshotBinding.from_evidence(initial),
+            "reread_snapshot": EvidenceSnapshotBinding.from_evidence(reread),
+        }
+        provisional = cls(**values, proof_sha256="0" * 64)
+        payload = provisional.to_document()
+        del payload["proof_sha256"]
+        encoded = json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ).encode()
+        return cls(
+            **values,
+            proof_sha256=hashlib.sha256(encoded).hexdigest(),
+        )
+
+    def to_document(self) -> dict:
+        return {
+            "schema_version": 1,
+            "outcome": "intent-ready",
+            "policy": {
+                "policy_id": self.policy_id,
+                "policy_sha256": self.policy_sha256,
+            },
+            "authorization": {
+                "merge_authorization_id": self.merge_authorization_id,
+                "authorization_sha256": self.authorization_sha256,
+            },
+            "protected_policy_sha256": self.protected_policy_sha256,
+            "initial_snapshot": self.initial_snapshot.to_document(),
+            "reread_snapshot": self.reread_snapshot.to_document(),
+            "proof_sha256": self.proof_sha256,
+        }
+
+
+@dataclass(frozen=True)
+class MergeReadinessEvaluation:
+    verdict: MergeEligibilityVerdict
+    proof: MergeReadinessProof | None
+
+    @property
+    def intent_ready(self) -> bool:
+        return self.verdict.eligible and self.proof is not None

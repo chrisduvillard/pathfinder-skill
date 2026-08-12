@@ -11,6 +11,8 @@ from typing import Mapping, Sequence
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from .errors import PolicyError, StateError
+from .merge_diff import derive_special_files, object_evidence_sha256
 from .merge_policy_freshness import compare_complete_reread, evaluate_snapshot_window
 from .merge_policy_proofs import evaluate_checks, evaluate_reviews
 from .merge_policy_types import (
@@ -19,9 +21,12 @@ from .merge_policy_types import (
     EligibilityBlock,
     EligibilityOutcome,
     MergeEligibilityVerdict,
+    MergeReadinessEvaluation,
+    MergeReadinessProof,
     UNKNOWN_CODES,
     UNSUPPORTED_CODES,
 )
+from .protected_surfaces import ProtectedSurfaceRegistry
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +80,7 @@ def _validator(name: str) -> Draft202012Validator:
 
 
 VALIDATORS = {name: _validator(name) for name in ("policy", "authorization", "evidence")}
+READINESS_VALIDATOR = _validator("readiness-proof")
 
 
 def _time(value: str) -> datetime:
@@ -126,6 +132,7 @@ class MergePolicyEvaluator:
         self,
         policy: Mapping[str, object] | None,
         authorization: Mapping[str, object] | None,
+        protected_policy: Mapping[str, object] | None,
         evidence: Mapping[str, object] | None,
         *,
         now: datetime,
@@ -134,6 +141,11 @@ class MergePolicyEvaluator:
         missing = (
             (policy, DenyCode.POLICY_MISSING, "policy"),
             (authorization, DenyCode.AUTHORIZATION_MISSING, "authorization"),
+            (
+                protected_policy,
+                DenyCode.PROTECTED_POLICY_MISSING,
+                "protected_policy",
+            ),
             (evidence, DenyCode.EVIDENCE_MISSING, "evidence"),
         )
         for document, code, surface in missing:
@@ -153,13 +165,39 @@ class MergePolicyEvaluator:
         if blocks.items:
             return self._verdict(blocks, policy, authorization, evidence)
 
-        self._authority(policy, authorization, evidence, now, blocks)
-        self._evidence_integrity(evidence, now, blocks)
-        self._candidate(policy, evidence, blocks)
+        try:
+            if not isinstance(protected_policy, dict):
+                raise TypeError("protected policy must be an object")
+            shipped_registry = ProtectedSurfaceRegistry.load()
+            if protected_policy["mode"] == "baseline":
+                if protected_policy != shipped_registry.to_document():
+                    raise StateError(
+                        "protected baseline differs from the shipped policy"
+                    )
+                protected_registry = shipped_registry
+            else:
+                protected_registry = ProtectedSurfaceRegistry(
+                    shipped_registry.to_document(), protected_policy
+                )
+        except (KeyError, PolicyError, StateError, TypeError, ValueError):
+            blocks.add(
+                DenyCode.INPUT_INVALID,
+                "protected_policy",
+                "protected policy does not match its closed schema",
+            )
+            return self._verdict(blocks, policy, authorization, evidence)
+
+        self._authority(
+            policy, authorization, protected_registry, evidence, now, blocks
+        )
+        self._evidence_integrity(policy, evidence, now, blocks)
+        self._candidate(policy, authorization, protected_registry, evidence, blocks)
         required_approvals, required_checks, enforced_checks = self._rules(
             policy, evidence, blocks
         )
-        approval_actor_ids = evaluate_reviews(evidence, required_approvals, blocks)
+        approval_actor_ids = evaluate_reviews(
+            policy, authorization, evidence, required_approvals, blocks
+        )
         evaluate_checks(evidence, required_checks, enforced_checks, blocks)
         return self._verdict(
             blocks, policy, authorization, evidence,
@@ -172,14 +210,19 @@ class MergePolicyEvaluator:
         self,
         policy: Mapping[str, object] | None,
         authorization: Mapping[str, object] | None,
+        protected_policy: Mapping[str, object] | None,
         initial_evidence: Mapping[str, object] | None,
         reread_evidence: Mapping[str, object] | None,
         *,
         now: datetime,
-    ) -> MergeEligibilityVerdict:
+    ) -> MergeReadinessEvaluation:
         """Evaluate two complete observations and reject all intervening drift."""
-        initial = self.evaluate(policy, authorization, initial_evidence, now=now)
-        reread = self.evaluate(policy, authorization, reread_evidence, now=now)
+        initial = self.evaluate(
+            policy, authorization, protected_policy, initial_evidence, now=now
+        )
+        reread = self.evaluate(
+            policy, authorization, protected_policy, reread_evidence, now=now
+        )
         blocks = _Blocks()
         for block in (*initial.blocks, *reread.blocks):
             blocks.add(block.code, block.surface, block.detail)
@@ -191,7 +234,7 @@ class MergePolicyEvaluator:
             and next(VALIDATORS["evidence"].iter_errors(reread_evidence), None) is None
         ):
             compare_complete_reread(initial_evidence, reread_evidence, blocks)
-        return self._verdict(
+        verdict = self._verdict(
             blocks,
             policy,
             authorization,
@@ -200,6 +243,34 @@ class MergePolicyEvaluator:
             approval_actor_ids=reread.approval_actor_ids,
             required_checks=set(reread.required_checks),
         )
+        if (
+            not verdict.eligible
+            or policy is None
+            or authorization is None
+            or initial_evidence is None
+            or reread_evidence is None
+        ):
+            return MergeReadinessEvaluation(verdict, None)
+        proof = MergeReadinessProof.build(
+            policy, authorization, initial_evidence, reread_evidence
+        )
+        if next(READINESS_VALIDATOR.iter_errors(proof.to_document()), None) is not None:
+            blocks.add(
+                DenyCode.INPUT_INVALID,
+                "readiness_proof",
+                "generated readiness proof does not match its closed schema",
+            )
+            verdict = self._verdict(
+                blocks,
+                policy,
+                authorization,
+                reread_evidence,
+                required_approvals=reread.required_approvals,
+                approval_actor_ids=reread.approval_actor_ids,
+                required_checks=set(reread.required_checks),
+            )
+            return MergeReadinessEvaluation(verdict, None)
+        return MergeReadinessEvaluation(verdict, proof)
 
     @staticmethod
     def _verdict(
@@ -223,7 +294,9 @@ class MergePolicyEvaluator:
         )
 
     @staticmethod
-    def _authority(policy, authorization, evidence, now, blocks: _Blocks) -> None:
+    def _authority(
+        policy, authorization, protected_registry, evidence, now, blocks: _Blocks
+    ) -> None:
         for document, field, surface in (
             (policy, "policy_sha256", "policy"),
             (authorization, "authorization_sha256", "authorization"),
@@ -257,10 +330,26 @@ class MergePolicyEvaluator:
             "policy_id": policy["policy_id"], "policy_sha256": policy["policy_sha256"],
         }:
             blocks.add(DenyCode.IDENTITY_DRIFT, "authorization.policy", "policy binding differs")
+        policy_read = evidence["observation"]["policy_read"]
+        if (
+            policy_read["policy_id"] != policy["policy_id"]
+            or policy_read["policy_sha256"] != policy["policy_sha256"]
+        ):
+            blocks.add(
+                DenyCode.IDENTITY_DRIFT,
+                "observation.policy_read",
+                "host policy reread differs from the evaluated policy",
+            )
         if authorization["repository"] != policy["repository"]:
             blocks.add(DenyCode.IDENTITY_DRIFT, "authorization.repository", "repository binding differs")
         if authorization["merge_method"] != policy["merge_method"]:
             blocks.add(DenyCode.UNSUPPORTED_MERGE_METHOD, "authorization", "merge method differs")
+        if protected_registry.sha256 != policy["path_policy"]["protected_policy_sha256"]:
+            blocks.add(
+                DenyCode.IDENTITY_DRIFT,
+                "protected_policy",
+                "effective protected policy hash differs",
+            )
 
         expected_bindings = {
             "policy_id": policy["policy_id"],
@@ -280,16 +369,17 @@ class MergePolicyEvaluator:
             blocks.add(DenyCode.IDENTITY_DRIFT, "evidence.repository", "repository identity differs")
 
     @staticmethod
-    def _evidence_integrity(evidence, now, blocks: _Blocks) -> None:
+    def _evidence_integrity(policy, evidence, now, blocks: _Blocks) -> None:
         observation = evidence["observation"]
-        evaluate_snapshot_window(evidence, now, blocks)
+        evaluate_snapshot_window(policy, evidence, now, blocks)
         try:
             observed = _time(observation["observed_at"])
             completed = _time(observation["completed_at"])
+            policy_read = _time(observation["policy_read"]["observed_at"])
             audits_current = all(
                 observed <= _time(item["observed_at"]) <= completed
                 for item in observation["requests"]
-            )
+            ) and observed <= policy_read <= completed
         except (TypeError, ValueError):
             audits_current = False
         if not audits_current:
@@ -340,7 +430,9 @@ class MergePolicyEvaluator:
                 blocks.add(DenyCode.PAGINATION_INCOMPLETE, f"pagination.{name}", "item count differs")
 
     @staticmethod
-    def _candidate(policy, evidence, blocks: _Blocks) -> None:
+    def _candidate(
+        policy, authorization, protected_registry, evidence, blocks: _Blocks
+    ) -> None:
         repository = evidence["repository"]
         pull = evidence["pull_request"]
         mergeability = evidence["mergeability"]
@@ -367,6 +459,34 @@ class MergePolicyEvaluator:
             blocks.add(DenyCode.IDENTITY_DRIFT, "pull_request.base_ref", "base branch differs")
         if not CONTROLLER_BRANCH.fullmatch(pull["head_ref"]):
             blocks.add(DenyCode.CONTROLLER_BRANCH_UNPROVEN, "pull_request.head_ref", "head is not a controller branch")
+        candidate = authorization["candidate"]
+        expected_pull = candidate["pull_request"]
+        observed_pull = {
+            key: pull[key]
+            for key in (
+                "id", "node_id", "number", "head_ref", "head_sha", "base_ref",
+                "base_sha",
+            )
+        }
+        if observed_pull != expected_pull:
+            blocks.add(
+                DenyCode.IDENTITY_DRIFT,
+                "pull_request.controller_candidate",
+                "pull request differs from the authenticated controller candidate",
+            )
+        observed_diff = {
+            "diff_sha256": evidence["diff"]["diff_sha256"],
+            "changed_files_sha256": evidence["diff"]["changed_files_sha256"],
+            "object_evidence_sha256": evidence["diff"]["object_evidence"][
+                "files_sha256"
+            ],
+        }
+        if candidate["diff"] != observed_diff:
+            blocks.add(
+                DenyCode.DIFF_DRIFT,
+                "diff.controller_candidate",
+                "diff differs from the authenticated controller candidate",
+            )
         if any(pull[key] is not None for key in ("merge_commit_sha", "merged_at", "merged_by")):
             blocks.add(DenyCode.IDENTITY_DRIFT, "pull_request", "open pull request contains merge proof")
         if mergeability["required_sha"] != pull["head_sha"]:
@@ -381,11 +501,19 @@ class MergePolicyEvaluator:
             blocks.add(DenyCode.BASE_BEHIND, "mergeability.merge_state_status", "base branch is ahead")
         elif mergeability["merge_state_status"] != "CLEAN":
             blocks.add(DenyCode.MERGE_STATE_UNKNOWN, "mergeability.merge_state_status", "merge state is not clean")
-        MergePolicyEvaluator._diff(policy, evidence["diff"], blocks)
+        MergePolicyEvaluator._diff(
+            policy, protected_registry, evidence["diff"], blocks
+        )
 
     @staticmethod
-    def _diff(policy, diff, blocks: _Blocks) -> None:
+    def _diff(policy, protected_registry, diff, blocks: _Blocks) -> None:
         files = diff["changed_files"]
+        if diff["object_evidence"]["files_sha256"] != object_evidence_sha256(files):
+            blocks.add(
+                DenyCode.DIFF_DRIFT,
+                "diff.object_evidence",
+                "controller Git object evidence hash differs",
+            )
         if diff["changed_files_sha256"] != canonical_sha256(files):
             blocks.add(DenyCode.DIFF_DRIFT, "diff.changed_files", "changed-file hash differs")
         if diff["diff_sha256"] != canonical_sha256(diff, "diff_sha256"):
@@ -399,9 +527,53 @@ class MergePolicyEvaluator:
             or any(item["status"] == "unchanged" for item in files)
         ):
             blocks.add(DenyCode.DIFF_DRIFT, "diff", "diff totals or ordering differ")
-        categories = sorted({value for item in files for value in item["protected_categories"]})
-        special = sorted({value for item in files for value in item["special_files"]})
-        if categories != diff["protected_categories"] or special != diff["special_files"]:
+        claimed_categories = {
+            value for item in files for value in item["protected_categories"]
+        }
+        derived_categories: set[str] = set()
+        for item in files:
+            item_paths = tuple(
+                path for path in (item["path"], item["previous_path"])
+                if path is not None
+            )
+            try:
+                classified = protected_registry.classify(item_paths)
+            except PolicyError:
+                blocks.add(
+                    DenyCode.DIFF_DRIFT,
+                    "diff.changed_files",
+                    "changed path cannot be classified by the protected policy",
+                )
+                continue
+            expected = sorted({
+                category
+                for values in classified.values()
+                for category in values
+            })
+            derived_categories.update(expected)
+            if item["protected_categories"] != expected:
+                blocks.add(
+                    DenyCode.DIFF_DRIFT,
+                    item["path"],
+                    "protected classification differs from the effective registry",
+                )
+        categories = sorted(claimed_categories | derived_categories)
+        claimed_special = {value for item in files for value in item["special_files"]}
+        derived_special: set[str] = set()
+        for item in files:
+            expected_special = list(derive_special_files(item))
+            derived_special.update(expected_special)
+            if item["special_files"] != expected_special:
+                blocks.add(
+                    DenyCode.DIFF_DRIFT,
+                    item["path"],
+                    "special-file classification differs from controller Git evidence",
+                )
+        special = sorted(claimed_special | derived_special)
+        if (
+            sorted(claimed_categories) != diff["protected_categories"]
+            or sorted(claimed_special) != diff["special_files"]
+        ):
             blocks.add(DenyCode.DIFF_DRIFT, "diff", "protected classifications differ")
         if categories or special:
             blocks.add(DenyCode.PROTECTED_SURFACE, "diff", "diff touches a protected or special surface")
@@ -465,12 +637,44 @@ class MergePolicyEvaluator:
                 classic["settings_sha256"], classic["required_review_count"],
                 classic["enforce_admins"], classic["conversation_resolution_required"],
                 classic["last_push_approval_required"],
+                classic["dismiss_stale_reviews"],
+                classic["code_owner_review_required"],
+                classic["required_linear_history"],
+                classic["required_signatures"],
+                classic["restrictions_present"],
+                classic["dismissal_restrictions_present"],
             )
             if any(value is None for value in semantic_values):
                 blocks.add(DenyCode.CLASSIC_PROTECTION_UNKNOWN, "classic_protection", "classic settings are incomplete")
             else:
                 approvals.append(classic["required_review_count"])
                 review_enforced = classic["required_review_count"] >= 1
+                if classic["required_signatures"]:
+                    blocks.add(
+                        DenyCode.UNSUPPORTED_REQUIRED_SIGNATURES,
+                        "classic_protection.required_signatures",
+                        "classic protection requires signed commits",
+                    )
+                for field, detail in (
+                    (
+                        "code_owner_review_required",
+                        "classic code-owner approval cannot be attributed",
+                    ),
+                    (
+                        "restrictions_present",
+                        "classic push restrictions are active",
+                    ),
+                    (
+                        "dismissal_restrictions_present",
+                        "classic review-dismissal restrictions are active",
+                    ),
+                ):
+                    if classic[field]:
+                        blocks.add(
+                            DenyCode.UNSUPPORTED_ACTIVE_RULE,
+                            f"classic_protection.{field}",
+                            detail,
+                        )
             enforced_checks |= _requirements(classic["required_checks"])
             required_checks |= enforced_checks
             if classic["bypass_visibility"] != "complete":
@@ -483,7 +687,10 @@ class MergePolicyEvaluator:
             or classic["bypass_actor_keys"]
             or any(classic[key] is not None for key in (
                 "enforce_admins", "conversation_resolution_required",
-                "last_push_approval_required",
+                "last_push_approval_required", "dismiss_stale_reviews",
+                "code_owner_review_required", "required_linear_history",
+                "required_signatures", "restrictions_present",
+                "dismissal_restrictions_present",
             ))
         ):
             blocks.add(DenyCode.CLASSIC_PROTECTION_UNKNOWN, "classic_protection", "absent protection has settings")
@@ -501,11 +708,18 @@ class MergePolicyEvaluator:
                 if (
                     rule["approval_count"] is None or not rule["allowed_merge_methods"]
                     or rule["required_checks"] or rule["strict"] is not None
+                    or rule["code_owner_review_required"] is None
                 ):
                     blocks.add(DenyCode.RULESET_DRIFT, f"active_rules.{rule['ruleset_id']}", "pull-request parameters differ")
                 else:
                     approvals.append(rule["approval_count"])
                     review_enforced = review_enforced or rule["approval_count"] >= 1
+                if rule["code_owner_review_required"]:
+                    blocks.add(
+                        DenyCode.UNSUPPORTED_ACTIVE_RULE,
+                        f"active_rules.{rule['ruleset_id']}.code_owner_review_required",
+                        "ruleset code-owner approval cannot be attributed",
+                    )
                 if "squash" not in rule["allowed_merge_methods"]:
                     blocks.add(
                         DenyCode.UNSUPPORTED_MERGE_METHOD,
@@ -517,6 +731,7 @@ class MergePolicyEvaluator:
                 if (
                     rule["approval_count"] is not None or rule["allowed_merge_methods"]
                     or not values or rule["strict"] is None
+                    or rule["code_owner_review_required"] is not None
                 ):
                     blocks.add(DenyCode.RULESET_DRIFT, f"active_rules.{rule['ruleset_id']}", "check parameters differ")
                 enforced_checks |= values
@@ -525,6 +740,7 @@ class MergePolicyEvaluator:
                 if (
                     rule["approval_count"] is not None or rule["allowed_merge_methods"]
                     or rule["required_checks"] or rule["strict"] is not None
+                    or rule["code_owner_review_required"] is not None
                 ):
                     blocks.add(DenyCode.RULESET_DRIFT, f"active_rules.{rule['ruleset_id']}", "linear-history parameters differ")
             else:

@@ -15,13 +15,16 @@ def _time(value: str) -> datetime:
     return parsed
 
 
-def evaluate_snapshot_window(evidence, now: datetime, blocks) -> None:
+def evaluate_snapshot_window(policy, evidence, now: datetime, blocks) -> None:
     observation = evidence["observation"]
     try:
         observed = _time(observation["observed_at"])
         completed = _time(observation["completed_at"])
         host_expiry = _time(observation["expires_at"])
-        hard_expiry = observed + MAX_SNAPSHOT_AGE
+        policy_age = timedelta(
+            seconds=policy["freshness"]["max_snapshot_age_seconds"]
+        )
+        hard_expiry = observed + min(MAX_SNAPSHOT_AGE, policy_age)
         current = observed <= completed <= now < min(host_expiry, hard_expiry)
     except (TypeError, ValueError):
         current = False
@@ -29,13 +32,13 @@ def evaluate_snapshot_window(evidence, now: datetime, blocks) -> None:
         blocks.add(
             DenyCode.EVIDENCE_EXPIRED,
             "observation",
-            "evidence exceeds its host expiry or 60-second hard window",
+            "evidence exceeds its host expiry or effective freshness window",
         )
 
 
 def compare_complete_reread(initial, reread, blocks) -> None:
     try:
-        ordered = _time(initial["observation"]["completed_at"]) <= _time(
+        ordered = _time(initial["observation"]["completed_at"]) < _time(
             reread["observation"]["observed_at"]
         )
     except (TypeError, ValueError):
@@ -53,11 +56,24 @@ def compare_complete_reread(initial, reread, blocks) -> None:
         initial["evidence_id"] == reread["evidence_id"]
         or initial["evidence_sha256"] == reread["evidence_sha256"]
         or initial_ids & reread_ids
+        or initial["observation"]["policy_read"]["receipt_id"]
+        == reread["observation"]["policy_read"]["receipt_id"]
     ):
         blocks.add(
             DenyCode.IDENTITY_DRIFT,
             "reread.observation",
             "reread must have a new evidence identity and disjoint request ids",
+        )
+    if (
+        initial["observation"]["policy_read"]["policy_id"]
+        != reread["observation"]["policy_read"]["policy_id"]
+        or initial["observation"]["policy_read"]["policy_sha256"]
+        != reread["observation"]["policy_read"]["policy_sha256"]
+    ):
+        blocks.add(
+            DenyCode.IDENTITY_DRIFT,
+            "reread.policy_read",
+            "host policy changed between complete snapshots",
         )
 
     initial_merge = {

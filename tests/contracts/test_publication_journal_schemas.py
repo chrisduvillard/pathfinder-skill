@@ -18,9 +18,15 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_ROOT = ROOT / "schemas" / "publication"
 FIXTURE_ROOT = ROOT / "tests" / "contracts" / "fixtures"
 HASH_FIELDS = {
+    "initial_evidence": "evidence_sha256",
     "evidence": "evidence_sha256",
+    "readiness_proof": "proof_sha256",
     "intent": "intent_sha256",
     "result": "result_sha256",
+}
+SCHEMA_NAMES = {
+    "initial_evidence": "evidence",
+    "readiness_proof": "readiness-proof",
 }
 
 
@@ -29,7 +35,8 @@ def load_json(path):
 
 
 def validate_schema(name, document):
-    schema = load_json(SCHEMA_ROOT / f"merge-{name}.schema.json")
+    schema_name = SCHEMA_NAMES.get(name, name)
+    schema = load_json(SCHEMA_ROOT / f"merge-{schema_name}.schema.json")
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(document)
 
@@ -38,9 +45,11 @@ def _subset(document, keys):
     return {key: document[key] for key in keys}
 
 
-def validate_journal(journal, authority):
-    evidence, intent, result = (
+def validate_journal(journal, authority, protected_policy=None):
+    initial_evidence, evidence, readiness, intent, result = (
+        journal.get("initial_evidence"),
         journal.get("evidence"),
+        journal.get("readiness_proof"),
         journal.get("intent"),
         journal.get("result"),
     )
@@ -50,9 +59,14 @@ def validate_journal(journal, authority):
         raise ValidationError("merge intent is required")
 
     validate_contract_pair(authority["policy"], authority["authorization"])
+    validate_schema("initial_evidence", initial_evidence)
     validate_schema("evidence", evidence)
+    validate_schema("readiness_proof", readiness)
     validate_schema("intent", intent)
-    for name, document in (("evidence", evidence), ("intent", intent)):
+    for name, document in (
+        ("initial_evidence", initial_evidence), ("evidence", evidence),
+        ("readiness_proof", readiness), ("intent", intent)
+    ):
         field = HASH_FIELDS[name]
         if document[field] != canonical_sha256(document, field):
             raise ValidationError(f"{field} does not match canonical document")
@@ -72,6 +86,22 @@ def validate_journal(journal, authority):
     repository_keys = ("id", "node_id", "owner", "name", "base_branch")
     if _subset(evidence["repository"], repository_keys) != policy["repository"]:
         raise ValidationError("evidence repository binding drift")
+    expected_candidate_pull = _subset(
+        evidence["pull_request"],
+        ("id", "node_id", "number", "head_ref", "head_sha", "base_ref", "base_sha"),
+    )
+    expected_candidate_diff = {
+        "diff_sha256": evidence["diff"]["diff_sha256"],
+        "changed_files_sha256": evidence["diff"]["changed_files_sha256"],
+        "object_evidence_sha256": evidence["diff"]["object_evidence"][
+            "files_sha256"
+        ],
+    }
+    if (
+        authorization["candidate"]["pull_request"] != expected_candidate_pull
+        or authorization["candidate"]["diff"] != expected_candidate_diff
+    ):
+        raise ValidationError("evidence controller candidate binding drift")
 
     pages = evidence["pagination"].values()
     if (
@@ -88,9 +118,54 @@ def validate_journal(journal, authority):
     if not observed <= completed <= started < expires:
         raise ValidationError("evidence is expired or has an invalid observation window")
 
+    def expected_snapshot(document):
+        observation = document["observation"]
+        return {
+            "evidence_id": document["evidence_id"],
+            "evidence_sha256": document["evidence_sha256"],
+            "policy_read_receipt_id": observation["policy_read"]["receipt_id"],
+            "request_ids_sha256": observation["request_ids_sha256"],
+            "observed_at": observation["observed_at"],
+            "completed_at": observation["completed_at"],
+            "expires_at": observation["expires_at"],
+        }
+
+    expected_initial = expected_snapshot(initial_evidence)
+    expected_reread = expected_snapshot(evidence)
+    initial_snapshot = readiness["initial_snapshot"]
+    reread_snapshot = readiness["reread_snapshot"]
+    if (
+        readiness["policy"] != {
+            "policy_id": policy["policy_id"],
+            "policy_sha256": policy["policy_sha256"],
+        }
+        or readiness["authorization"] != {
+            "merge_authorization_id": authorization["merge_authorization_id"],
+            "authorization_sha256": authorization["authorization_sha256"],
+        }
+        or readiness["protected_policy_sha256"]
+        != policy["path_policy"]["protected_policy_sha256"]
+        or initial_snapshot != expected_initial
+        or reread_snapshot != expected_reread
+    ):
+        raise ValidationError("readiness proof authority or evidence binding drift")
+    initial_completed = datetime.fromisoformat(initial_snapshot["completed_at"])
+    reread_observed = datetime.fromisoformat(reread_snapshot["observed_at"])
+    if (
+        initial_snapshot["evidence_id"] == reread_snapshot["evidence_id"]
+        or initial_snapshot["evidence_sha256"] == reread_snapshot["evidence_sha256"]
+        or initial_snapshot["policy_read_receipt_id"]
+        == reread_snapshot["policy_read_receipt_id"]
+        or not initial_completed < reread_observed
+    ):
+        raise ValidationError("readiness proof does not bind a disjoint ordered reread")
+
     expected_intent_bindings = {
-        "evidence_id": evidence["evidence_id"],
-        "evidence_sha256": evidence["evidence_sha256"],
+        "readiness_proof_sha256": readiness["proof_sha256"],
+        "initial_evidence_id": initial_snapshot["evidence_id"],
+        "initial_evidence_sha256": initial_snapshot["evidence_sha256"],
+        "reread_evidence_id": reread_snapshot["evidence_id"],
+        "reread_evidence_sha256": reread_snapshot["evidence_sha256"],
         **{key: evidence["bindings"][key] for key in (
             "policy_id", "policy_sha256", "merge_authorization_id",
             "authorization_sha256", "mission_id", "binding_id",
@@ -113,13 +188,33 @@ def validate_journal(journal, authority):
     if intent["merge_method"] != policy["merge_method"]:
         raise ValidationError("intent merge method drift")
 
+    from pathfinder_core.merge_policy import MergePolicyEvaluator
+    from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
+
+    effective_protected_policy = (
+        ProtectedSurfaceRegistry.load().to_document()
+        if protected_policy is None else protected_policy
+    )
+    evaluation = MergePolicyEvaluator().evaluate_reread(
+        policy,
+        authorization,
+        effective_protected_policy,
+        initial_evidence,
+        evidence,
+        now=started,
+    )
+    if not evaluation.intent_ready or evaluation.proof is None:
+        raise ValidationError("persisted evidence does not replay as intent-ready")
+    if evaluation.proof.to_document() != readiness:
+        raise ValidationError("readiness proof differs from evaluator replay")
+
     if result is None:
         return {"state": "pending", "disposition": "reconcile-required"}
     validate_schema("result", result)
     if result["result_sha256"] != canonical_sha256(result, "result_sha256"):
         raise ValidationError("result_sha256 does not match canonical document")
     expected_result_binding = {
-        "evidence_sha256": evidence["evidence_sha256"],
+        "readiness_proof_sha256": readiness["proof_sha256"],
         "policy_sha256": policy["policy_sha256"],
         "authorization_sha256": authorization["authorization_sha256"],
         "repository": _subset(policy["repository"], ("id", "node_id")),
@@ -169,16 +264,60 @@ def mutate_journal(bundle, case):
         else:
             parent[final] = case["value"]
 
-    evidence, intent, result = changed["evidence"], changed["intent"], changed["result"]
+    evidence = changed["evidence"]
+    initial_evidence = changed["initial_evidence"]
+    readiness = changed["readiness_proof"]
+    intent = changed["intent"]
+    result = changed["result"]
+    if initial_evidence is not None:
+        initial_evidence["evidence_sha256"] = canonical_sha256(
+            initial_evidence, "evidence_sha256"
+        )
     if evidence is not None:
         evidence["evidence_sha256"] = canonical_sha256(evidence, "evidence_sha256")
+    if readiness is not None:
+        if initial_evidence is not None and case["document"] == "initial_evidence":
+            observation = initial_evidence["observation"]
+            readiness["initial_snapshot"].update({
+                "evidence_id": initial_evidence["evidence_id"],
+                "evidence_sha256": initial_evidence["evidence_sha256"],
+                "policy_read_receipt_id": observation["policy_read"]["receipt_id"],
+                "request_ids_sha256": observation["request_ids_sha256"],
+                "observed_at": observation["observed_at"],
+                "completed_at": observation["completed_at"],
+                "expires_at": observation["expires_at"],
+            })
+        if evidence is not None and case["document"] == "evidence":
+            observation = evidence["observation"]
+            readiness["reread_snapshot"].update({
+                "evidence_id": evidence["evidence_id"],
+                "evidence_sha256": evidence["evidence_sha256"],
+                "policy_read_receipt_id": observation["policy_read"]["receipt_id"],
+                "request_ids_sha256": observation["request_ids_sha256"],
+                "observed_at": observation["observed_at"],
+                "completed_at": observation["completed_at"],
+                "expires_at": observation["expires_at"],
+            })
+        readiness["proof_sha256"] = canonical_sha256(
+            readiness, "proof_sha256"
+        )
     if intent is not None:
-        if evidence is not None:
-            intent["bindings"]["evidence_sha256"] = evidence["evidence_sha256"]
+        if readiness is not None:
+            initial = readiness["initial_snapshot"]
+            reread = readiness["reread_snapshot"]
+            intent["bindings"].update({
+                "readiness_proof_sha256": readiness["proof_sha256"],
+                "initial_evidence_id": initial["evidence_id"],
+                "initial_evidence_sha256": initial["evidence_sha256"],
+                "reread_evidence_id": reread["evidence_id"],
+                "reread_evidence_sha256": reread["evidence_sha256"],
+            })
         intent["intent_sha256"] = canonical_sha256(intent, "intent_sha256")
     if result is not None:
-        if evidence is not None:
-            result["binding"]["evidence_sha256"] = evidence["evidence_sha256"]
+        if readiness is not None:
+            result["binding"]["readiness_proof_sha256"] = readiness[
+                "proof_sha256"
+            ]
         if intent is not None:
             result["intent_sha256"] = intent["intent_sha256"]
         result["result_sha256"] = canonical_sha256(result, "result_sha256")
@@ -193,13 +332,85 @@ class PublicationJournalSchemaTests(unittest.TestCase):
     def test_journal_schemas_are_valid_and_closed(self):
         for name in HASH_FIELDS:
             with self.subTest(name=name):
-                schema = load_json(SCHEMA_ROOT / f"merge-{name}.schema.json")
+                schema_name = SCHEMA_NAMES.get(name, name)
+                schema = load_json(SCHEMA_ROOT / f"merge-{schema_name}.schema.json")
                 Draft202012Validator.check_schema(schema)
                 self.assertFalse(schema["additionalProperties"])
 
     def test_valid_evidence_intent_and_result_are_exactly_bound(self):
         self.assertEqual(
             validate_journal(self.bundle, self.authority),
+            {"state": "terminal", "disposition": "merged"},
+        )
+
+    def test_journal_replay_accepts_an_additive_protected_policy(self):
+        from pathfinder_core.merge_policy import MergePolicyEvaluator
+        from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
+
+        authority = copy.deepcopy(self.authority)
+        journal = copy.deepcopy(self.bundle)
+        baseline = ProtectedSurfaceRegistry.load().to_document()
+        additive = {
+            "schema_version": 1,
+            "policy_id": "protected-policy-example-additive",
+            "mode": "additive",
+            "base_policy_id": baseline["policy_id"],
+            "rules": [{
+                "rule_id": "protected-rule-example-extra",
+                "category": "example-extra",
+                "description": "Additional host-owned protected surface.",
+                "patterns": ["extra-protected/**"],
+            }],
+        }
+        effective = ProtectedSurfaceRegistry(baseline, additive)
+        policy = authority["policy"]
+        authorization = authority["authorization"]
+        policy["path_policy"]["protected_policy_sha256"] = effective.sha256
+        policy["policy_sha256"] = canonical_sha256(policy, "policy_sha256")
+        authorization["policy"]["policy_sha256"] = policy["policy_sha256"]
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        for evidence in (journal["initial_evidence"], journal["evidence"]):
+            evidence["bindings"].update({
+                "policy_sha256": policy["policy_sha256"],
+                "authorization_sha256": authorization["authorization_sha256"],
+                "protected_policy_sha256": effective.sha256,
+            })
+            evidence["observation"]["policy_read"]["policy_sha256"] = policy[
+                "policy_sha256"
+            ]
+            evidence["evidence_sha256"] = canonical_sha256(
+                evidence, "evidence_sha256"
+            )
+        started = datetime.fromisoformat(journal["intent"]["started_at"])
+        evaluation = MergePolicyEvaluator().evaluate_reread(
+            policy, authorization, additive,
+            journal["initial_evidence"], journal["evidence"], now=started,
+        )
+        self.assertTrue(evaluation.intent_ready)
+        journal["readiness_proof"] = evaluation.proof.to_document()
+        intent = journal["intent"]
+        intent["bindings"].update({
+            "readiness_proof_sha256": evaluation.proof.proof_sha256,
+            "initial_evidence_sha256": journal["initial_evidence"][
+                "evidence_sha256"
+            ],
+            "reread_evidence_sha256": journal["evidence"]["evidence_sha256"],
+            "policy_sha256": policy["policy_sha256"],
+            "authorization_sha256": authorization["authorization_sha256"],
+        })
+        intent["intent_sha256"] = canonical_sha256(intent, "intent_sha256")
+        result = journal["result"]
+        result["intent_sha256"] = intent["intent_sha256"]
+        result["binding"].update({
+            "readiness_proof_sha256": evaluation.proof.proof_sha256,
+            "policy_sha256": policy["policy_sha256"],
+            "authorization_sha256": authorization["authorization_sha256"],
+        })
+        result["result_sha256"] = canonical_sha256(result, "result_sha256")
+        self.assertEqual(
+            validate_journal(journal, authority, additive),
             {"state": "terminal", "disposition": "merged"},
         )
 

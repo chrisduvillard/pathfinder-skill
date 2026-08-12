@@ -1398,7 +1398,7 @@ Observable completion means:
 
 - [x] `[writes code]` Add only closed merge-evidence, merge-intent, and merge-result schemas plus focused fixtures/tests; present the identity-binding and replay invariants before editing.
 - [x] Evidence must carry completeness/pagination markers, API version, observation window, repository/actor/PR identities, exact head/base SHAs, diff and policy hashes, classic protection, aggregate active rules, source rulesets, bypass visibility, effective reviews/threads, required checks/statuses, mergeability, and typed unsupported/unknown fields.
-- [x] Intent must bind the evidence hash, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
+- [x] Intent must bind an intent-ready two-snapshot proof, both evidence ids/hashes, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
 - [x] Result must distinguish `merged`, `not-merged`, `reconcile-required`, `policy-blocked`, `auth-error`, `rate-limited`, `permission-missing`, and `api-unavailable`; `merged` requires exact result evidence rather than a message string.
 - [x] Imitate `OperationJournal` write-once binding, but do not widen its existing action enums yet. A dedicated merge journal keeps an unreachable future writer separate from the local host action machine.
 - [x] Existing contract tests must pass unmodified. Add result-without-intent, changed-head, changed-policy, changed-actor, expired-evidence, missing-page, unknown-enum, and fabricated-merged negatives.
@@ -1499,6 +1499,54 @@ network, or merge. GitHub still offers no atomic precondition over the base, pol
 rules, reviews, and checks after that final reread, so trusted-admin control-plane mutation remains a
 documented residual race.
 
+#### Sub-prompt K3.3 — independent-review remediation and intent-ready proof
+
+- [x] `[writes code]` Bind authorization to the exact authenticated controller publication,
+  mission-state hash, PR id/node/number, head/base refs and SHAs, and canonical diff/file/object
+  evidence hashes; a controller-shaped branch alone cannot pass.
+- [x] Anchor protected surfaces to the shipped baseline: accept only that exact baseline or a
+  schema-valid additive override naming it, then independently recompute every current/previous
+  path classification. Derive special-file labels from an authenticated controller Git-diff
+  receipt; forge-supplied labels cannot erase a protected, symlink, submodule, binary, workflow,
+  CODEOWNERS, or policy match.
+- [x] Allow host policy to shorten the 60-second ceiling, require a fresh host-policy-store receipt
+  in each snapshot, use strict non-touching reread ordering, and reject receipt reuse or policy hash
+  drift.
+- [x] Count only host-attested human reviewer ids and exclude PR author, last pusher, merge actor,
+  all implementation actors, and every observed check creator. Normalize commit-status creator
+  identity explicitly.
+- [x] Keep a single-snapshot verdict advisory with `intent_ready = false`; emit a distinct immutable
+  readiness proof only after two complete ordered/disjoint green snapshots. Bind inert intent and
+  result contracts to that proof and both evidence hashes.
+- [x] Persist both complete evidence documents in the inert journal, validate their canonical
+  hashes, and replay the actual two-snapshot evaluator at intent time; summary-only or stale proof
+  metadata cannot satisfy the readiness contract.
+- [x] Make the low-risk Goal boundary and classic protection semantics machine-readable. Reject
+  release, deployment, data mutation, and real-world-side-effect Goal bindings; normalize and
+  cross-check stale-review, code-owner, linear-history, signature, and restriction settings, with
+  unsupported semantics typed fail-closed.
+- [x] Add adversarial regressions for rehashed different PRs, erased protected/special labels,
+  changed registry hashes, unallowlisted service users, implementation/check actors, policy receipt
+  reuse, and freshness shortening. Add the required deterministic merge-evidence eval fixture.
+- [x] Preserve zero production callers, credentials, network/mutation primitives, routes, and merge
+  methods. K4 remains closed until a fresh independent security review is clean and exact PR
+  identity is durably persisted by runnable awaiting-review publication.
+
+**Implementation note (2026-08-12):** the K3 review-remediation slice now authenticates the exact
+controller candidate, anchors protected policy to the shipped baseline, recomputes protected and
+special surfaces, normalizes controller Git-object/policy-read/check-creator receipts, narrows
+reviewer identity to a host human allowlist, and separates advisory verdicts from closed
+two-snapshot readiness proofs. The K1 journal persists both full evidence documents and accepts a
+proof only when the actual evaluator reproduces it at intent time. Closed Goal-risk fields exclude
+release/deployment/data/real-world work, while explicit classic-protection semantics reject opaque
+or unsupported settings, including ruleset code-owner requirements. Malformed protected-policy
+objects return typed denials, and journals replay the exact baseline or additive policy document.
+Focused contract, observer, evaluator, adversarial journal, and actual-code eval suites cover each
+reproduced bypass, and all 287 repository tests pass. The implementation
+remains inert: repository search finds no production caller, credential, remote mutation, merge
+method, or enabled route. A proof crossing a process boundary will still require a trusted
+host-owned envelope in any future K4 composition.
+
 **Phase verification:** a pure process can explain exactly why a PR is eligible or blocked, and exhaustive negative fixtures prove it cannot merge or perform network access.
 
 **Rollback:** remove the unused evaluator. No schema migration or external state exists.
@@ -1512,7 +1560,10 @@ documented residual race.
 #### Sub-prompt K4.1 — dedicated merge credential and journal
 
 - [ ] `[writes code]` Add only a separate merge executor module/process, dedicated journal implementation using K1 schemas, focused fixtures, and credential policy; present the state machine and credential scopes before editing.
-- [ ] The executor accepts only schema-valid policy, authorization, fresh eligible evidence, and merge intent inputs. It cannot discover work, update a Goal, push, open/edit/comment on a PR, change protection/rulesets, delete a branch, release, deploy, or invoke repository code.
+- [ ] The executor accepts only schema-valid policy, authorization, exact protected policy, an
+  intent-ready two-snapshot proof, both bound evidence records, and merge intent inputs. It rejects
+  a single advisory verdict. It cannot discover work, update a Goal, push, open/edit/comment on a
+  PR, change protection/rulesets, delete a branch, release, deploy, or invoke repository code.
 - [ ] Restrict the merge token to the one repository and permissions needed for reading the exact PR and writing contents through the merge endpoint. Bind and compare its exact actor/app/installation identity with observer evidence and every bypass list.
 - [ ] Persist the write-once intent before network mutation. An intent with no terminal result is `reconcile-required`; it is never automatically replayed.
 - [ ] Imitate `OperationJournal` atomic write-once behavior and binding checks, but keep its namespace/action enums separate from the local mission journal until composition is explicitly approved.
@@ -1646,4 +1697,8 @@ documented residual race.
 
 ### Recommended first implementation slice
 
-**K0.1 through K3.1 are complete.** Execute **K3.2 only** next: add pure 60-second freshness and complete-reread drift comparison with a fake clock and no caller. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
+**K0.1 through K3.3 are implemented, locally verified, and independently reviewed clean.** K4 is
+still closed: runnable awaiting-review publication must durably persist the exact PR identity, a
+trusted host-owned envelope must authenticate any cross-process readiness proof, live evidence must
+collect every required fact, and a separate explicit security/enablement decision must authorize
+the next phase. Do not infer that authority from this plan, green tests, or the K3 review verdict.

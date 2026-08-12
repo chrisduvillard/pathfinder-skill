@@ -113,6 +113,11 @@ class GitHubMergeObserverTests(unittest.TestCase):
         )
         self.assertEqual(len(evidence["reviews"]), 1)
         self.assertEqual(len(evidence["checks"]), 2)
+        self.assertEqual(evidence["checks"][1]["creator_actor_id"], 55555)
+        self.assertEqual(
+            evidence["observation"]["policy_read"]["receipt_id"],
+            "policy_read_observer1",
+        )
         self.assertEqual(evidence["actor"]["bypass_assessment"], "no-match")
         self.assertEqual(len(evidence["observation"]["requests"]), 16)
         request_ids = [item["request_id"] for item in evidence["observation"]["requests"]]
@@ -155,6 +160,10 @@ class GitHubMergeObserverTests(unittest.TestCase):
             "required_checks": [], "bypass_visibility": "not-applicable",
             "enforce_admins": None, "conversation_resolution_required": None,
             "last_push_approval_required": None,
+            "dismiss_stale_reviews": None, "code_owner_review_required": None,
+            "required_linear_history": None, "required_signatures": None,
+            "restrictions_present": None,
+            "dismissal_restrictions_present": None,
             "absence_proof": {
                 "endpoint": "classic-protection", "repository_id": 123456789,
                 "repository_node_id": "R_kgDOExample1", "permission_confirmed": True,
@@ -182,6 +191,16 @@ class GitHubMergeObserverTests(unittest.TestCase):
             "cursor-page-1",
         )
         self.assertIn("pagination-incomplete", result.evidence["unknown_reasons"])
+
+    def test_controller_git_object_evidence_must_match_the_api_path_set(self):
+        context = copy.deepcopy(self.context)
+        context["object_evidence"]["files"][0]["path"] = "different/path.md"
+        backend = FixtureObservationBackend(copy.deepcopy(self.responses))
+        result = GitHubMergeObserver(backend).observe(
+            bindings=self.bindings, **context
+        )
+        self.assertEqual(result.outcome, ObservationOutcome.DIFF_INCOMPLETE)
+        self.assertIsNone(result.evidence)
 
     def test_merged_state_reconciles_and_ref_drift_stops(self):
         responses = copy.deepcopy(self.responses)
@@ -295,6 +314,25 @@ class GitHubMergeObserverTests(unittest.TestCase):
         responses = copy.deepcopy(self.responses)
         status = responses["active-rules"]["items"][1]
         status["parameters"]["required_status_checks"][0]["integration_id"] = 1
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertIn("field-unknown", result.evidence["unknown_reasons"])
+
+        responses = copy.deepcopy(self.responses)
+        responses["active-rules"]["items"][0]["parameters"][
+            "require_code_owner_review"
+        ] = True
+        responses["source-rulesets"]["items"][0]["rules"][0]["parameters"][
+            "require_code_owner_review"
+        ] = True
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.OBSERVED)
+        self.assertIn("unsupported-active-rule", result.evidence["unsupported_reasons"])
+
+        responses = copy.deepcopy(self.responses)
+        responses["classic-protection"]["data"]["settings"][
+            "required_signatures"
+        ] = True
         result, _ = self.observe(responses)
         self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
         self.assertIn("field-unknown", result.evidence["unknown_reasons"])
