@@ -128,7 +128,7 @@
           "conditions_sha256": {"$ref": "#/$defs/sha256"}, "rules_sha256": {"$ref": "#/$defs/sha256"}, "active_rules_sha256": {"$ref": "#/$defs/sha256"},
           "updated_at": {"type": "string", "format": "date-time"},
           "bypass_visibility": {"enum": ["complete", "unknown"]},
-          "bypass_actor_keys": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/actorKey"}}
+          "bypass_actor_keys": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/rulesetBypassActorKey"}}
         }
       }
     },
@@ -158,6 +158,7 @@
     "nodeId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
     "ref": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"},
     "actorKey": {"type": "string", "pattern": "^(User|Team|RepositoryRole|OrganizationAdmin|DeployKey|Integration):[1-9][0-9]*$"},
+    "rulesetBypassActorKey": {"type": "string", "pattern": "^(User|Team|RepositoryRole|OrganizationAdmin|DeployKey|Integration):[1-9][0-9]*:(always|pull_request|exempt)$"},
     "responseAudit": {"type": "object", "additionalProperties": false, "required": ["surface", "request_id", "etag", "observed_at"], "properties": {"surface": {"enum": ["repository", "actor", "pull-request", "refs", "changed-files", "classic-protection", "active-rules", "source-rulesets", "bypass-actors", "reviews", "review-requests", "review-threads", "check-runs", "commit-statuses", "deployments", "merged-state"]}, "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._:/-]{1,256}$"}, "etag": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}, "observed_at": {"type": "string", "format": "date-time"}}},
     "policyRead": {"type": "object", "additionalProperties": false, "required": ["source", "receipt_id", "policy_id", "policy_sha256", "observed_at"], "properties": {"source": {"const": "host-policy-store"}, "receipt_id": {"type": "string", "pattern": "^policy_read_[a-z0-9][a-z0-9_-]{7,63}$"}, "policy_id": {"type": "string", "pattern": "^merge_policy_[a-z0-9][a-z0-9_-]{7,63}$"}, "policy_sha256": {"$ref": "#/$defs/sha256"}, "observed_at": {"type": "string", "format": "date-time"}}},
     "objectEvidence": {"type": "object", "additionalProperties": false, "required": ["source", "receipt_id", "files_sha256"], "properties": {"source": {"const": "authenticated-controller-git-diff"}, "receipt_id": {"type": "string", "pattern": "^object_evidence_[a-z0-9][a-z0-9_-]{7,63}$"}, "files_sha256": {"$ref": "#/$defs/sha256"}}},

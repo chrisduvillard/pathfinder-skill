@@ -119,6 +119,10 @@ class GitHubMergeObserverTests(unittest.TestCase):
             "policy_read_observer1",
         )
         self.assertEqual(evidence["actor"]["bypass_assessment"], "no-match")
+        self.assertEqual(
+            evidence["source_rulesets"][0]["bypass_actor_keys"],
+            ["Integration:86420:always"],
+        )
         self.assertEqual(len(evidence["observation"]["requests"]), 16)
         request_ids = [item["request_id"] for item in evidence["observation"]["requests"]]
         encoded = json.dumps(request_ids, sort_keys=True, separators=(",", ":")).encode()
@@ -144,6 +148,22 @@ class GitHubMergeObserverTests(unittest.TestCase):
                 self.assertIsNone(result.evidence)
         result, _ = self.observe(timeout_surface="repository")
         self.assertEqual(result.outcome, ObservationOutcome.TIMEOUT)
+        self.assertIsNone(result.evidence)
+
+    def test_source_ruleset_read_failures_never_yield_partial_evidence(self):
+        for outcome in (
+            ObservationOutcome.PERMISSION_MISSING,
+            ObservationOutcome.API_UNAVAILABLE,
+        ):
+            with self.subTest(outcome=outcome):
+                result, _ = self.observe(failure=("source-rulesets", outcome))
+                self.assertEqual(result.outcome, outcome)
+                self.assertEqual(result.surface, "source-rulesets")
+                self.assertIsNone(result.evidence)
+
+        result, _ = self.observe(timeout_surface="source-rulesets")
+        self.assertEqual(result.outcome, ObservationOutcome.TIMEOUT)
+        self.assertEqual(result.surface, "transport")
         self.assertIsNone(result.evidence)
 
     def test_404_is_not_inferred_as_unprotected(self):
@@ -242,6 +262,7 @@ class GitHubMergeObserverTests(unittest.TestCase):
         responses = copy.deepcopy(self.responses)
         responses["bypass-actors"]["items"] = [{
             "ruleset_id": 7001, "actor_type": "Integration", "actor_id": 24680,
+            "bypass_mode": "pull_request",
         }]
         responses["bypass-actors"]["page"]["total_count"] = 1
         result, _ = self.observe(responses)
@@ -249,8 +270,20 @@ class GitHubMergeObserverTests(unittest.TestCase):
         self.assertEqual(result.evidence["actor"]["bypass_assessment"], "match")
         self.assertEqual(
             result.evidence["source_rulesets"][0]["bypass_actor_keys"],
-            ["Integration:24680"],
+            ["Integration:24680:pull_request"],
         )
+
+        responses = copy.deepcopy(self.responses)
+        responses["bypass-actors"]["items"] = [{
+            "ruleset_id": 7001, "actor_type": "Team", "actor_id": 123,
+            "bypass_mode": "always",
+        }]
+        responses["bypass-actors"]["page"]["total_count"] = 1
+        result, _ = self.observe(responses)
+        self.assertEqual(
+            result.outcome, ObservationOutcome.BYPASS_VISIBILITY_UNKNOWN
+        )
+        self.assertEqual(result.evidence["actor"]["bypass_assessment"], "unknown")
 
         responses = copy.deepcopy(self.responses)
         responses["active-rules"]["items"].append({
@@ -342,6 +375,20 @@ class GitHubMergeObserverTests(unittest.TestCase):
         result, _ = self.observe(responses)
         self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
         self.assertIn("field-unknown", result.evidence["unknown_reasons"])
+
+        responses = copy.deepcopy(self.responses)
+        responses["bypass-actors"]["items"][0]["bypass_mode"] = "future_mode"
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.BYPASS_VISIBILITY_UNKNOWN)
+        self.assertIn(
+            "bypass-visibility-unknown", result.evidence["unknown_reasons"]
+        )
+
+        responses = copy.deepcopy(self.responses)
+        del responses["bypass-actors"]["items"][0]["bypass_mode"]
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.MALFORMED_RESPONSE)
+        self.assertIsNone(result.evidence)
 
         responses = copy.deepcopy(self.responses)
         responses["reviews"]["items"][0]["repository_permission"]["user"]["id"] = 1

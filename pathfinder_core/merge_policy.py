@@ -12,6 +12,11 @@ from typing import Mapping, Sequence
 from jsonschema import Draft202012Validator, FormatChecker
 
 from .errors import PolicyError, StateError
+from .merge_bypass import (
+    AMBIGUOUS_MEMBERSHIP_TYPES,
+    bypass_actor_type,
+    ruleset_bypass_actor_identity,
+)
 from .merge_diff import derive_special_files, object_evidence_sha256
 from .merge_policy_freshness import compare_complete_reread, evaluate_snapshot_window
 from .merge_policy_proofs import evaluate_checks, evaluate_reviews
@@ -777,10 +782,16 @@ class MergePolicyEvaluator:
 
         actor = evidence["actor"]
         bypass_keys = set(classic["bypass_actor_keys"])
-        bypass_keys.update(key for source in evidence["source_rulesets"] for key in source["bypass_actor_keys"])
+        bypass_keys.update(
+            ruleset_bypass_actor_identity(key)
+            for source in evidence["source_rulesets"]
+            for key in source["bypass_actor_keys"]
+        )
         actor_keys = {f"Integration:{actor['app_id']}", f"User:{actor['actor_id']}"}
-        ambiguous_types = {"Team", "RepositoryRole", "OrganizationAdmin"}
-        if any(key.split(":", 1)[0] in ambiguous_types for key in bypass_keys):
+        if any(
+            bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
+            for key in bypass_keys
+        ):
             blocks.add(DenyCode.BYPASS_VISIBILITY_UNKNOWN, "bypass_actors", "membership-based bypass cannot be excluded")
         if (
             actor["bypass_assessment"] == "match" or actor_keys & bypass_keys

@@ -13,7 +13,7 @@ from pathfinder_core.merge_policy import (
     READINESS_VALIDATOR,
     canonical_sha256,
 )
-from pathfinder_core.merge_diff import object_evidence_sha256
+from pathfinder_core.merge_diff import derive_special_files, object_evidence_sha256
 from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
 
 
@@ -331,6 +331,10 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         cases.append(("base-advance", DenyCode.IDENTITY_DRIFT, reread))
 
         reread = complete_reread(self.evidence)
+        reread["pull_request"]["base_ref"] = "develop"
+        cases.append(("retarget", DenyCode.IDENTITY_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
         for document, field in (
             (reread["pull_request"], "head_sha"),
             (reread["mergeability"], "required_sha"),
@@ -340,6 +344,12 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         for check in reread["checks"]:
             check["sha"] = "d" * 40
         cases.append(("force-push", DenyCode.IDENTITY_DRIFT, reread))
+
+        reread = complete_reread(self.evidence)
+        reread["diff"]["changed_files"][0]["additions"] += 1
+        reread["diff"]["changed_files"][0]["changes"] += 1
+        normalize_diff(reread)
+        cases.append(("changed-diff", DenyCode.DIFF_DRIFT, reread))
 
         reread = complete_reread(self.evidence)
         reread["source_rulesets"][0]["updated_at"] = "2026-08-11T12:08:30+00:00"
@@ -539,6 +549,58 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertIn(DenyCode.PROTECTED_SURFACE, codes(verdict))
         self.assertFalse(verdict.eligible)
 
+    def test_protected_and_special_surface_matrix_is_independently_derived(self):
+        cases = (
+            ("protected-path", "auth/session.py", "regular-file", False),
+            ("workflow", ".github/workflows/ci.yml", "regular-file", False),
+            ("codeowners", ".github/CODEOWNERS", "regular-file", False),
+            (
+                "dependency-policy-exception",
+                "policies/dependency-exceptions.json",
+                "regular-file",
+                False,
+            ),
+            ("schema", "schemas/example.graphql", "regular-file", False),
+            ("migration", "migrations/0001.sql", "regular-file", False),
+            ("submodule", "docs/vendor", "submodule", False),
+            ("symlink", "docs/link", "symlink", False),
+            ("binary", "docs/image.png", "regular-file", True),
+        )
+        registry = ProtectedSurfaceRegistry.load()
+        for name, path, object_kind, binary in cases:
+            with self.subTest(case=name):
+                policy = copy.deepcopy(self.policy)
+                authorization = copy.deepcopy(self.authorization)
+                evidence = copy.deepcopy(self.evidence)
+                policy["path_policy"]["allowed_paths"].append(path)
+                item = evidence["diff"]["changed_files"][0]
+                item.update({
+                    "path": path,
+                    "object_kind": object_kind,
+                    "binary": binary,
+                })
+                item["protected_categories"] = list(
+                    registry.classify([path]).get(path, ())
+                )
+                item["special_files"] = list(derive_special_files(item))
+                normalize_diff(evidence)
+                authorization["candidate"]["diff"] = {
+                    "diff_sha256": evidence["diff"]["diff_sha256"],
+                    "changed_files_sha256": evidence["diff"][
+                        "changed_files_sha256"
+                    ],
+                    "object_evidence_sha256": evidence["diff"][
+                        "object_evidence"
+                    ]["files_sha256"],
+                }
+                rebind_authority(policy, authorization, evidence)
+                verdict = self.evaluate(policy, authorization, evidence)
+                self.assertEqual(
+                    verdict.outcome, EligibilityOutcome.POLICY_BLOCKED
+                )
+                self.assertIn(DenyCode.PROTECTED_SURFACE, codes(verdict))
+                self.assertFalse(verdict.eligible)
+
     def test_diff_hash_paths_protected_surfaces_and_effective_limits(self):
         evidence = copy.deepcopy(self.evidence)
         evidence["diff"]["changed_file_count"] = 99
@@ -646,13 +708,20 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertIn(DenyCode.RULESET_DRIFT, codes(self.evaluate(evidence=evidence)))
 
         evidence = copy.deepcopy(self.evidence)
+        evidence["source_rulesets"][0]["enforcement"] = "evaluate"
+        rehash_evidence(evidence)
+        self.assertIn(DenyCode.RULESET_DRIFT, codes(self.evaluate(evidence=evidence)))
+
+        evidence = copy.deepcopy(self.evidence)
         rule = next(item for item in evidence["active_rules"] if item["rule_type"] == "pull_request")
         rule["strict"] = True
         rehash_evidence(evidence)
         self.assertIn(DenyCode.RULESET_DRIFT, codes(self.evaluate(evidence=evidence)))
 
         evidence = copy.deepcopy(self.evidence)
-        evidence["source_rulesets"][0]["bypass_actor_keys"] = ["Team:123"]
+        evidence["source_rulesets"][0]["bypass_actor_keys"] = [
+            "Team:123:always"
+        ]
         evidence["pagination"]["bypass_actors"]["items"] = 1
         rehash_evidence(evidence)
         verdict = self.evaluate(evidence=evidence)
@@ -679,11 +748,61 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         )
 
         evidence = copy.deepcopy(self.evidence)
-        evidence["source_rulesets"][0]["bypass_actor_keys"] = ["Integration:24680"]
+        evidence["source_rulesets"][0]["bypass_actor_keys"] = [
+            "Integration:24680:always"
+        ]
         evidence["pagination"]["bypass_actors"]["items"] = 1
         rehash_evidence(evidence)
         self.assertIn(
             DenyCode.MERGE_ACTOR_CAN_BYPASS,
+            codes(self.evaluate(evidence=evidence)),
+        )
+
+    def test_actor_bypass_matrix_distinguishes_exact_matches_from_ambiguity(self):
+        exact_matches = (
+            "Integration:24680:always",
+            "User:97531:pull_request",
+            "Integration:24680:exempt",
+        )
+        for actor_key in exact_matches:
+            with self.subTest(exact_match=actor_key):
+                evidence = copy.deepcopy(self.evidence)
+                evidence["source_rulesets"][0]["bypass_actor_keys"] = [actor_key]
+                evidence["pagination"]["bypass_actors"]["items"] = 1
+                rehash_evidence(evidence)
+                self.assertIn(
+                    DenyCode.MERGE_ACTOR_CAN_BYPASS,
+                    codes(self.evaluate(evidence=evidence)),
+                )
+
+        ambiguous_memberships = (
+            "Team:123:always",
+            "RepositoryRole:5:pull_request",
+            "OrganizationAdmin:1:exempt",
+        )
+        for actor_key in ambiguous_memberships:
+            with self.subTest(ambiguous_membership=actor_key):
+                evidence = copy.deepcopy(self.evidence)
+                evidence["source_rulesets"][0]["bypass_actor_keys"] = [actor_key]
+                evidence["pagination"]["bypass_actors"]["items"] = 1
+                rehash_evidence(evidence)
+                verdict = self.evaluate(evidence=evidence)
+                self.assertIn(DenyCode.BYPASS_VISIBILITY_UNKNOWN, codes(verdict))
+                self.assertNotIn(DenyCode.MERGE_ACTOR_CAN_BYPASS, codes(verdict))
+
+        evidence = copy.deepcopy(self.evidence)
+        evidence["classic_protection"]["bypass_visibility"] = "unknown"
+        rehash_evidence(evidence)
+        self.assertIn(
+            DenyCode.BYPASS_VISIBILITY_UNKNOWN,
+            codes(self.evaluate(evidence=evidence)),
+        )
+
+        evidence = copy.deepcopy(self.evidence)
+        evidence["actor"]["bypass_assessment"] = "unknown"
+        rehash_evidence(evidence)
+        self.assertIn(
+            DenyCode.BYPASS_VISIBILITY_UNKNOWN,
             codes(self.evaluate(evidence=evidence)),
         )
 

@@ -1328,24 +1328,29 @@ Observable completion means:
 
 ### Fail-closed acceptance matrix
 
-- [ ] Protected branch with classic checks/reviews, an active additive ruleset, complete non-bypass actor evidence, independent approval, and exact green checks can produce `eligible`; the observer still performs zero merge calls.
-- [ ] Classic protection absent and no active rulesets returns `policy-unenforced`, even when the host-owned policy says enabled.
-- [ ] Classic protection present but required review count is zero returns `independent-review-not-enforced`.
-- [ ] Active rulesets present but one source ruleset or organization parent cannot be read returns `ruleset-evidence-incomplete`.
-- [ ] The aggregate branch-rules endpoint and fetched source ruleset disagree on ids, enforcement, or rule parameters returns `ruleset-drift`.
-- [ ] Missing `bypass_actors`, classic PR bypass allowances, merge actor identity, or actor-role resolution returns `bypass-visibility-unknown`.
-- [ ] Merge actor is an admin, repository-role bypass member, named user/team/app, or exempt integration returns `merge-actor-can-bypass`.
-- [ ] A new/unknown active GitHub rule type or enum returns `unsupported-active-rule`.
-- [ ] A `merge_queue` rule or queue entry returns `merge-queue-required`; no enqueue or merge call occurs.
-- [ ] Required deployments, signed commits, code-scanning/quality gates, or another initially unsupported rule returns its typed unsupported reason rather than a generic success.
-- [ ] A required check with the correct name but wrong app id, stale SHA, pending duplicate status, or conflicting check-run/status returns `required-check-unproven`.
-- [ ] Review approval from the author, agent, last pusher, merge actor, bot, dismissed reviewer, stale commit, or ineligible association does not count.
-- [ ] A current `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, requested code-owner review, or unresolved non-outdated thread blocks.
-- [ ] Any protected path, workflow, CODEOWNERS/policy surface, schema/migration, dependency-policy exception, submodule, symlink, binary, or diff-limit excess blocks.
-- [ ] Base advancement, head force-push, PR retarget, changed diff hash, policy expiry, ruleset update, review dismissal, or evidence timeout between observation and intent blocks.
-- [ ] A `409` head mismatch, `405` unmergeable response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success.
-- [ ] A lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT.
-- [ ] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential.
+K3 closes 16 observer/evaluator and inert-composition cases below with direct executable evidence.
+One membership-resolution case remains an explicit K3 follow-up; the other two unchecked cases
+require the still-closed K4 writer and must not be inferred from schemas or fixtures alone.
+
+- [x] Protected branch with classic checks/reviews, an active additive ruleset, complete non-bypass actor evidence, independent approval, and exact green checks can produce `eligible`; the observer still performs zero merge calls. (`test_complete_layered_fixture_is_deterministically_eligible`, `test_backend_protocol_exposes_read_methods_only`)
+- [x] Classic protection absent and no active rulesets returns `policy-unenforced`, even when the host-owned policy says enabled. (`test_policy_layers_take_the_most_restrictive_review_floor`)
+- [x] Classic protection present but required review count is zero returns `independent-review-not-enforced`. (`test_policy_layers_take_the_most_restrictive_review_floor`)
+- [x] Active rulesets present but a source ruleset cannot be positively attributed returns `ruleset-evidence-incomplete`; source/parent permission, transport, or timeout failure retains its more specific typed outcome and yields no partial evidence. (`test_unattributed_ruleset_and_ambiguous_actor_stop_without_evidence`, `test_source_ruleset_read_failures_never_yield_partial_evidence`)
+- [x] The aggregate branch-rules endpoint and fetched source ruleset disagree on ids, enforcement, or rule parameters returns `ruleset-drift`. (`test_ruleset_source_parameters_and_bypass_evidence_fail_closed`)
+- [x] Missing ruleset/classic bypass visibility, an unknown bypass mode, or unresolved actor-role membership returns `bypass-visibility-unknown`; an omitted required bypass mode returns `malformed-response`, and an unprovable actor identity returns `actor-identity-unknown`. (`test_missing_bypass_visibility_is_a_typed_unknown`, `test_rule_parameter_cross_checks_fail_closed`, `test_actor_bypass_matrix_distinguishes_exact_matches_from_ambiguity`, `test_unattributed_ruleset_and_ambiguous_actor_stop_without_evidence`)
+- [x] An exact named user/App/integration bypass match in any recorded mode or any administration permission returns `merge-actor-can-bypass`. (`test_actor_bypass_matrix_distinguishes_exact_matches_from_ambiguity`, `test_fixture_driven_candidate_matrix_returns_exact_codes`, `merge-evidence-contract` eval)
+- [ ] **K3 follow-up:** positively resolved team, repository-role, or organization-admin membership returns `merge-actor-can-bypass`. Current evidence records actor id/type/mode but has no authenticated membership-resolution fact, so these cases safely return `bypass-visibility-unknown` and cannot become eligible.
+- [x] A new/unknown active GitHub rule type or enum returns `unsupported-active-rule` or a stronger `field-unknown` when the payload itself is outside the closed projection. (`test_bypass_actor_match_and_unsupported_rule_are_explicit`, `test_malformed_and_future_fields_never_look_complete`, `test_unsupported_rule_types_are_typed_and_never_generic_success`)
+- [x] A `merge_queue` rule or queue entry returns `merge-queue-required`; no enqueue or merge call occurs. (`test_unsupported_rule_types_are_typed_and_never_generic_success`, `test_fixture_driven_candidate_matrix_returns_exact_codes`, `test_evaluator_has_zero_network_mutation_credentials_or_production_callers`)
+- [x] Required deployments, signed commits, code-scanning/quality gates, or another initially unsupported rule returns its typed unsupported reason rather than a generic success. (`test_unsupported_rule_types_are_typed_and_never_generic_success`, `test_classic_protection_semantics_are_explicit_and_fail_closed`)
+- [x] A required check with the correct name but wrong App id, stale SHA, pending/duplicate/conflicting sources, failed conclusion, missing enforcement, or incomplete timestamps returns its exact typed check denial rather than generic success. (`test_required_check_matrix_proves_app_sha_status_and_conclusion`)
+- [x] Review approval from the author, implementation agent, last pusher, merge actor, bot, dismissed reviewer, stale commit, check creator, or ineligible association does not count. (`test_latest_effective_independent_human_review_only`)
+- [x] A current `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, requested code-owner review, or unresolved non-outdated thread blocks. (`test_review_changes_code_owner_and_threads_are_independent_blocks`, `test_fixture_driven_candidate_matrix_returns_exact_codes`)
+- [x] Any protected path, workflow, CODEOWNERS/policy surface, schema/migration, dependency-policy exception surface, submodule, symlink, binary, or diff-limit excess blocks. (`test_protected_and_special_surface_matrix_is_independently_derived`, `test_diff_hash_paths_protected_surfaces_and_effective_limits`, `test_authenticated_git_object_evidence_drives_special_file_blocking`)
+- [x] Base advancement, head force-push, PR retarget, changed diff hash, policy expiry, ruleset update, review dismissal, or evidence timeout between observation and intent blocks. (`test_reread_drift_matrix_forces_a_new_complete_snapshot_cycle`, `test_authority_and_evidence_windows_are_independently_current`, `test_complete_disjoint_reread_is_required_and_stays_pure`)
+- [ ] **K4 deferred:** a `409` head mismatch, `405` unmergeable response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success. No merge request exists yet against which to prove these writer outcomes.
+- [ ] **K4 deferred:** a lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT. The inert journal proves only the pending disposition until a crash-safe writer exists.
+- [x] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential. (`test_forge_policy_and_mergeability_fixtures_never_trigger_merge`, `test_evidence_observer_is_only_production_consumer_and_has_no_merge_call`, `test_evaluator_has_zero_network_mutation_credentials_or_production_callers`, full `scripts/check-all.sh`)
 
 ### Phase K0 — ratify a standalone security contract
 

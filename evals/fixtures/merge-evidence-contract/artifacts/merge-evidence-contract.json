@@ -43,7 +43,13 @@
   "rules": {
     "active_pull_request": {"allowed_merge_methods": ["squash"]},
     "active_rules_sha256": "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365",
-    "source_rules_sha256": "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365"
+    "source_rules_sha256": "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365",
+    "bypass_actor": {
+      "actor_type": "Integration",
+      "actor_id": 86420,
+      "bypass_mode": "always",
+      "normalized_key": "Integration:86420:always"
+    }
   },
   "review": {
     "actor_id": 44444,

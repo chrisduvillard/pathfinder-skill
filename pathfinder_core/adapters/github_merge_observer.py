@@ -10,6 +10,12 @@ from typing import Mapping, Protocol
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError, ValidationError
 
+from ..merge_bypass import (
+    AMBIGUOUS_MEMBERSHIP_TYPES,
+    bypass_actor_type,
+    ruleset_bypass_actor_identity,
+    ruleset_bypass_actor_key,
+)
 from ..merge_diff import derive_special_files, object_evidence_sha256
 
 SCHEMA_PATH = (
@@ -294,9 +300,23 @@ class GitHubMergeObserver:
         )
         bypass_keys = set(classic["bypass_actor_keys"])
         bypass_keys.update(
-            key for ruleset in source_rulesets for key in ruleset["bypass_actor_keys"]
+            ruleset_bypass_actor_identity(key)
+            for ruleset in source_rulesets
+            for key in ruleset["bypass_actor_keys"]
         )
-        if any(ruleset["bypass_visibility"] == "unknown" for ruleset in source_rulesets):
+        membership_ambiguous = any(
+            bypass_actor_type(key) in AMBIGUOUS_MEMBERSHIP_TYPES
+            for key in bypass_keys
+        )
+        if membership_ambiguous:
+            unknown_reasons.append("bypass-visibility-unknown")
+        if (
+            membership_ambiguous
+            or any(
+                ruleset["bypass_visibility"] == "unknown"
+                for ruleset in source_rulesets
+            )
+        ):
             actor["bypass_assessment"] = "unknown"
         else:
             actor_keys = {f"Integration:{actor['app_id']}", f"User:{actor['actor_id']}"}
@@ -657,17 +677,32 @@ class GitHubMergeObserver:
         bypass_by_ruleset: dict[object, list[str]] = {}
         for index, value in enumerate(bypass_page.items):
             raw = _take(
-                value, required={"ruleset_id", "actor_type", "actor_id"},
+                value,
+                required={"ruleset_id", "actor_type", "actor_id", "bypass_mode"},
                 surface=f"bypass-actors[{index}]", unknowns=unknowns,
             )
-            if raw["actor_type"] not in {
-                "User", "Team", "RepositoryRole", "OrganizationAdmin", "DeployKey", "Integration",
-            }:
+            if (
+                raw["actor_type"] not in {
+                    "User", "Team", "RepositoryRole", "OrganizationAdmin",
+                    "DeployKey", "Integration",
+                }
+                or raw["bypass_mode"] not in {
+                    "always", "pull_request", "exempt",
+                }
+            ):
                 unknown_reasons.append("bypass-visibility-unknown")
-                unknowns.append({"surface": f"bypass-actors[{index}]", "fields": {"actor_type": raw["actor_type"]}})
+                unknowns.append({
+                    "surface": f"bypass-actors[{index}]",
+                    "fields": {
+                        "actor_type": raw["actor_type"],
+                        "bypass_mode": raw["bypass_mode"],
+                    },
+                })
                 continue
             bypass_by_ruleset.setdefault(raw["ruleset_id"], []).append(
-                f"{raw['actor_type']}:{raw['actor_id']}"
+                ruleset_bypass_actor_key(
+                    raw["actor_type"], raw["actor_id"], raw["bypass_mode"]
+                )
             )
 
         result = []

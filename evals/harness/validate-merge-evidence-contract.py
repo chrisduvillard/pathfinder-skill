@@ -192,6 +192,18 @@ def main() -> int:
         == "Integration",
         "actual observer omitted required review/check provenance",
     )
+    require(
+        observation.evidence["source_rulesets"][0]["bypass_actor_keys"]
+        == [document["rules"]["bypass_actor"]["normalized_key"]]
+        and observer["responses"]["bypass-actors"]["items"][0]
+        == {
+            "ruleset_id": 7001,
+            "actor_type": document["rules"]["bypass_actor"]["actor_type"],
+            "actor_id": document["rules"]["bypass_actor"]["actor_id"],
+            "bypass_mode": document["rules"]["bypass_actor"]["bypass_mode"],
+        },
+        "actual observer omitted ruleset bypass actor mode",
+    )
 
     evaluator = MergePolicyEvaluator()
     single = evaluator.evaluate(
