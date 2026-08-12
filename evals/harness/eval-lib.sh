@@ -337,6 +337,17 @@ assert_merge_writer_contract() {
   )" || add_error "merge writer contract invalid: $validation_output"
 }
 
+assert_merge_status_contract() {
+  local file validation_output
+  require_artifact "merge-status-contract.json" || return
+  file="$(artifact_file "merge-status-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-merge-status-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "merge status contract invalid: $validation_output"
+}
+
 assert_publication_controller_contract() {
   local file validation_output
   require_artifact "publication-controller-contract.json" || return
@@ -368,6 +379,7 @@ run_assertion() {
     publication-safety) assert_publication_safety ;;
     merge-evidence-contract) assert_merge_evidence_contract ;;
     merge-writer-contract) assert_merge_writer_contract ;;
+    merge-status-contract) assert_merge_status_contract ;;
     publication-controller-contract) assert_publication_controller_contract ;;
     replay-contract) assert_replay_contract ;;
     injection-surface-fixtures) assert_injection_surface_fixtures ;;

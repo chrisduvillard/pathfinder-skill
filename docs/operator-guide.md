@@ -57,8 +57,12 @@ readiness proof, creates a merge intent, or calls the K4 writer. Even an `eligib
 `state: awaiting-review` with `intent_ready`, `execution_available`,
 `writer_credential_loaded`, and `merge_intent_created` all fixed to `false`.
 
-The host directory must be an existing owner-only, non-symlink directory outside the repository.
-Its fixed layout is:
+On POSIX, the host directory must be an existing current-user-owned, owner-only, non-symlink
+directory outside the repository. The reader pins that directory descriptor once and opens every
+journal/input descendant relative to the pinned descriptor with symlink following disabled, so a
+path swap after validation cannot redirect reads into repository trust. K5.1 fails closed on
+Windows until an equivalent current-user and owner-only ACL proof is implemented; the rest of the
+Pathfinder controller remains supported there. The fixed host layout is:
 
 ```text
 <host-dir>/
@@ -78,6 +82,9 @@ bash scripts/pathfinder-controller.sh merge evaluate --repo-root <repository> --
 ```
 
 `--json` emits the closed canonical report. The default Markdown is only a rendering of that report.
+Each input entry binds its state, canonical document hash, declared identity, and declared hash
+where applicable, so the report hash identifies the exact policy, authorization, and both evidence
+documents that were evaluated. Block codes are closed to the evaluator's typed deny-code domain.
 The two commands use the same pure two-snapshot evaluator; `operation` records which view the
 operator requested. Missing, expired, malformed, unsupported, drifted, or incomplete inputs produce
 typed blocks without widening authority. A missing exact publication receipt is a hard error.

@@ -326,22 +326,29 @@ class PublicationJournal:
     def request_exists(self, request_id: str) -> bool:
         return self._path(request_id, "request").exists()
 
-    def load(self, request_id: str) -> dict:
-        request_path = self._path(request_id, "request")
-        if not request_path.exists():
-            raise StateError(f"publication request not found: {request_id}")
-        request = read_json(request_path)
+    def validate_records(
+        self,
+        request: dict,
+        dispatch: dict | None,
+        receipt: dict | None,
+        *,
+        expected_request_id: str | None = None,
+    ) -> dict:
+        """Validate an already-read journal snapshot without filesystem access."""
         self._validate("request", request)
         self._validate_hash(request, "request_sha256")
         self._validate_request_binding(request)
-        dispatch_path = self._path(request_id, "dispatch")
-        dispatch = read_json(dispatch_path) if dispatch_path.exists() else None
+        if (
+            expected_request_id is not None
+            and request["publication_request_id"] != expected_request_id
+        ):
+            raise StateError(
+                "publication request identity differs from selected journal record"
+            )
         if dispatch is not None:
             self._validate("dispatch", dispatch)
             self._validate_hash(dispatch, "dispatch_sha256")
             self._validate_dispatch_binding(request, dispatch)
-        receipt_path = self._path(request_id, "receipt")
-        receipt = read_json(receipt_path) if receipt_path.exists() else None
         if receipt is not None:
             if dispatch is None:
                 raise StateError("publication journal has receipt without dispatch")
@@ -355,3 +362,16 @@ class PublicationJournal:
             "dispatch": dispatch,
             "receipt": receipt,
         }
+
+    def load(self, request_id: str) -> dict:
+        request_path = self._path(request_id, "request")
+        if not request_path.exists():
+            raise StateError(f"publication request not found: {request_id}")
+        request = read_json(request_path)
+        dispatch_path = self._path(request_id, "dispatch")
+        dispatch = read_json(dispatch_path) if dispatch_path.exists() else None
+        receipt_path = self._path(request_id, "receipt")
+        receipt = read_json(receipt_path) if receipt_path.exists() else None
+        return self.validate_records(
+            request, dispatch, receipt, expected_request_id=request_id
+        )

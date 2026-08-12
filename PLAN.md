@@ -1616,12 +1616,13 @@ approved composed merge rehearsal in K6.2.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
 - [x] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
-- [ ] K5.1 read-only composition is implemented and independently reviewed. Source implementation is complete; independent review is still pending.
+- [x] K5.1 read-only composition is implemented and independently reviewed.
 - [ ] K5.2 has separate human security approval. Repeated implementation approval does not satisfy this gate.
 
-Until every prerequisite above K5.1 is checked, the safe next work is contract clarification and
-default-off regression coverage only. Fixture success cannot be relabeled as runnable publication,
-trusted-host installation, live evidence, or rehearsal.
+Until the remaining operational prerequisites and separate K5.2 approval are checked, the safe
+next work is trusted-host/read-only-collector closure, contract clarification, and default-off
+regression coverage only. Fixture success cannot be relabeled as runnable publication,
+trusted-host installation, live evidence, or merge authority.
 
 **Bounded operational rehearsal (2026-08-12):** an external operator-hosted adapter used two
 repository-scoped GitHub Apps against the private disposable
@@ -1635,9 +1636,9 @@ and rulesets unavailable on this private Free-plan target, so it cannot be eligi
 [`docs/rehearsals/2026-08-12-zero-merge-publication.md`](docs/rehearsals/2026-08-12-zero-merge-publication.md).
 This closes only the bounded rehearsal checkbox: the adapter is not an installed package route, the
 package still has no live backend/credential loader, and the host binding deliberately was not a
-schema-valid merge policy or authorization. The first two readiness items remain unchecked. K5.1
-now has an explicitly approved observation-only source implementation, but its combined
-implementation-and-independent-review readiness item remains unchecked pending separate review.
+schema-valid merge policy or authorization. The first two readiness items remain unchecked. K5.1's
+explicitly approved observation-only source implementation and independent review are now complete;
+that does not close either installed-host prerequisite or authorize K5.2.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and
@@ -1677,16 +1678,22 @@ collector, or supply operator authorization, policy, or credentials.
 
 **K5.1 implementation note (2026-08-12):** the explicitly selected command lazily loads one
 observation-only reader rooted in an owner-only, current-user-owned non-symlink host directory
-outside repository trust. It requires one exact validated publication request/dispatch/receipt,
-reads only fixed policy/authorization/two-snapshot evidence filenames, falls back only to the
-shipped protected-surface baseline, and rebinds both snapshots and authorization to the receipt's
-repository, mission, PR, refs, SHAs, and diff. Its closed hashed report always remains
+outside repository trust. On POSIX it pins that directory descriptor and reads only fixed
+journal/policy/authorization/two-snapshot evidence descendants relative to the descriptor with
+symlink following disabled; Windows fails closed until equivalent ACL ownership proof exists. It
+requires one exact validated publication request/dispatch/receipt, falls back only to the shipped
+protected-surface baseline, and rebinds both snapshots and authorization to the receipt's
+repository, mission, PR, refs, SHAs, and diff. Its closed hashed report binds each evaluated input's
+canonical identity/hash and uses only the closed evaluator deny-code domain. It always remains
 `awaiting-review` with execution, writer credential, intent readiness, and intent creation fixed to
 false; even an eligible evaluation discards the generated readiness proof. Missing or malformed
-inputs are typed, while a missing exact publication receipt stops. The package scan forbids every
-writer, credential, environment-token, subprocess, and network primitive from the caller. The full
-376-test preflight and exact worktree archive smoke pass. K5.2 remains closed, and the K5.1
-readiness item above remains unchecked until a separate independent review is clean.
+inputs are typed, while a missing exact publication receipt stops. A deterministic actual-code
+artifact eval owns this structured runtime contract. The package scan forbids every writer,
+credential, environment-token, subprocess, and network primitive from the caller. Independent
+standards and adversarial security/spec reviews are clean after direct remediation probes for host
+path swaps, Windows ownership, journal identity, malformed JSON, exact input correlation, and
+closed report domains. The 382-test preflight and exact archive smoke are green. K5.2 remains
+closed and requires separate human security approval.
 
 #### Sub-prompt K5.2 — separately approved execution gate
 

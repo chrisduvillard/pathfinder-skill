@@ -24,10 +24,16 @@ def _reject_duplicate_keys(pairs):
     return result
 
 
+def load_json_stream(stream):
+    """Parse one duplicate-safe JSON value from an already-open text stream."""
+    return json.load(stream, object_pairs_hook=_reject_duplicate_keys)
+
+
 def read_json(path: Path) -> dict:
     try:
-        return json.loads(path.read_text(), object_pairs_hook=_reject_duplicate_keys)
-    except (OSError, json.JSONDecodeError) as error:
+        with path.open(encoding="utf-8") as stream:
+            return load_json_stream(stream)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise StateError(f"cannot read valid JSON from {path}: {error}") from error
 
 

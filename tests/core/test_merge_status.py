@@ -14,6 +14,7 @@ from jsonschema.exceptions import ValidationError
 from pathfinder_core.__main__ import main
 from pathfinder_core.errors import StateError
 from pathfinder_core.merge_policy import canonical_sha256
+from pathfinder_core.merge_policy_types import DenyCode
 from pathfinder_core.merge_status import (
     InstalledHostMergeReader,
     MergeStatusController,
@@ -32,6 +33,7 @@ def load(name):
     return json.loads((FIXTURES / name).read_text())
 
 
+@unittest.skipIf(os.name == "nt", "K5.1 host ACL verification is POSIX-only")
 class MergeStatusTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -94,7 +96,17 @@ class MergeStatusTests(unittest.TestCase):
         self.assertFalse(first["execution_available"])
         self.assertFalse(first["writer_credential_loaded"])
         self.assertFalse(first["merge_intent_created"])
-        self.assertEqual(first["inputs"]["protected_policy"], "shipped-baseline")
+        self.assertEqual(
+            first["inputs"]["protected_policy"]["state"], "shipped-baseline"
+        )
+        self.assertEqual(
+            first["inputs"]["policy"]["declared_sha256"],
+            self.authority["policy"]["policy_sha256"],
+        )
+        self.assertEqual(
+            first["inputs"]["initial_evidence"]["document_sha256"],
+            canonical_sha256(self.evidence["initial_evidence"]),
+        )
         self.assertNotIn("readiness_proof", first)
         self.assertNotIn("proof_sha256", json.dumps(first))
         self.assertEqual(
@@ -106,6 +118,37 @@ class MergeStatusTests(unittest.TestCase):
         inconsistent["eligible"] = False
         with self.assertRaises(ValidationError):
             REPORT_VALIDATOR.validate(inconsistent)
+        invented = copy.deepcopy(first)
+        invented["outcome"] = "unknown"
+        invented["eligible"] = False
+        invented["blocks"] = [{
+            "code": "invented-block", "surface": "test", "detail": "invalid",
+        }]
+        with self.assertRaises(ValidationError):
+            REPORT_VALIDATOR.validate(invented)
+
+        impossible_policy_state = copy.deepcopy(first)
+        impossible_policy_state["inputs"]["policy"]["state"] = "shipped-baseline"
+        with self.assertRaises(ValidationError):
+            REPORT_VALIDATOR.validate(impossible_policy_state)
+        impossible_protected_state = copy.deepcopy(first)
+        impossible_protected_state["inputs"]["protected_policy"]["state"] = "missing"
+        with self.assertRaises(ValidationError):
+            REPORT_VALIDATOR.validate(impossible_protected_state)
+
+        for name in ("policy", "authorization", "initial_evidence", "reread_evidence"):
+            for field in ("document_id", "declared_sha256"):
+                with self.subTest(name=name, missing_present_binding=field):
+                    incomplete = copy.deepcopy(first)
+                    incomplete["inputs"][name][field] = None
+                    with self.assertRaises(ValidationError):
+                        REPORT_VALIDATOR.validate(incomplete)
+        invented_protected_hash = copy.deepcopy(first)
+        invented_protected_hash["inputs"]["protected_policy"][
+            "declared_sha256"
+        ] = "a" * 64
+        with self.assertRaises(ValidationError):
+            REPORT_VALIDATOR.validate(invented_protected_hash)
 
     def test_missing_authority_is_typed_without_changing_state(self):
         self.write_publication()
@@ -115,8 +158,9 @@ class MergeStatusTests(unittest.TestCase):
 
         self.assertEqual(report["outcome"], "unknown")
         self.assertEqual(report["state"], "awaiting-review")
-        self.assertEqual(report["inputs"]["policy"], "missing")
-        self.assertEqual(report["inputs"]["authorization"], "missing")
+        self.assertEqual(report["inputs"]["policy"]["state"], "missing")
+        self.assertEqual(report["inputs"]["authorization"]["state"], "missing")
+        self.assertIsNone(report["inputs"]["policy"]["document_sha256"])
         self.assertEqual(
             {block["code"] for block in report["blocks"]},
             {"policy-missing", "authorization-missing"},
@@ -140,6 +184,36 @@ class MergeStatusTests(unittest.TestCase):
         })
         self.assertFalse(report["intent_ready"])
 
+    def test_report_hash_binds_both_exact_evidence_documents(self):
+        self.write_publication()
+        self.write_inputs()
+        original = self.controller().inspect(self.request_id, operation="evaluate")
+        changed_documents = []
+        for key, filename, suffix in (
+            ("initial_evidence", "merge-evidence-initial.json", "changed"),
+            ("evidence", "merge-evidence-reread.json", "changed-reread"),
+        ):
+            document = copy.deepcopy(self.evidence[key])
+            document["evidence_id"] = f"merge_evidence_example1_{suffix}"
+            document["evidence_sha256"] = canonical_sha256(
+                document, "evidence_sha256"
+            )
+            write_atomic(self.host / filename, document)
+            changed_documents.append(document)
+
+        changed = self.controller().inspect(self.request_id, operation="evaluate")
+
+        self.assertEqual(changed["outcome"], "eligible")
+        self.assertNotEqual(changed["report_sha256"], original["report_sha256"])
+        self.assertEqual(
+            changed["inputs"]["initial_evidence"]["document_sha256"],
+            canonical_sha256(changed_documents[0]),
+        )
+        self.assertEqual(
+            changed["inputs"]["reread_evidence"]["document_sha256"],
+            canonical_sha256(changed_documents[1]),
+        )
+
     def test_malformed_input_returns_a_typed_block(self):
         self.write_publication()
         self.write_inputs()
@@ -148,22 +222,71 @@ class MergeStatusTests(unittest.TestCase):
         report = self.controller().inspect(self.request_id, operation="status")
 
         self.assertEqual(report["outcome"], "unknown")
-        self.assertEqual(report["inputs"]["policy"], "invalid")
+        self.assertEqual(report["inputs"]["policy"]["state"], "invalid")
         self.assertIn("input-invalid", {
             block["code"] for block in report["blocks"]
         })
 
         (self.host / "merge-policy.json").write_bytes(b"\xff")
         report = self.controller().inspect(self.request_id, operation="status")
-        self.assertEqual(report["inputs"]["policy"], "invalid")
+        self.assertEqual(report["inputs"]["policy"]["state"], "invalid")
 
         write_atomic(self.host / "merge-policy.json", self.authority["policy"])
         write_atomic(self.host / "protected-policy.json", {"mode": "additive"})
         report = self.controller().inspect(self.request_id, operation="status")
-        self.assertEqual(report["inputs"]["protected_policy"], "invalid")
+        self.assertEqual(
+            report["inputs"]["protected_policy"]["state"], "invalid"
+        )
         self.assertIn("input-invalid", {
             block["code"] for block in report["blocks"]
         })
+
+        malformed_policy = copy.deepcopy(self.authority["policy"])
+        malformed_policy["policy_id"] = "x" * 1000
+        malformed_policy["policy_sha256"] = "not-a-hash"
+        write_atomic(self.host / "merge-policy.json", malformed_policy)
+        report = self.controller().inspect(self.request_id, operation="status")
+        self.assertEqual(report["inputs"]["policy"]["state"], "invalid")
+        self.assertIsNone(report["inputs"]["policy"]["document_id"])
+        self.assertIsNone(report["inputs"]["policy"]["declared_sha256"])
+        REPORT_VALIDATOR.validate(report)
+
+    def test_non_object_json_is_invalid_and_bound_in_the_report(self):
+        self.write_publication()
+        self.write_inputs()
+
+        for document in ([], "wrong", 7, None):
+            with self.subTest(document=document):
+                write_atomic(self.host / "merge-policy.json", document)
+                report = self.controller().inspect(
+                    self.request_id, operation="status"
+                )
+
+                self.assertEqual(report["outcome"], "unknown")
+                self.assertEqual(report["inputs"]["policy"]["state"], "invalid")
+                self.assertEqual(
+                    report["inputs"]["policy"]["document_sha256"],
+                    canonical_sha256(document),
+                )
+                self.assertIn(
+                    "input-invalid", {block["code"] for block in report["blocks"]}
+                )
+                REPORT_VALIDATOR.validate(report)
+
+    def test_selected_journal_name_must_match_embedded_request_identity(self):
+        self.write_publication()
+        self.write_inputs()
+        alternate = "publication_request_other999"
+        operations = self.host / "journal" / "publication-operations"
+        for label in ("request", "dispatch", "receipt"):
+            (operations / f"{self.request_id}.{label}.json").rename(
+                operations / f"{alternate}.{label}.json"
+            )
+
+        with self.assertRaisesRegex(
+            StateError, "identity differs from selected journal record"
+        ):
+            self.controller().inspect(alternate, operation="status")
 
     def test_exact_publication_receipt_is_a_hard_prerequisite(self):
         self.write_publication(receipt=False)
@@ -183,7 +306,6 @@ class MergeStatusTests(unittest.TestCase):
         with self.assertRaisesRegex(StateError, "non-symlink directory"):
             InstalledHostMergeReader(self.repository, link).load(self.request_id)
 
-    @unittest.skipIf(os.name == "nt", "POSIX owner-only mode")
     def test_installed_host_boundary_rejects_group_or_world_access(self):
         os.chmod(self.host, 0o750)
         with self.assertRaisesRegex(StateError, "owner-only"):
@@ -206,7 +328,7 @@ class MergeStatusTests(unittest.TestCase):
         (self.host / "merge-policy.json").replace(real_policy)
         (self.host / "merge-policy.json").symlink_to(real_policy)
         report = self.controller().inspect(self.request_id, operation="status")
-        self.assertEqual(report["inputs"]["policy"], "invalid")
+        self.assertEqual(report["inputs"]["policy"]["state"], "invalid")
         self.assertIn("input-invalid", {
             block["code"] for block in report["blocks"]
         })
@@ -220,8 +342,34 @@ class MergeStatusTests(unittest.TestCase):
         real_receipt = receipt.with_name("real-receipt.json")
         receipt.replace(real_receipt)
         receipt.symlink_to(real_receipt)
-        with self.assertRaisesRegex(StateError, "regular non-symlink"):
+        with self.assertRaisesRegex(StateError, "opened safely"):
             self.controller().inspect(self.request_id, operation="status")
+
+    def test_root_descriptor_prevents_post_validation_path_swap(self):
+        self.write_publication()
+        self.write_inputs()
+        repository_host = self.repository / "attacker-host"
+        repository_host.mkdir()
+        pinned_host = self.host.with_name("pinned-host")
+
+        class SwappingReader(InstalledHostMergeReader):
+            def _open_root(inner_self):
+                descriptor = super()._open_root()
+                inner_self.host_root.rename(pinned_host)
+                inner_self.host_root.symlink_to(
+                    repository_host, target_is_directory=True
+                )
+                return descriptor
+
+        report = MergeStatusController(
+            SwappingReader(self.repository, self.host), clock=lambda: NOW
+        ).inspect(self.request_id, operation="evaluate")
+
+        self.assertEqual(report["outcome"], "eligible")
+        self.assertEqual(
+            report["publication"]["receipt_sha256"],
+            self.publication["receipt"]["receipt_sha256"],
+        )
 
     def test_cli_emits_canonical_json_or_a_markdown_view(self):
         self.write_publication()
@@ -247,6 +395,21 @@ class MergeStatusTests(unittest.TestCase):
         self.assertIn("# Pathfinder merge status", rendered)
         self.assertIn("execution available: `false`", rendered)
         self.assertNotIn("readiness_proof", rendered)
+
+
+class MergeStatusPlatformTests(unittest.TestCase):
+    def test_windows_fails_closed_without_acl_ownership_proof(self):
+        with patch("pathfinder_core.merge_status.os.name", "nt"):
+            with self.assertRaisesRegex(StateError, "unavailable on Windows"):
+                InstalledHostMergeReader("repository", "host").load(
+                    "publication_request_example1"
+                )
+
+    def test_report_block_code_schema_tracks_the_closed_domain(self):
+        codes = REPORT_VALIDATOR.schema["$defs"]["block"]["properties"][
+            "code"
+        ]["enum"]
+        self.assertEqual(set(codes), {code.value for code in DenyCode})
 
 
 if __name__ == "__main__":

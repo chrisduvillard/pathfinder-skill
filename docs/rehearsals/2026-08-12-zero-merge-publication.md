@@ -64,8 +64,9 @@ hashes.
   separately and explicitly requested.
 - [x] Implement K5.1 as observation-only status/evaluation; it loads no writer credential, creates
   no merge intent, and remains awaiting-review even when eligible.
-- [ ] Obtain a separate independent K5.1 review; local implementation review is not relabeled as
-  independent evidence.
+- [x] Obtain a separate independent K5.1 review; independent standards and adversarial
+  security/spec reviews are clean after remediation, with direct counterexample probes retained as
+  regressions.
 - [ ] Keep K5.2 closed until its separate human security approval. Repeated implementation or
   rehearsal approval is not merge approval.
 - [ ] If a later composed merge rehearsal is approved, use a newly bounded authorization and fresh
