@@ -1098,8 +1098,8 @@ class GitHubMergeObserver:
         result = []
         required = {"id", "user", "repository_permission", "state", "commit_id", "submitted_at", "author_association", "dismissed"}
         for index, value in enumerate(page.items):
-            raw = _take(value, required=required, surface=f"reviews[{index}]", unknowns=unknowns)
-            user = _take(raw["user"], required={"id", "login", "type"}, surface=f"reviews[{index}].user", unknowns=unknowns)
+            raw = _take(value, required=required, optional={"node_id"}, surface=f"reviews[{index}]", unknowns=unknowns)
+            user = _take(raw["user"], required={"id", "login", "type"}, optional={"node_id"}, surface=f"reviews[{index}].user", unknowns=unknowns)
             permission = _take(
                 raw["repository_permission"], required={"permission", "user"},
                 surface=f"reviews[{index}].repository-permission", unknowns=unknowns,

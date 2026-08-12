@@ -43,6 +43,9 @@ permission, pagination, request budget, PR binding, or SHA drift; none is an ins
 and the required union/candidate are not yet read and composed from live policy/PR sources. An
 uncalled pure projector can now form that union from the host floor, qualified classic protection,
 and all completely paginated active rules; it rejects any unpinned or contradictory check identity.
+An uncalled pure review reconciler also requires the GraphQL latest-opinionated record for every
+actor to match the exact record selected from the complete chronological, permission-qualified REST
+history. These source pieces still are not a complete collector or an installed runtime route.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full

@@ -129,6 +129,8 @@ class GitHubReviewReaderTests(unittest.TestCase):
             ["write", "write", "read"],
         )
         self.assertFalse(observed.items[0]["dismissed"])
+        self.assertEqual(observed.items[0]["node_id"], "PRR_node_81")
+        self.assertEqual(observed.items[0]["user"]["node_id"], "U_node_44")
         self.assertEqual(
             transport.calls,
             [

@@ -1484,9 +1484,13 @@ projector unions host-policy, qualified classic-protection, and every completely
 ruleset check, rejecting unpinned App ids, duplicate/contradictory identities, or incomplete rule
 pages. These readers still have no caller and do not read/compose those policy inputs or the
 candidate from live sources,
-reconcile REST with the GraphQL review view, compose a snapshot, or bind exact controller last-pusher
-evidence, so the positive-identity/bypass checkbox and both K5 installed-host readiness items remain
-unchecked.
+compose the review/check/PR projections into a snapshot, or bind exact controller last-pusher
+evidence. A pure uncalled review reconciler now proves that GraphQL's complete latest-opinionated
+review per actor is the exact node/database/actor/state/commit/time/association record selected from
+the complete chronological permission-qualified REST audit; split actor sets, identity drift,
+nonchronological history, incomplete pagination, or reused request ids block. Review requests,
+threads, and the overall snapshot still are not composed, so the positive-identity/bypass checkbox
+and both K5 installed-host readiness items remain unchecked.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 

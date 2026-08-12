@@ -488,8 +488,23 @@ class GitHubGraphQLClientTests(unittest.TestCase):
                 continue
             if "github_graphql" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(consumers, [])
-        source = (ROOT / "pathfinder_core/adapters/github_graphql.py").read_text()
+        self.assertEqual(
+            consumers,
+            ["pathfinder_core/adapters/github_review_reconciliation.py"],
+        )
+        constructors = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_graphql.py":
+                continue
+            if "GitHubGraphQLClient(" in path.read_text():
+                constructors.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(constructors, [])
+        source = "\n".join(
+            (ROOT / "pathfinder_core/adapters" / name).read_text()
+            for name in (
+                "github_graphql.py", "github_review_reconciliation.py",
+            )
+        )
         self.assertNotIn("os.environ", source)
         self.assertNotIn("getenv(", source)
         self.assertNotIn("subprocess", source)

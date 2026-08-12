@@ -68,7 +68,7 @@ class GitHubReviewReader:
         self.client = client
 
     @staticmethod
-    def _identity(value: object, index: int) -> tuple[int, str, str]:
+    def _identity(value: object, index: int) -> tuple[int, str, str, str]:
         surface = f"reviews[{index}].user"
         if not isinstance(value, Mapping):
             raise _fail("GitHub review actor is not an object", surface=surface)
@@ -81,16 +81,19 @@ class GitHubReviewReader:
         actor_id = _positive_int(value["id"], "GitHub review actor id is malformed")
         login = value["login"]
         actor_type = value["type"]
+        node_id = value.get("node_id")
         if (
             not isinstance(login, str)
             or _LOGIN.fullmatch(login) is None
             or actor_type not in {"User", "Bot"}
             or (actor_type == "Bot") != login.endswith("[bot]")
+            or not isinstance(node_id, str)
+            or not node_id
         ):
             raise _fail(
                 "GitHub review actor identity is unsupported", surface=surface
             )
-        return actor_id, login, actor_type
+        return actor_id, login, actor_type, node_id
 
     @staticmethod
     def _review(value: Mapping[str, object], index: int) -> dict[str, object]:
@@ -104,7 +107,10 @@ class GitHubReviewReader:
         if set(value) - _REVIEW_FIELDS:
             raise _fail("GitHub review fields are unknown", surface=surface)
         review_id = _positive_int(value["id"], "GitHub review id is malformed")
-        actor_id, login, actor_type = GitHubReviewReader._identity(
+        node_id = value.get("node_id")
+        if not isinstance(node_id, str) or not node_id:
+            raise _fail("GitHub review node id is malformed", surface=surface)
+        actor_id, login, actor_type, actor_node_id = GitHubReviewReader._identity(
             value["user"], index
         )
         state = value["state"]
@@ -122,7 +128,13 @@ class GitHubReviewReader:
         )
         return {
             "id": review_id,
-            "user": {"id": actor_id, "login": login, "type": actor_type},
+            "node_id": node_id,
+            "user": {
+                "id": actor_id,
+                "node_id": actor_node_id,
+                "login": login,
+                "type": actor_type,
+            },
             "state": state,
             "commit_id": commit_id,
             "submitted_at": submitted_at,

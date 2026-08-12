@@ -673,6 +673,15 @@ class GitHubGETClientTests(unittest.TestCase):
             if "GitHubReviewReader(" in path.read_text():
                 review_consumers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(review_consumers, [])
+        review_reconciler_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_review_reconciliation.py":
+                continue
+            if "GitHubReviewReconciler." in path.read_text():
+                review_reconciler_consumers.append(
+                    path.relative_to(ROOT).as_posix()
+                )
+        self.assertEqual(review_reconciler_consumers, [])
         sources = "\n".join(
             (ROOT / "pathfinder_core" / "adapters" / name).read_text()
             for name in (
@@ -680,6 +689,7 @@ class GitHubGETClientTests(unittest.TestCase):
                 "github_get_policy.py", "github_get_transport.py",
                 "github_check_policy.py", "github_checks.py",
                 "github_memberships.py", "github_reviews.py",
+                "github_review_reconciliation.py",
             )
         )
         self.assertNotIn("os.environ", sources)

@@ -208,6 +208,15 @@ rule identities, malformed source attribution, unknown check fields, and incompl
 request-id-ambiguous pagination. The projector has no caller and is not authority to read a policy
 or install the collector.
 
+The source-only review reconciler selects the last `APPROVED`, `CHANGES_REQUESTED`, or `DISMISSED`
+record per actor from the complete chronological permission-qualified REST audit and requires the
+complete GraphQL `latestOpinionatedReviews` actor set to match it exactly by review database/node id,
+actor database/node/login/type, state, commit SHA, submission instant, and association. Later
+`COMMENTED` records do not replace an earlier opinion. Missing/extra actors, malformed permission
+bindings, identity drift, nonchronological history, incomplete pagination, duplicate identities, or
+cross-protocol request-id reuse block. This pure check has no caller and does not compose review
+requests, threads, or a complete snapshot.
+
 These primitives are still not the production collector: no source composes all REST and GraphQL
 families, records the credential receipt and every identity audit in a normalized snapshot,
 transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
