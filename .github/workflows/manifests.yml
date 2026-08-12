@@ -58,7 +58,9 @@ jobs:
       - name: Install check dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: choco install jq shellcheck --no-progress --yes
+        run: |
+          choco install jq shellcheck --no-progress --yes
+          "$env:ChocolateyInstall\bin" >> $env:GITHUB_PATH
 
       - name: Install controller dependencies
         run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
