@@ -1444,7 +1444,7 @@ fixtures; no normal route can call it.
 - [x] `[writes code]` Add only the minimal versioned GitHub HTTP client/backend, credential-boundary policy, redaction tests, and operator configuration needed by K2.1; present the exact hostname, methods, endpoints, headers, and permission scopes before editing.
 - [x] Enforce `api.github.com`, TLS, GET-only requests, fixed API version/Accept headers, bounded response sizes, bounded pagination, timeouts, retry limits for safe reads only, and redaction of authorization headers and response bodies from logs.
 - [x] Keep the elevated evidence token in a process that cannot issue POST/PATCH/PUT/DELETE. Never pass it to implementation, tests, repository commands, publisher callbacks, or the later merge writer.
-- [ ] Positively record token/actor identity and whether bypass lists were visible. Elevated permission is not positive evidence by itself.
+- [x] Positively record token/actor identity and whether bypass lists were visible. Elevated permission is not positive evidence by itself.
 - [x] Imitate existing structured command/network boundary reporting and capability degradation; do not add a general-purpose GitHub client or shell out to repository-provided code.
 - [x] Existing tests must pass unmodified. Use a local fake HTTP server or transport fixture; required CI must not contact GitHub.
 - [x] No deletion is expected. Show zero callers before replacing a backend seam.
@@ -1452,7 +1452,7 @@ fixtures; no normal route can call it.
 - [x] Append a `PROGRESS.md` line recording zero mutating HTTP methods and credential non-guarantees.
 - [x] Stop if bypass visibility requires granting the observer mutation capability that the runtime cannot mechanically constrain to GET; keep merge unsupported for that host.
 
-**Implementation note (2026-08-11):** implemented an uncomposed standard-library REST boundary split into a 48-line read-only credential policy, 42-line fixed-host TLS transport, 80-line endpoint/query policy, and 311-line client. It fixes `api.github.com:443`, `GET`, media type, REST `2026-03-10`, user agent, 8 MiB responses, 30 pages, 10-second timeouts, one safe transient retry, two same-host redirects, duplicate-safe JSON, request-id/ETag audits, and typed auth/permission/404/rate/timeout/availability/malformed outcomes. Eleven fake-transport tests prove endpoint/query/redirect/size/page/retry bounds, response and credential redaction, exact version probing, zero mutating transport methods, no secret loader, and zero enabled production caller; full preflight passes with 258 tests. The operator contract requires direct secret injection into this dedicated process, an App JWT with no repository permissions, and an installation token declaring only the seven required read permissions; declarations do not prove actual token scope or identity. Official GitHub documentation confirms ordinary GraphQL queries require `POST`, so the GET-only runtime rejects `/graphql` and returns typed `api-unavailable` for review-thread/queue/cross-check evidence. Positive token/actor identity and complete bypass visibility therefore remain unchecked above, the K2.1 fixture observer remains the only complete backend, and live eligibility/merge stays unsupported.
+**Implementation note (2026-08-11):** implemented an uncomposed standard-library REST boundary split into a 48-line read-only credential policy, 42-line fixed-host TLS transport, 80-line endpoint/query policy, and 311-line client. It fixes `api.github.com:443`, `GET`, media type, REST `2026-03-10`, user agent, 8 MiB responses, 30 pages, 10-second timeouts, one safe transient retry, two same-host redirects, duplicate-safe JSON, request-id/ETag audits, and typed auth/permission/404/rate/timeout/availability/malformed outcomes. Eleven fake-transport tests prove endpoint/query/redirect/size/page/retry bounds, response and credential redaction, exact version probing, zero mutating transport methods, no secret loader, and zero enabled production caller; full preflight passes with 258 tests. The operator contract requires direct secret injection into this dedicated process, an App JWT with no repository permissions, and an installation token declaring only the seven required read permissions; declarations do not prove actual token scope or identity. Official GitHub documentation confirms ordinary GraphQL queries require `POST`, so the GET-only runtime rejects `/graphql` and returns typed `api-unavailable` for review-thread/queue/cross-check evidence. At this original REST slice, positive token/actor identity and complete bypass visibility remained unchecked; later receipt/identity readers and the pure composed provenance boundary close that source-contract item without installing a live collector. Live eligibility/merge stays unsupported.
 
 **Fixed-query GraphQL follow-up (2026-08-12):** added a separate uncomposed TLS transport that
 can POST only one compiled `PathfinderPullRequestEvidence` query to `api.github.com/graphql`.
@@ -1491,14 +1491,27 @@ nonchronological history, incomplete pagination, or reused request ids block. Re
 threads, mergeability, and queue state now pass through a second pure projector that requires the
 exact compiled query hash, one real GraphQL audit family, complete independent connections, exact
 repository/PR/ref/SHA identity, rate-limit/audit coverage, and the reconciled publication-pusher
-proof. The overall snapshot still is not composed. The publication request now also binds the
+proof. A pure, uncalled composer now requires those projections plus the verified observer receipt,
+all four App/installation/bot/repository identity audits, complete REST review history, the policy-
+derived required-check union, exact check pages, and every remaining normalized REST family. It
+emits schema-valid evidence plus a separate canonical provenance receipt bound to the evidence,
+credential/publication receipts, query, reviews, checks, request ids, and collection window. The
+publication request now also binds the
 authenticated publication credential's bot database/node/login identity through exact preflight and
 the durable repository/ref/SHA push receipt. An uncalled pure reconciler validates both canonical
 publication documents, requires a later fixed-query GraphQL observation of the identical
 repository/PR/head/base identity, and projects that bot database id as the controller pusher. This
 does not prove that an installed host prevented a later same-SHA push by a different actor; that
-branch-ownership fact and complete snapshot composition remain mandatory. The positive-identity/
-bypass checkbox and both K5 installed-host readiness items remain unchecked.
+branch-ownership fact remains mandatory. The positive-identity/bypass checkbox is now closed by
+the composed provenance receipt, while both K5 installed-host readiness items remain unchecked:
+the composer owns no client, credential, durable host store, or installed caller.
+
+**Composer follow-up (2026-08-12):** the 462-line production adapter exceeds the per-slice estimate
+because it owns the closed backend projection for every observer method, global request/time checks,
+and the separately schema-validated provenance receipt in one auditable boundary. Five focused
+tests cover deterministic composition, malformed and drifted identities, review/policy/check drift,
+cross-surface request reuse, collection-window violations, input immutability, and zero source
+callers. It adds no network client or installed route.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 

@@ -102,9 +102,14 @@ that never reached dispatch from an
 ambiguous dispatched operation; only the atomic intent creator may write it, and reconciliation
 never sends a second mutation. Because a durable local marker cannot be atomic with the remote
 request, restarted reconciliation never credits a pending dispatched operation as merged even when
-observation finds matching merged state. The fixture observer can supply a complete dry-run snapshot, while
-the source REST and fixed-query GraphQL transports are not composed into a live collector. K5
-composition still requires the separate security and enablement gates in the security contract.
+observation finds matching merged state. The fixture observer can supply a complete dry-run
+snapshot. A pure uncalled composer now requires the verified observer receipt/identity audits,
+authenticated publication receipt, fixed-query GraphQL projection, reconciled REST reviews,
+policy-derived required checks, exact check/status pages, and the remaining normalized REST
+families before it emits evidence plus a canonical evidence-hash-bound provenance receipt. It owns
+no client, token, storage, or installed caller and does not prove exclusive controller-branch
+ownership, so it is not a live collector. K5 composition still requires the separate security and
+enablement gates in the security contract.
 
 The source-only publication prerequisite now produces the candidate input shape rather than relying
 on a URL or branch discovery heuristic. Its closed request is authenticated outside repository

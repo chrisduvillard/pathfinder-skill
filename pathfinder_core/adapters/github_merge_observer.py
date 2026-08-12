@@ -68,6 +68,7 @@ class RequestAudit:
 class EndpointResponse:
     data: Mapping[str, object]
     audit: RequestAudit
+    extra_audits: tuple[RequestAudit, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -428,7 +429,11 @@ class GitHubMergeObserver:
     def _audits(raw: Mapping[str, object]) -> list[dict]:
         result = []
         for surface, response in raw.items():
-            source = response.audits if isinstance(response, PageResponse) else (response.audit,)
+            source = (
+                response.audits
+                if isinstance(response, PageResponse)
+                else (response.audit, *response.extra_audits)
+            )
             for audit in source:
                 item = {
                     "surface": surface,

@@ -21,15 +21,20 @@ The package now also contains a source-only GraphQL evidence primitive. It can s
 compiled pull-request query to GitHub's fixed GraphQL endpoint and has no arbitrary query, mutation,
 URL, secret loader, command, or caller. It binds the exact query hash and completely paginates the
 latest effective reviews, code-owner review requests, and review threads while rechecking stable PR
-identity on every page. This does not make live observation available: the REST and GraphQL pieces
-are not yet composed into a collector or installed trusted-host credential reader. A separate
+identity on every page. This does not make live observation available: a later pure composer binds
+the REST and GraphQL outputs, but no installed trusted-host credential reader calls either. A separate
 source-only verifier now accepts a hash-bound, fresh, one-repository observer issuance receipt and
 cross-checks the observer App/installation/bot/repository plus the future merge
 App/installation/bot through exact live reads. A dedicated feature read treats the private-plan
 upgrade response as absence only when GitHub also identifies the exact required read permission;
-ordinary 403 remains a permission error. These primitives still do not persist a complete snapshot,
-compose every ruleset/review/check surface, prove installed branch ownership, load a credential
-from the host, or add a caller. A source-only membership reader now qualifies exact team and
+ordinary 403 remains a permission error. A pure source-only composer now requires the verified
+observer receipt and all identity audits, authenticated publication receipt, fixed-query GraphQL
+projection, reconciled REST reviews, policy-derived required checks, exact check/status pages, and
+the remaining normalized REST families. It emits one schema-valid evidence document plus a
+separately hashed provenance receipt bound to the evidence, credential/publication receipts,
+reviews, checks, request identities, and collection window. It still does not authenticate durable
+host storage, prove installed branch ownership, load a credential from the host, or add a caller. A
+source-only membership reader now qualifies exact team and
 organization absence and exact repository-role permissions, while the check reader walks suites
 before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader
 fully paginates the REST review audit and reads one exact repository permission for every unique
@@ -40,7 +45,7 @@ classifies checks only against a closed supplied context/App union, and requires
 to name the supplied candidate's exact PR/head/base identity. Suites, runs, and both status reads
 share one request budget. These readers retain distinct request audits and fail on identity,
 permission, pagination, request budget, PR binding, or SHA drift; none is an installed collector,
-and the required union/candidate are not yet read and composed from live policy/PR sources. An
+and only the uncalled pure composer binds the supplied union/candidate to their outputs. An
 uncalled pure projector can now form that union from the host floor, qualified classic protection,
 and all completely paginated active rules; it rejects any unpinned or contradictory check identity.
 An uncalled pure review reconciler also requires the GraphQL latest-opinionated record for every
@@ -52,7 +57,8 @@ It does not authenticate storage or prove that an installed host prevented a dif
 pushing the same commit later. A pure GraphQL projector then requires that same pusher-bound
 snapshot, the exact schema-pinned compiled query hash, complete review/reviewer/thread connections,
 and one-to-one request/rate-limit audit coverage before emitting mergeability, queue, requested-
-reviewer, thread, pagination, and `graphql-pull-request` audit inputs. These source pieces still are not a complete collector or an
+reviewer, thread, pagination, and `graphql-pull-request` audit inputs. These source pieces and their
+pure composer still are not an installed collector or an
 installed runtime route.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit

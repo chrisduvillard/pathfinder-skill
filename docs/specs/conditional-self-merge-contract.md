@@ -237,11 +237,15 @@ and shared `graphql-pull-request` audit inputs. Incomplete connections, syntheti
 coverage, query drift, identity drift, duplicate reviewers/threads/request ids, or audit-count/time
 drift block. This projector is pure, uncalled, and not a complete snapshot composer.
 
-These primitives are still not the production collector: no source composes all REST and GraphQL
-families, records the credential receipt and every identity audit in a normalized snapshot,
-transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
-sets, or binds those supplied policy/candidate/reconciled-pusher/GraphQL projection inputs into a
-complete snapshot.
+One pure source-only composer now binds these primitives together. It requires the verified
+one-repository observer receipt and all four App/installation/bot/repository audits, the canonical
+publication request/receipt pair, the fixed-query GraphQL snapshot, the complete permission-
+qualified REST review history, host/classic/ruleset required-check union, exact check/status pages,
+and every remaining normalized REST family. It emits one schema-valid evidence document plus a
+separately hashed provenance receipt bound to the evidence hash, credential/publication receipt
+hashes, query hash, reconciled review ids, required checks, request-id hash, and collection window.
+Cross-surface request reuse or any split identity/policy/review/check input blocks. The composer owns
+no client, credential, storage, command, or caller, so it is not an installed production collector.
 The installed host must additionally authenticate the publication journal and prove exclusive
 controller branch ownership through the evidence instant. The system must not substitute UI text or omit those
 facts. Conditional merge therefore remains unsupported

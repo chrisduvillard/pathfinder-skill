@@ -627,6 +627,7 @@ class GitHubGETClientTests(unittest.TestCase):
         self.assertEqual(sorted(consumers), [
             "pathfinder_core/adapters/github_check_policy.py",
             "pathfinder_core/adapters/github_checks.py",
+            "pathfinder_core/adapters/github_evidence_composer.py",
             "pathfinder_core/adapters/github_identity.py",
             "pathfinder_core/adapters/github_memberships.py",
             "pathfinder_core/adapters/github_reviews.py",
@@ -681,7 +682,9 @@ class GitHubGETClientTests(unittest.TestCase):
                 review_reconciler_consumers.append(
                     path.relative_to(ROOT).as_posix()
                 )
-        self.assertEqual(review_reconciler_consumers, [])
+        self.assertEqual(review_reconciler_consumers, [
+            "pathfinder_core/adapters/github_evidence_composer.py",
+        ])
         sources = "\n".join(
             (ROOT / "pathfinder_core" / "adapters" / name).read_text()
             for name in (
