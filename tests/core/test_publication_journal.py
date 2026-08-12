@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -86,7 +87,7 @@ class PublicationJournalTests(unittest.TestCase):
         worker.start()
         self.assertTrue(entered.wait(5))
         try:
-            with self.assertRaisesRegex(StateError, "lock is already held"):
+            with self.assertRaisesRegex(StateError, "not owned"):
                 self.dispatch(claim)
         finally:
             release.set()
@@ -94,6 +95,44 @@ class PublicationJournalTests(unittest.TestCase):
         self.assertFalse(worker.is_alive())
         self.assertEqual(errors, [])
         self.assertEqual(sends, ["sent"])
+
+    def test_remote_send_runs_after_the_journal_lock_is_released(self):
+        claim = self.claim()
+        self.assertIsNotNone(claim)
+
+        def send():
+            self.assertFalse(self.journal.lock_path.exists())
+            return "sent"
+
+        _dispatch, result = self.journal.dispatch_once(
+            claim,
+            started_at=self.bundle["dispatch"]["started_at"],
+            send=send,
+        )
+        self.assertEqual(result, "sent")
+
+    @unittest.skipUnless(hasattr(os, "fork"), "requires POSIX process death")
+    def test_process_death_during_send_does_not_strand_recovery_lock(self):
+        claim = self.claim()
+        self.assertIsNotNone(claim)
+        child = os.fork()
+        if child == 0:
+            try:
+                self.journal.dispatch_once(
+                    claim,
+                    started_at=self.bundle["dispatch"]["started_at"],
+                    send=lambda: os._exit(17),
+                )
+            finally:
+                os._exit(99)
+        _pid, status = os.waitpid(child, 0)
+        self.assertEqual(os.waitstatus_to_exitcode(status), 17)
+        self.assertFalse(self.journal.lock_path.exists())
+        self.assertIsNotNone(
+            self.journal.load(claim.publication_request_id)["dispatch"]
+        )
+        recorded = self.journal.record_receipt(self.bundle["receipt"])
+        self.assertEqual(recorded, self.bundle["receipt"])
 
     def test_receipt_requires_dispatch_and_exact_request_binding(self):
         claim = self.claim()
@@ -132,6 +171,39 @@ class PublicationJournalTests(unittest.TestCase):
         path.write_text(json.dumps(changed))
         with self.assertRaisesRegex(StateError, "dispatch request binding"):
             self.journal.load(claim.publication_request_id)
+
+    def test_authorization_snapshot_and_identity_are_bound(self):
+        cases = (
+            ("hash", "authorization snapshot hash"),
+            ("identity", "authorization identity"),
+            ("window", "authorization window"),
+        )
+        for mutation, message in cases:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as root:
+                changed = copy.deepcopy(self.bundle["request"])
+                if mutation == "hash":
+                    changed["authorization"]["snapshot_sha256"] = "5" * 64
+                elif mutation == "identity":
+                    changed["authorization"]["authorization_id"] = (
+                        "authorization_other123"
+                    )
+                    changed["mission"]["authorization_snapshot_sha256"] = (
+                        canonical_sha256(changed["authorization"])
+                    )
+                else:
+                    changed["authorization"]["authorized_at"] = (
+                        "2026-08-11T10:00:00+00:00"
+                    )
+                    changed["authorization"]["limits"]["max_wall_seconds"] = 60
+                    changed["mission"]["authorization_snapshot_sha256"] = (
+                        canonical_sha256(changed["authorization"])
+                    )
+                changed["request_sha256"] = canonical_sha256(
+                    changed, "request_sha256"
+                )
+                journal = PublicationJournal(Path(root))
+                with self.assertRaisesRegex(StateError, message):
+                    journal.claim_request(changed)
 
     def test_namespace_is_separate_from_mission_and_merge_journals(self):
         self.claim()

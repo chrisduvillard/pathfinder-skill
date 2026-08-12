@@ -246,13 +246,21 @@ envelope is authenticated.
 ## Implemented unreachable mutation and crash reconciliation
 
 The prerequisite publication boundary is also source-only and uncomposed. A fresh authenticated
-host request binds one committed mission and authorization to the repository, controller branch,
-exact head/base SHAs, and canonical diff/file/object hashes. It is journaled before the injected
-publication-only backend may find, push, create, or check. Successful awaiting-review publication
-writes a closed authenticated receipt containing repository identity plus PR database id, node id,
-number, URL, exact refs/SHAs, mission-state hash, authorization, diff, and check observation. A
-pending request cannot be published again; explicit recovery can only find the same exact PR and
-observe checks. No installed or ordinary route constructs this controller.
+host request embeds and canonically binds the full explicit GitHub-awaiting-review authorization,
+its one-PR ceiling, one committed mission, repository, controller branch, exact head/base SHAs,
+canonical diff/file/object hashes, and required check context/App identities. It is journaled before
+the injected publication-only backend may act. That backend must first perform a read-only preflight
+and return the identical repository/ref/commit/diff/check target; mismatch blocks before push or PR
+creation. Neither publication nor reconciliation accepts a caller-selected timestamp; freshness
+and observation time come only from the injected authenticated-host clock. Successful
+awaiting-review publication writes a closed authenticated receipt containing
+repository identity plus PR database id, node id, number, URL, exact refs/SHAs, mission-state and
+authorization hashes, diff, and each successful check's exact context, App id, and head SHA. The
+write-once dispatch marker is persisted under lock, then the lock is released before the remote
+callback so actual process death cannot strand reconciliation. A pending request cannot be
+published again; explicit recovery can only find the same exact PR and observe checks. No installed
+or ordinary route constructs this controller, and no live backend currently implements the trusted
+preflight.
 
 Before the unreachable primitive can issue its one remote call, an atomic one-use claim persists a
 write-once intent and binds the two-snapshot readiness-proof hash,

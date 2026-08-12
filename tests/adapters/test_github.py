@@ -1,18 +1,29 @@
 import unittest
+from dataclasses import replace
 
 from pathfinder_core.adapters.github import (
     AuthenticationError,
+    CheckObservation,
     CheckState,
     GitHubPublisher,
     PublicationState,
+    PublicationTarget,
     PullRequest,
+    PullRequestIdentity,
     RateLimitError,
+    RequiredCheck,
 )
 from pathfinder_core.errors import PolicyError
 
 
 class FixtureBackend:
-    def __init__(self, checks=None, error=None, api_observations=None):
+    def __init__(
+        self,
+        checks=None,
+        error=None,
+        api_observations=None,
+        preflight_result=None,
+    ):
         self.checks = list(checks or [CheckState.SUCCESS])
         self.error = error
         self.api_observations = dict(api_observations or {})
@@ -20,6 +31,8 @@ class FixtureBackend:
         self.created = 0
         self.pushed = 0
         self.merge_attempts = 0
+        self.preflight_result = preflight_result
+        self.targets = []
 
     def _raise(self):
         if self.error:
@@ -47,6 +60,55 @@ class FixtureBackend:
             return self.checks.pop(0)
         return self.checks[0]
 
+    def preflight(self, target):
+        self.targets.append(target)
+        return self.preflight_result or target
+
+    def push_exact(self, target):
+        self.targets.append(target)
+        self.push(target.head_ref)
+
+    def find_pull_request_exact(self, target):
+        self.targets.append(target)
+        if self.pr and (
+            self.pr.head,
+            self.pr.base,
+            self.pr.mission_id,
+        ) == (target.head_ref, target.base_ref, target.mission_id):
+            return self.pr
+        return None
+
+    def create_pull_request_exact(self, target, title, body):
+        del title, body
+        self.targets.append(target)
+        self.created += 1
+        self.pr = PullRequest(
+            "pr_12345678",
+            "https://github.com/example/repo/pull/1",
+            target.head_ref,
+            target.base_ref,
+            target.mission_id,
+            PullRequestIdentity(
+                target.repository_id,
+                target.repository_node_id,
+                1,
+                "PR_node_1",
+                1,
+                target.head_sha,
+                target.base_sha,
+            ),
+        )
+        return self.pr
+
+    def check_observations_exact(self, pull_request, target):
+        state = self.check_state(pull_request)
+        return tuple(
+            CheckObservation(
+                check.context, check.app_id, target.head_sha, state
+            )
+            for check in target.required_checks
+        )
+
     def merge(self, pull_request):
         self.merge_attempts += 1
         raise AssertionError("awaiting-review publisher must never merge")
@@ -62,7 +124,67 @@ def publish(backend, **overrides):
     return GitHubPublisher(backend).publish(**arguments)
 
 
+def exact_target():
+    return PublicationTarget(
+        123,
+        "R_repo123",
+        "example-owner",
+        "example-repo",
+        "pathfinder/auto/test-goal",
+        "a" * 40,
+        "main",
+        "b" * 40,
+        "mission_12345678",
+        "1" * 64,
+        "2" * 64,
+        "3" * 64,
+        (RequiredCheck("ci/pathfinder", 24680),),
+    )
+
+
+def publish_exact(backend, **overrides):
+    arguments = {
+        "target": exact_target(),
+        "title": "Test",
+        "body": "Mission mission_12345678",
+        "max_check_polls": 3,
+        "credential_boundary": "publication-only",
+    }
+    arguments.update(overrides)
+    return GitHubPublisher(backend).publish_exact(**arguments)
+
+
 class GitHubPublisherTests(unittest.TestCase):
+    def test_exact_publication_binds_target_and_check_identity(self):
+        backend = FixtureBackend()
+        result = publish_exact(backend)
+        self.assertEqual(result.state, PublicationState.AWAITING_REVIEW)
+        self.assertEqual(result.checks[0].sha, exact_target().head_sha)
+        self.assertTrue(all(target == exact_target() for target in backend.targets))
+
+    def test_exact_preflight_mismatch_stops_before_mutation(self):
+        target = exact_target()
+        wrong = replace(target, repository_id=999)
+        backend = FixtureBackend(preflight_result=wrong)
+        with self.assertRaisesRegex(PolicyError, "preflight target"):
+            publish_exact(backend, target=target)
+        self.assertEqual((backend.pushed, backend.created), (0, 0))
+
+    def test_exact_check_context_app_and_sha_must_match(self):
+        cases = (
+            CheckObservation("ci/untrusted", 999, "a" * 40, CheckState.SUCCESS),
+            CheckObservation("ci/pathfinder", 24680, "c" * 40, CheckState.SUCCESS),
+            CheckObservation("ci/pathfinder", 24680, "a" * 40, "success"),
+        )
+        for observation in cases:
+            with self.subTest(observation=observation):
+                backend = FixtureBackend()
+                backend.check_observations_exact = (
+                    lambda pull_request, target: (observation,)
+                )
+                with self.assertRaisesRegex(PolicyError, "check identity"):
+                    publish_exact(backend)
+
     def test_success_stops_at_awaiting_review(self):
         result = publish(FixtureBackend())
         self.assertEqual(result.state, PublicationState.AWAITING_REVIEW)

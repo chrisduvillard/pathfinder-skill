@@ -18,14 +18,20 @@ reconciliation-required because a local marker cannot prove the remote request b
 live implementation in this package; fixture success is not operator enablement.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
-controller accepts one fresh authenticated host request, persists that request before dispatch, and
-writes a closed receipt only after the injected publication-only backend returns the exact
-repository and pull-request database/node/number identities, controller head/base refs and SHAs,
-mission-state/authorization binding, diff hashes, GitHub URL, and successful check observation. A
-pending request is never published again; explicit reconciliation performs only exact PR lookup and
-check observation. The source includes no command, live backend, credential loader, ordinary mission
-caller, or installed route. Do not instantiate it manually or interpret its fixture receipt as a
-real published PR.
+controller accepts one fresh authenticated host request containing the canonically bound full
+explicit GitHub-awaiting-review authorization and one-PR ceiling. Before mutation, its injected
+publication-only backend must read-only preflight the exact repository, refs, commits, diff hashes,
+and required check context/App pairs. Publication and reconciliation accept no caller-selected
+timestamp; only the injected trusted host clock can establish freshness and receipt time. The
+controller writes a closed receipt only after the backend returns
+the exact repository and pull-request database/node/number identities, controller head/base refs
+and SHAs, mission-state/authorization binding, diff hashes, GitHub URL, and successful check
+context/App/head-SHA observations. Dispatch is persisted before the remote callback without holding
+the journal lock across that callback, so process death leaves a recoverable pending record instead
+of a stale lock. A pending request is never published again; explicit reconciliation performs only
+exact PR lookup and check observation. The source includes no command, live backend, credential
+loader, ordinary mission caller, or installed route. Do not instantiate it manually or interpret
+its fixture receipt as a real published PR.
 
 ## Inspect capabilities
 

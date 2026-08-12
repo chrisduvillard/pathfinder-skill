@@ -7,9 +7,33 @@
       "mission_id": "mission_example1",
       "binding_id": "binding_example1",
       "mission_authorization_id": "authorization_example1",
+      "authorization_snapshot_sha256": "aaba7d2aa7e6991253ab0017e5fd7376b08a4a579220a835f2771302123756ad",
       "mission_state": "committed",
       "mission_state_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
       "commit_sha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "authorization": {
+      "schema_version": 1,
+      "authorization_id": "authorization_example1",
+      "mission_id": "mission_example1",
+      "binding_id": "binding_example1",
+      "explicit_request": true,
+      "trusted_source": "current-user-turn",
+      "authorized_at": "2026-08-11T11:55:00+00:00",
+      "base_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "intent_hashes": {
+        "charter": "1111111111111111111111111111111111111111111111111111111111111111",
+        "roadmap": "2222222222222222222222222222222222222222222222222222222222222222",
+        "doctrine": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "limits": {
+        "max_goals": 1,
+        "max_attempts": 2,
+        "max_wall_seconds": 3600,
+        "max_total_prs": 1
+      },
+      "publication_target": "github-awaiting-review",
+      "snapshot_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
     },
     "repository": {
       "id": 123456789,
@@ -28,32 +52,36 @@
         "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
       }
     },
+    "required_checks": [
+      {"context": "ci/pathfinder", "app_id": 24680}
+    ],
     "title": "Pathfinder fixture publication",
     "body": "Authenticated mission mission_example1 publication fixture.",
     "max_check_polls": 3,
     "credential_boundary": "publication-only",
     "issued_at": "2026-08-11T12:00:00+00:00",
     "expires_at": "2026-08-11T12:10:00+00:00",
-    "request_sha256": "34f6cc962a27368bd3754d0bdf958f9ea0ecacc6eaa35250087134704f60dd9e"
+    "request_sha256": "325af8fed0beada212f107d754e074be71ad72d64f9ea1f3ae5164a3d5791ffb"
   },
   "dispatch": {
     "schema_version": 1,
     "publication_request_id": "publication_request_example1",
-    "request_sha256": "34f6cc962a27368bd3754d0bdf958f9ea0ecacc6eaa35250087134704f60dd9e",
+    "request_sha256": "325af8fed0beada212f107d754e074be71ad72d64f9ea1f3ae5164a3d5791ffb",
     "started_at": "2026-08-11T12:05:00+00:00",
-    "dispatch_sha256": "dbcb1c4c26fd3c21db8e2391d40e4cbf39126e0c2820c0955ee19b760abfc72d"
+    "dispatch_sha256": "b3553353323ca600e837b48c38521345a1d6c883fcc67dd48d83655dc5a43415"
   },
   "receipt": {
     "schema_version": 1,
     "publication_receipt_id": "publication_receipt_example1",
     "publication_request_id": "publication_request_example1",
-    "request_sha256": "34f6cc962a27368bd3754d0bdf958f9ea0ecacc6eaa35250087134704f60dd9e",
+    "request_sha256": "325af8fed0beada212f107d754e074be71ad72d64f9ea1f3ae5164a3d5791ffb",
     "source": "authenticated-controller-publication",
     "state": "awaiting-review",
     "mission": {
       "mission_id": "mission_example1",
       "binding_id": "binding_example1",
       "mission_authorization_id": "authorization_example1",
+      "authorization_snapshot_sha256": "aaba7d2aa7e6991253ab0017e5fd7376b08a4a579220a835f2771302123756ad",
       "mission_state_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
     },
     "repository": {
@@ -77,9 +105,19 @@
       "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
       "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
     },
-    "checks": {"state": "success", "polls": 1},
+    "checks": {
+      "state": "success",
+      "polls": 1,
+      "observations": [
+        {
+          "context": "ci/pathfinder",
+          "app_id": 24680,
+          "sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ]
+    },
     "reused": false,
     "observed_at": "2026-08-11T12:06:00+00:00",
-    "receipt_sha256": "9d94f8ec6d4586e09d756070d0c7cf470353cbce32cc5fe0598c52983e212309"
+    "receipt_sha256": "8d83967570597d7f4a8429649b210d0f9084ed0bd13f7b0afcc7c90eb79d84da"
   }
 }

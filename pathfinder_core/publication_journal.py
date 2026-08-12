@@ -101,12 +101,40 @@ class PublicationJournal:
         try:
             issued = parse_aware_timestamp(request["issued_at"])
             expires = parse_aware_timestamp(request["expires_at"])
+            authorized = parse_aware_timestamp(
+                request["authorization"]["authorized_at"]
+            )
         except (KeyError, TypeError, ValueError) as error:
             raise StateError("publication request window is malformed") from error
         if not issued < expires <= issued + timedelta(minutes=15):
             raise StateError("publication request window exceeds 15 minutes")
         if request["mission"]["commit_sha"] != request["candidate"]["head_sha"]:
             raise StateError("publication request commit and head SHA differ")
+        authorization = request["authorization"]
+        expected_authority = {
+            "authorization_id": request["mission"]["mission_authorization_id"],
+            "mission_id": request["mission"]["mission_id"],
+            "binding_id": request["mission"]["binding_id"],
+            "base_commit": request["candidate"]["base_sha"],
+        }
+        if any(
+            authorization[field] != value
+            for field, value in expected_authority.items()
+        ):
+            raise StateError("publication authorization identity differs")
+        if (
+            request["mission"]["authorization_snapshot_sha256"]
+            != canonical_sha256(authorization)
+        ):
+            raise StateError("publication authorization snapshot hash differs")
+        if not (
+            authorized
+            <= issued
+            < expires
+            <= authorized
+            + timedelta(seconds=authorization["limits"]["max_wall_seconds"])
+        ):
+            raise StateError("publication request exceeds its authorization window")
         if not request["candidate"]["head_ref"].startswith("pathfinder/auto/"):
             raise StateError("publication request head is not a controller branch")
 
@@ -194,7 +222,7 @@ class PublicationJournal:
                 dispatch_path, dispatch, "publication dispatch"
             )
             self._claims.pop(request_id, None)
-            return recorded, send()
+        return recorded, send()
 
     def record_receipt(self, receipt: dict) -> dict:
         self._validate("receipt", receipt)
@@ -229,6 +257,7 @@ class PublicationJournal:
                 "mission_id",
                 "binding_id",
                 "mission_authorization_id",
+                "authorization_snapshot_sha256",
                 "mission_state_sha256",
             )
         }
@@ -238,6 +267,22 @@ class PublicationJournal:
             "base_ref": request["candidate"]["base_ref"],
             "base_sha": request["candidate"]["base_sha"],
         }
+        expected_checks = sorted(
+            (
+                check["context"],
+                check["app_id"],
+                request["candidate"]["head_sha"],
+            )
+            for check in request["required_checks"]
+        )
+        observed_checks = sorted(
+            (
+                check["context"],
+                check["app_id"],
+                check["sha"],
+            )
+            for check in receipt["checks"]["observations"]
+        )
         if (
             receipt["request_sha256"] != request["request_sha256"]
             or dispatch["publication_request_id"]
@@ -250,6 +295,7 @@ class PublicationJournal:
                 for key, value in expected_pull.items()
             )
             or receipt["diff"] != request["candidate"]["diff"]
+            or observed_checks != expected_checks
         ):
             raise StateError("publication receipt request binding differs")
         suffix = request["publication_request_id"].removeprefix(

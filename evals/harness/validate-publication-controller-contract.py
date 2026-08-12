@@ -71,6 +71,7 @@ def main() -> int:
     sys.path.insert(0, str(root))
 
     from pathfinder_core.adapters.github import (
+        CheckObservation,
         CheckState,
         GitHubPublisher,
         PullRequest,
@@ -116,6 +117,35 @@ def main() -> int:
         ),
     )
     backend = Backend(pull_request, CheckState.SUCCESS)
+    preflight_targets = []
+
+    def preflight(target):
+        preflight_targets.append(target)
+        return target
+
+    backend.preflight = preflight
+    backend.push_exact = lambda target: backend.push(target.head_ref)
+    backend.find_pull_request_exact = lambda target: backend.find_pull_request(
+        target.head_ref, target.base_ref, target.mission_id
+    )
+    backend.create_pull_request_exact = (
+        lambda target, title, body: backend.create_pull_request(
+            target.head_ref,
+            target.base_ref,
+            target.mission_id,
+            title,
+            body,
+        )
+    )
+    backend.check_observations_exact = lambda pull, target: tuple(
+        CheckObservation(
+            check.context,
+            check.app_id,
+            target.head_sha,
+            backend.check_state(pull),
+        )
+        for check in target.required_checks
+    )
     started = datetime.fromisoformat("2026-08-11T12:05:00+00:00")
     observed = datetime.fromisoformat("2026-08-11T12:06:00+00:00")
     envelope = VerifiedPublicationEnvelope(
@@ -125,22 +155,21 @@ def main() -> int:
         request,
     )
     envelopes = Envelopes(envelope)
+    moments = iter((started, observed))
     with tempfile.TemporaryDirectory() as directory:
         controller = PublicationController(
             PublicationJournal(Path(directory)),
             envelopes,
             GitHubPublisher(backend),
-            clock=lambda: observed,
+            clock=lambda: next(moments),
         )
         first = controller.publish(
             request["publication_request_id"],
             envelope.envelope_id,
-            now=started,
         )
         second = controller.publish(
             request["publication_request_id"],
             "unused-on-replay",
-            now=started,
         )
 
     require(first == second, "terminal publication receipt did not replay exactly")
@@ -160,6 +189,50 @@ def main() -> int:
     require(
         backend.counts == expected["first_call_counts"],
         "publication replay performed additional backend calls",
+    )
+    require(len(preflight_targets) == 1, "publication preflight count drift")
+    target = preflight_targets[0]
+    require(
+        (
+            target.repository_id,
+            target.repository_node_id,
+            target.repository_owner,
+            target.repository_name,
+            target.head_ref,
+            target.head_sha,
+            target.base_ref,
+            target.base_sha,
+            target.mission_id,
+            target.diff_sha256,
+            target.changed_files_sha256,
+            target.object_evidence_sha256,
+        )
+        == (
+            request["repository"]["id"],
+            request["repository"]["node_id"],
+            request["repository"]["owner"],
+            request["repository"]["name"],
+            request["candidate"]["head_ref"],
+            request["candidate"]["head_sha"],
+            request["candidate"]["base_ref"],
+            request["candidate"]["base_sha"],
+            request["mission"]["mission_id"],
+            request["candidate"]["diff"]["diff_sha256"],
+            request["candidate"]["diff"]["changed_files_sha256"],
+            request["candidate"]["diff"]["object_evidence_sha256"],
+        ),
+        "publication preflight exact target drift",
+    )
+    require(
+        [
+            (check.context, check.app_id)
+            for check in target.required_checks
+        ]
+        == [
+            (check["context"], check["app_id"])
+            for check in request["required_checks"]
+        ],
+        "publication preflight required checks drift",
     )
     callers = []
     for path in (root / "pathfinder_core").rglob("*.py"):

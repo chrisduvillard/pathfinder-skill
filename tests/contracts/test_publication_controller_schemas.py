@@ -90,6 +90,28 @@ class PublicationControllerSchemaTests(unittest.TestCase):
                     )
                 self.validate("receipt", changed)
 
+    def test_publication_request_requires_explicit_github_authorization(self):
+        for field, value in (
+            ("explicit_request", False),
+            ("publication_target", "local-branch"),
+            ("limits", {
+                "max_goals": 1,
+                "max_attempts": 2,
+                "max_wall_seconds": 3600,
+                "max_total_prs": 2,
+            }),
+        ):
+            with self.subTest(field=field), self.assertRaises(Exception):
+                changed = copy.deepcopy(self.bundle["request"])
+                changed["authorization"][field] = value
+                changed["mission"]["authorization_snapshot_sha256"] = (
+                    canonical_sha256(changed["authorization"])
+                )
+                changed["request_sha256"] = canonical_sha256(
+                    changed, "request_sha256"
+                )
+                self.validate("request", changed)
+
     def test_default_routes_have_zero_publication_controller_callers(self):
         callers = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):

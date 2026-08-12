@@ -5,10 +5,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, Protocol
 
 from .adapters.github import (
+    PublicationTarget,
     GitHubPublisher,
     PublicationResult,
     PublicationState,
     PullRequest,
+    RequiredCheck,
 )
 from .errors import StateError
 from .merge_time import parse_aware_timestamp
@@ -105,8 +107,16 @@ class PublicationController:
             raise StateError("publication request identity differs")
         mission = request.get("mission", {})
         candidate = request.get("candidate", {})
+        authorization = request.get("authorization", {})
         if mission.get("commit_sha") != candidate.get("head_sha"):
             raise StateError("publication request commit and head SHA differ")
+        if not (
+            authorization.get("explicit_request") is True
+            and authorization.get("publication_target")
+            == "github-awaiting-review"
+            and authorization.get("limits", {}).get("max_total_prs") == 1
+        ):
+            raise StateError("publication is not explicitly authorized")
         if not str(candidate.get("head_ref", "")).startswith("pathfinder/auto/"):
             raise StateError("publication request head is not a controller branch")
         return request
@@ -130,6 +140,30 @@ class PublicationController:
             or pull_request.mission_id != request["mission"]["mission_id"]
         ):
             raise StateError("published pull request mission or ref identity differs")
+
+    @staticmethod
+    def _target(request: dict) -> PublicationTarget:
+        repository = request["repository"]
+        candidate = request["candidate"]
+        diff = candidate["diff"]
+        return PublicationTarget(
+            repository["id"],
+            repository["node_id"],
+            repository["owner"],
+            repository["name"],
+            candidate["head_ref"],
+            candidate["head_sha"],
+            candidate["base_ref"],
+            candidate["base_sha"],
+            request["mission"]["mission_id"],
+            diff["diff_sha256"],
+            diff["changed_files_sha256"],
+            diff["object_evidence_sha256"],
+            tuple(
+                RequiredCheck(check["context"], check["app_id"])
+                for check in request["required_checks"]
+            ),
+        )
 
     @staticmethod
     def _receipt(
@@ -159,6 +193,7 @@ class PublicationController:
                     "mission_id",
                     "binding_id",
                     "mission_authorization_id",
+                    "authorization_snapshot_sha256",
                     "mission_state_sha256",
                 )
             },
@@ -174,7 +209,21 @@ class PublicationController:
                 "base_sha": identity.base_sha,
             },
             "diff": request["candidate"]["diff"],
-            "checks": {"state": "success", "polls": result.polls},
+            "checks": {
+                "state": "success",
+                "polls": result.polls,
+                "observations": sorted(
+                    [
+                        {
+                            "context": check.context,
+                            "app_id": check.app_id,
+                            "sha": check.sha,
+                        }
+                        for check in result.checks
+                    ],
+                    key=lambda check: (check["context"], check["app_id"]),
+                ),
+            },
             "reused": result.reused,
             "observed_at": observed_at.isoformat(),
             "receipt_sha256": "0" * 64,
@@ -208,13 +257,11 @@ class PublicationController:
         self,
         request_id: str,
         envelope_id: str,
-        *,
-        now: datetime | None = None,
     ) -> PublicationDisposition:
         existing = self._existing(request_id)
         if existing is not None:
             return existing
-        current = now or self.clock()
+        current = self.clock()
         if not isinstance(current, datetime) or current.utcoffset() is None:
             raise StateError("publication time requires a UTC offset")
         envelope = self.envelopes.read_fresh_verified(envelope_id, now=current)
@@ -230,10 +277,8 @@ class PublicationController:
         _dispatch, result = self.journal.dispatch_once(
             claim,
             started_at=current.isoformat(),
-            send=lambda: self.publisher.publish(
-                head=request["candidate"]["head_ref"],
-                base=request["candidate"]["base_ref"],
-                mission_id=request["mission"]["mission_id"],
+            send=lambda: self.publisher.publish_exact(
+                target=self._target(request),
                 title=request["title"],
                 body=request["body"],
                 max_check_polls=request["max_check_polls"],
@@ -245,22 +290,18 @@ class PublicationController:
     def reconcile(
         self,
         request_id: str,
-        *,
-        now: datetime | None = None,
     ) -> PublicationDisposition:
         loaded = self.journal.load(request_id)
         if loaded["receipt"] is not None:
             return self._from_receipt(loaded["receipt"])
         if loaded["dispatch"] is None:
             return self._pending(request_id, "dispatch-not-started")
-        current = now or self.clock()
+        current = self.clock()
         if not isinstance(current, datetime) or current.utcoffset() is None:
             raise StateError("publication reconciliation time requires a UTC offset")
         request = loaded["request"]
-        result = self.publisher.observe(
-            head=request["candidate"]["head_ref"],
-            base=request["candidate"]["base_ref"],
-            mission_id=request["mission"]["mission_id"],
+        result = self.publisher.observe_exact(
+            target=self._target(request),
             credential_boundary=request["credential_boundary"],
         )
         if result.state is PublicationState.AWAITING_REVIEW:

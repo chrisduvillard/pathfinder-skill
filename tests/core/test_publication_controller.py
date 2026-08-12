@@ -6,12 +6,14 @@ from datetime import datetime
 from pathlib import Path
 
 from pathfinder_core.adapters.github import (
+    CheckObservation,
     CheckState,
     GitHubPublisher,
+    PublicationTarget,
     PullRequest,
     PullRequestIdentity,
 )
-from pathfinder_core.errors import StateError
+from pathfinder_core.errors import PolicyError, StateError
 from pathfinder_core.publication_controller import (
     PublicationController,
     VerifiedPublicationEnvelope,
@@ -43,7 +45,9 @@ class EnvelopeReader:
 
 
 class ExactBackend:
-    def __init__(self, *, checks=None, lose_create_response=False):
+    def __init__(
+        self, *, checks=None, lose_create_response=False, preflight=None
+    ):
         self.checks = list(checks or [CheckState.SUCCESS])
         self.lose_create_response = lose_create_response
         self.pr = None
@@ -51,6 +55,8 @@ class ExactBackend:
         self.pushes = 0
         self.creates = 0
         self.polls = 0
+        self.preflight_result = preflight
+        self.targets = []
 
     @staticmethod
     def exact_pull(head, base, mission_id):
@@ -100,6 +106,37 @@ class ExactBackend:
             return self.checks.pop(0)
         return self.checks[0]
 
+    def preflight(self, target):
+        self.targets.append(target)
+        return self.preflight_result or target
+
+    def push_exact(self, target):
+        self.targets.append(target)
+        self.push(target.head_ref)
+
+    def find_pull_request_exact(self, target):
+        self.targets.append(target)
+        return self.find_pull_request(
+            target.head_ref, target.base_ref, target.mission_id
+        )
+
+    def create_pull_request_exact(self, target, title, body):
+        self.targets.append(target)
+        return self.create_pull_request(
+            target.head_ref,
+            target.base_ref,
+            target.mission_id,
+            title,
+            body,
+        )
+
+    def check_observations_exact(self, pull_request, target):
+        state = self.check_state(pull_request)
+        return tuple(
+            CheckObservation(check.context, check.app_id, target.head_sha, state)
+            for check in target.required_checks
+        )
+
 
 class NoIdentityBackend(ExactBackend):
     @staticmethod
@@ -134,13 +171,14 @@ class PublicationControllerTests(unittest.TestCase):
             self.request,
         )
 
-    def controller(self, backend, *, envelope=None, journal=None):
+    def controller(self, backend, *, envelope=None, journal=None, times=None):
         reader = EnvelopeReader(envelope or self.envelope)
+        moments = iter(times or (STARTED, OBSERVED))
         controller = PublicationController(
             journal or PublicationJournal(Path(self.temporary.name)),
             reader,
             GitHubPublisher(backend),
-            clock=lambda: OBSERVED,
+            clock=lambda: next(moments),
         )
         return controller, reader
 
@@ -150,12 +188,10 @@ class PublicationControllerTests(unittest.TestCase):
         first = controller.publish(
             self.request["publication_request_id"],
             self.envelope.envelope_id,
-            now=STARTED,
         )
         second = controller.publish(
             self.request["publication_request_id"],
             "unused-on-replay",
-            now=STARTED,
         )
         self.assertEqual(first, second)
         self.assertEqual(first.state, "awaiting-review")
@@ -170,36 +206,31 @@ class PublicationControllerTests(unittest.TestCase):
             controller.publish(
                 self.request["publication_request_id"],
                 self.envelope.envelope_id,
-                now=STARTED,
             )
         self.assertEqual((backend.pushes, backend.creates), (1, 1))
         pending = controller.publish(
             self.request["publication_request_id"],
             self.envelope.envelope_id,
-            now=STARTED,
         )
         self.assertEqual(pending.state, "reconcile-required")
         self.assertEqual((backend.pushes, backend.creates), (1, 1))
 
-        result = controller.reconcile(
-            self.request["publication_request_id"], now=OBSERVED
-        )
+        result = controller.reconcile(self.request["publication_request_id"])
         self.assertEqual(result.state, "awaiting-review")
         self.assertTrue(result.receipt["reused"])
         self.assertEqual((backend.pushes, backend.creates), (1, 1))
 
     def test_late_reconciliation_is_read_only_and_records_actual_time(self):
         backend = ExactBackend(lose_create_response=True)
-        controller, _reader = self.controller(backend)
+        controller, _reader = self.controller(
+            backend, times=(STARTED, AFTER_EXPIRY)
+        )
         with self.assertRaisesRegex(RuntimeError, "lost create"):
             controller.publish(
                 self.request["publication_request_id"],
                 self.envelope.envelope_id,
-                now=STARTED,
             )
-        result = controller.reconcile(
-            self.request["publication_request_id"], now=AFTER_EXPIRY
-        )
+        result = controller.reconcile(self.request["publication_request_id"])
         self.assertEqual(result.state, "awaiting-review")
         self.assertEqual(
             result.receipt["observed_at"], AFTER_EXPIRY.isoformat()
@@ -215,7 +246,6 @@ class PublicationControllerTests(unittest.TestCase):
             controller.publish(
                 self.request["publication_request_id"],
                 self.envelope.envelope_id,
-                now=STARTED,
             )
         self.assertEqual(
             (backend.finds, backend.pushes, backend.creates, backend.polls),
@@ -225,9 +255,7 @@ class PublicationControllerTests(unittest.TestCase):
         restarted, _reader = self.controller(
             backend, journal=PublicationJournal(root)
         )
-        result = restarted.reconcile(
-            self.request["publication_request_id"], now=OBSERVED
-        )
+        result = restarted.reconcile(self.request["publication_request_id"])
         self.assertEqual(
             (result.state, result.reason),
             ("reconcile-required", "exact pull request not found"),
@@ -242,9 +270,7 @@ class PublicationControllerTests(unittest.TestCase):
         journal = PublicationJournal(Path(self.temporary.name))
         self.assertIsNotNone(journal.claim_request(self.request))
         controller, _reader = self.controller(backend, journal=journal)
-        result = controller.reconcile(
-            self.request["publication_request_id"], now=OBSERVED
-        )
+        result = controller.reconcile(self.request["publication_request_id"])
         self.assertEqual(result.reason, "dispatch-not-started")
         self.assertEqual(
             (backend.finds, backend.pushes, backend.creates, backend.polls),
@@ -257,14 +283,12 @@ class PublicationControllerTests(unittest.TestCase):
         first = controller.publish(
             self.request["publication_request_id"],
             self.envelope.envelope_id,
-            now=STARTED,
         )
         self.assertEqual(first.state, "checks-failed")
         counts = (backend.finds, backend.pushes, backend.creates, backend.polls)
         second = controller.publish(
             self.request["publication_request_id"],
             self.envelope.envelope_id,
-            now=STARTED,
         )
         self.assertEqual(
             (second.state, second.reason),
@@ -286,9 +310,7 @@ class PublicationControllerTests(unittest.TestCase):
             send=lambda: None,
         )
         controller, _reader = self.controller(backend, journal=journal)
-        result = controller.reconcile(
-            self.request["publication_request_id"], now=OBSERVED
-        )
+        result = controller.reconcile(self.request["publication_request_id"])
         self.assertEqual(
             (result.state, result.reason),
             ("reconcile-required", "exact pull request not found"),
@@ -325,14 +347,79 @@ class PublicationControllerTests(unittest.TestCase):
                     backend.exact_pull = wrong
                 journal = PublicationJournal(Path(root))
                 controller, _reader = self.controller(backend, journal=journal)
-                with self.assertRaisesRegex(StateError, "identity"):
+                with self.assertRaisesRegex(PolicyError, "identity"):
                     controller.publish(
                         self.request["publication_request_id"],
                         self.envelope.envelope_id,
-                        now=STARTED,
                     )
                 self.assertIsNone(
                     journal.load(self.request["publication_request_id"])["receipt"]
+                )
+
+    def test_wrong_preflight_target_stops_before_remote_effects(self):
+        target = PublicationController._target(self.request)
+        wrong = PublicationTarget(
+            1,
+            target.repository_node_id,
+            target.repository_owner,
+            target.repository_name,
+            target.head_ref,
+            target.head_sha,
+            target.base_ref,
+            target.base_sha,
+            target.mission_id,
+            target.diff_sha256,
+            target.changed_files_sha256,
+            target.object_evidence_sha256,
+            target.required_checks,
+        )
+        backend = ExactBackend(preflight=wrong)
+        controller, _reader = self.controller(backend)
+        with self.assertRaisesRegex(PolicyError, "preflight target"):
+            controller.publish(
+                self.request["publication_request_id"],
+                self.envelope.envelope_id,
+            )
+        self.assertEqual(
+            (backend.finds, backend.pushes, backend.creates, backend.polls),
+            (0, 0, 0, 0),
+        )
+
+    def test_wrong_check_identity_never_writes_receipt(self):
+        cases = (
+            (
+                "context/app",
+                "ci/untrusted",
+                999,
+                self.request["candidate"]["head_sha"],
+            ),
+            ("sha", "ci/pathfinder", 24680, "d" * 40),
+        )
+        for name, context, app_id, sha in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as root:
+                backend = ExactBackend()
+
+                def wrong_checks(pull_request, target):
+                    del pull_request, target
+                    backend.polls += 1
+                    return (
+                        CheckObservation(
+                            context, app_id, sha, CheckState.SUCCESS
+                        ),
+                    )
+
+                backend.check_observations_exact = wrong_checks
+                journal = PublicationJournal(Path(root))
+                controller, _reader = self.controller(backend, journal=journal)
+                with self.assertRaisesRegex(PolicyError, "check identity"):
+                    controller.publish(
+                        self.request["publication_request_id"],
+                        self.envelope.envelope_id,
+                    )
+                self.assertIsNone(
+                    journal.load(
+                        self.request["publication_request_id"]
+                    )["receipt"]
                 )
 
     def test_untrusted_stale_or_mismatched_envelope_fails_before_backend(self):
@@ -351,7 +438,7 @@ class PublicationControllerTests(unittest.TestCase):
         object.__setattr__(mismatched, "request", changed)
         cases.append((mismatched, STARTED, "commit and head"))
 
-        for envelope, now, message in cases:
+        for envelope, _now, message in cases:
             with self.subTest(message=message), tempfile.TemporaryDirectory() as root:
                 backend = ExactBackend()
                 controller, _reader = self.controller(
@@ -363,12 +450,49 @@ class PublicationControllerTests(unittest.TestCase):
                     controller.publish(
                         self.request["publication_request_id"],
                         envelope.envelope_id,
-                        now=now,
                     )
                 self.assertEqual(
                     (backend.finds, backend.pushes, backend.creates),
                     (0, 0, 0),
                 )
+
+    def test_expired_authorization_cannot_be_backdated_by_caller(self):
+        backend = ExactBackend()
+        controller, _reader = self.controller(
+            backend, times=(AFTER_EXPIRY,)
+        )
+        with self.assertRaisesRegex(TypeError, "unexpected keyword"):
+            controller.publish(
+                self.request["publication_request_id"],
+                self.envelope.envelope_id,
+                now=STARTED,
+            )
+        with self.assertRaisesRegex(StateError, "stale"):
+            controller.publish(
+                self.request["publication_request_id"],
+                self.envelope.envelope_id,
+            )
+        self.assertEqual(
+            (backend.finds, backend.pushes, backend.creates),
+            (0, 0, 0),
+        )
+
+    def test_non_publication_authorization_fails_before_backend(self):
+        changed = copy.deepcopy(self.request)
+        changed["authorization"]["publication_target"] = "local-branch"
+        envelope = copy.copy(self.envelope)
+        object.__setattr__(envelope, "request", changed)
+        backend = ExactBackend()
+        controller, _reader = self.controller(backend, envelope=envelope)
+        with self.assertRaisesRegex(StateError, "explicitly authorized"):
+            controller.publish(
+                self.request["publication_request_id"],
+                envelope.envelope_id,
+            )
+        self.assertEqual(
+            (backend.finds, backend.pushes, backend.creates),
+            (0, 0, 0),
+        )
 
 
 if __name__ == "__main__":

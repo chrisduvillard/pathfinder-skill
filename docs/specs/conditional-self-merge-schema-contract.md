@@ -108,8 +108,13 @@ requires the separate security and enablement gates in the security contract.
 
 The source-only publication prerequisite now produces the candidate input shape rather than relying
 on a URL or branch discovery heuristic. Its closed request is authenticated outside repository
-trust and binds the committed mission, authorization, repository, controller branch, exact
-head/base SHAs, and diff hashes. After successful required-check observation, its write-once receipt
-adds the exact PR database id, node id, number, and GitHub URL. The merge authorization candidate is
-a direct projection of that receipt. Pending recovery is read-only; no CLI, enabled mission, or live
-backend currently produces the receipt.
+trust and embeds the full explicit GitHub-awaiting-review authorization. Its canonical hash binds
+that authorization, one-PR ceiling, committed mission, repository, controller branch, exact
+head/base SHAs, diff hashes, and required check context/App identities. The backend must return the
+identical target from read-only preflight before mutation, and the controller exposes no
+caller-selected time override for authorization or envelope freshness. After successful required-check
+observation, the write-once receipt adds the exact PR database id, node id, number, GitHub URL, and
+one context/App/head-SHA tuple for every required check. The merge authorization candidate is a
+direct projection of that receipt. Pending recovery is read-only and process death cannot leave the
+journal lock around a remote callback; no CLI, enabled mission, or live backend currently produces
+the receipt.

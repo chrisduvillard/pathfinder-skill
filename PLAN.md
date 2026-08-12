@@ -1605,18 +1605,24 @@ host-owned envelope in any future K4 composition.
 **Preconditions:** K4 green and independently reviewed; awaiting-review GitHub publication is itself runnable, idempotent, and isolated; operator has installed trusted policy and credential boundaries; disposable-repository live rehearsal complete.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
-controller and separate write-once journal. A fresh authenticated host envelope binds the committed
-mission, one authorization, repository, controller branch, exact head/base SHAs, all three diff
-hashes, bounded title/body, and publication-only credential boundary before any side effect. Success
-persists a closed authenticated receipt containing repository id/node, PR database id/node/number,
-GitHub URL, exact refs/SHAs, mission-state hash, authorization, diff, and successful check
-observation. Lost-response recovery is explicitly read-only and never pushes or creates a second
-PR. Deterministic tests and an actual-code eval prove terminal replay, exact merge-authorization
-projection, one-use claims, missing/wrong identity rejection, and zero production callers. No CLI,
-mission host, Goal pack, installed route, live backend, credential loader, or merge path constructs
-the controller, so this prerequisite grants no publication or K5 authority. K5.1 remains unchecked
-until this boundary is independently reviewed and the remaining trusted-host/live-rehearsal
-preconditions are satisfied.
+controller and separate write-once journal. A fresh authenticated host envelope embeds and
+canonically binds the full explicit GitHub-awaiting-review authorization, its one-PR ceiling, the
+committed mission, repository, controller branch, exact head/base SHAs, all three diff hashes,
+bounded title/body, pinned check context/App identities, and publication-only credential boundary.
+Before push or create, the injected backend must read-only preflight and return that exact target.
+The entry points take no caller-selected time; the injected host clock alone proves envelope and
+authorization freshness.
+Success persists a closed authenticated receipt containing repository id/node, PR database
+id/node/number, GitHub URL, exact refs/SHAs, mission-state and authorization hashes, diff, and each
+successful check's exact context, App id, and head SHA. The dispatch record is durable before the
+remote callback, but the journal lock is released before that callback so process death cannot
+strand recovery; a pending operation can only use read-only exact lookup/check observation and
+never pushes or creates again. Deterministic tests, a process-death probe, and an actual-code eval
+prove terminal replay, exact merge-authorization projection, one-use claims, pre-effect target
+rejection, check-identity rejection, and zero production callers. No CLI, mission host, Goal pack,
+installed route, live backend, credential loader, or merge path constructs the controller, so this
+prerequisite grants no publication or K5 authority. K5.1 remains unchecked until this boundary is
+independently reviewed and the remaining trusted-host/live-rehearsal preconditions are satisfied.
 
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 
