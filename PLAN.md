@@ -1478,9 +1478,12 @@ permission per unique reviewer identity. Reviewer permission responses are cross
 the requested actor and retain distinct target-bound audits. Check evidence now also projects the
 complete suite/run set and the latest creator-bearing `/statuses` item per context into the observer
 contract, cross-checking the result against the combined `/status` envelope, deriving `required`
-only from a closed caller-supplied context/App union, requiring every required run to name the exact
-candidate PR database/number/head/base identity, and sharing one global request budget. These readers
-still have no caller and do not derive that union or candidate from live policy/PR sources,
+only from a closed context/App union, requiring every required run to name the exact candidate PR
+database/number/head/base identity, and sharing one global request budget. A new pure, uncalled
+projector unions host-policy, qualified classic-protection, and every completely paginated active
+ruleset check, rejecting unpinned App ids, duplicate/contradictory identities, or incomplete rule
+pages. These readers still have no caller and do not read/compose those policy inputs or the
+candidate from live sources,
 reconcile REST with the GraphQL review view, compose a snapshot, or bind exact controller last-pusher
 evidence, so the positive-identity/bypass checkbox and both K5 installed-host readiness items remain
 unchecked.

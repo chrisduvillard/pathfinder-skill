@@ -40,7 +40,9 @@ classifies checks only against a closed supplied context/App union, and requires
 to name the supplied candidate's exact PR/head/base identity. Suites, runs, and both status reads
 share one request budget. These readers retain distinct request audits and fail on identity,
 permission, pagination, request budget, PR binding, or SHA drift; none is an installed collector,
-and the required union/candidate are not yet derived from live policy/PR sources.
+and the required union/candidate are not yet read and composed from live policy/PR sources. An
+uncalled pure projector can now form that union from the host floor, qualified classic protection,
+and all completely paginated active rules; it rejects any unpinned or contradictory check identity.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full

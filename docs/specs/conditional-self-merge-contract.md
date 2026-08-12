@@ -201,6 +201,13 @@ database id/number plus head/base repository ids, refs, and SHAs. One global req
 suites, runs, and both status reads; duplicate suite/run/status/request ids and
 repository/PR/SHA/suite/state drift fail closed.
 
+The source-only policy projector forms the check union from the non-empty host-policy floor, one
+permission-qualified classic-protection response, and every rule in a complete active-rules page
+set. It rejects unpinned/null/any-App requirements, classic context/check disagreement, duplicate
+rule identities, malformed source attribution, unknown check fields, and incomplete or
+request-id-ambiguous pagination. The projector has no caller and is not authority to read a policy
+or install the collector.
+
 These primitives are still not the production collector: no source composes all REST and GraphQL
 families, records the credential receipt and every identity audit in a normalized snapshot,
 transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
