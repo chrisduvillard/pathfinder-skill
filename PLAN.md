@@ -1471,8 +1471,10 @@ live responses; and accepts a plan-level protection/rules 403 only when the exac
 GitHub's `X-Accepted-GitHub-Permissions` header, and the closed upgrade-required response all
 qualify absence. Ordinary 403 remains `permission-missing`. The identity verifier has no caller,
 does not load either token, and does not yet record its receipt/audits in a complete normalized
-snapshot. REST policy/rules/bypass/check-suite composition, permission-qualified membership
-absence, and exact controller last-pusher evidence remain open, so the positive-identity/bypass
+snapshot. A later source-only reader now resolves exact permission-qualified membership absence and
+walks every check suite/run under a global ceiling without using GitHub's 1,000-suite shortcut. It
+still has no caller and does not compose REST policy/rules/reviewer-permission/check classification
+into a snapshot or bind exact controller last-pusher evidence, so the positive-identity/bypass
 checkbox and both K5 installed-host readiness items remain unchecked.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.

@@ -1085,6 +1085,8 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             ("unattested-user", {"actor_id": 66666}),
             ("bot", {"actor_type": "Bot"}),
             ("read-only", {"repository_permission": "read"}),
+            ("maintain-role", {"repository_permission": "maintain"}),
+            ("triage-role", {"repository_permission": "triage"}),
             ("dismissed", {"dismissed": True}),
             ("stale", {"commit_sha": "a" * 40}),
             ("association", {"author_association": "NONE"}),

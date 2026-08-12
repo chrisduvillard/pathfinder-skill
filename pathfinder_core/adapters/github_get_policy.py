@@ -28,7 +28,9 @@ _ALLOWED_PATHS = tuple(re.compile(pattern) for pattern in (
     rf"^/repos/{_PART}/{_PART}/branches/{_REF}/protection$",
     rf"^/repos/{_PART}/{_PART}/rules/branches/{_REF}$",
     rf"^/repos/{_PART}/{_PART}/rulesets(?:/[1-9][0-9]*)?$",
+    rf"^/repos/{_PART}/{_PART}/commits/{_REF}/check-suites$",
     rf"^/repos/{_PART}/{_PART}/commits/{_REF}/(?:check-runs|status)$",
+    rf"^/repos/{_PART}/{_PART}/check-suites/[1-9][0-9]*/check-runs$",
     rf"^/repos/{_PART}/{_PART}/deployments(?:/[1-9][0-9]*/statuses)?$",
 ))
 

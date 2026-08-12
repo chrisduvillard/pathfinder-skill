@@ -67,6 +67,7 @@ class JSONGETResponse:
     data: object = field(repr=False)
     audit: RequestAudit
     headers: Mapping[str, str]
+    status: int
 
 
 @dataclass(frozen=True)
@@ -212,7 +213,14 @@ class GitHubGETClient:
 
     def get_json(self, surface: str, target: str) -> JSONGETResponse:
         response = self._response(surface, target)
-        return self._decode_json(surface, response)
+        decoded = self._decode_json(surface, response)
+        if decoded.status != 200:
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub GET returned an unexpected success status",
+            )
+        return decoded
 
     def _decode_json(
         self, surface: str, response: RawGETResponse
@@ -235,6 +243,7 @@ class GitHubGETClient:
             data,
             RequestAudit(request_id, self.clock(), headers.get("etag")),
             headers,
+            response.status,
         )
 
     def get_qualified_feature(
@@ -284,6 +293,12 @@ class GitHubGETClient:
             response.status,
             qualified,
         )
+        if response.status not in {200, 403}:
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub feature response returned an unexpected status",
+            )
         if response.status == 200:
             if not qualified:
                 raise GitHubObservationError(
@@ -327,15 +342,28 @@ class GitHubGETClient:
         *,
         item_key: str | None = None,
         total_key: str | None = None,
+        page_limit: int | None = None,
     ) -> PageResponse:
+        limit = self.max_pages if page_limit is None else page_limit
+        if not 1 <= limit <= self.max_pages:
+            raise ValueError("GitHub GET page limit is out of bounds")
         separator = "&" if "?" in target else "?"
         current = f"{target}{separator}per_page=100"
         items: list[Mapping[str, object]] = []
         audits = []
         expected_total = None
         last_cursor = None
-        for page_number in range(1, self.max_pages + 1):
+        for page_number in range(1, limit + 1):
             response = self.get_json(surface, current)
+            if any(
+                audit.request_id == response.audit.request_id
+                for audit in audits
+            ):
+                raise GitHubObservationError(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    surface,
+                    "GitHub GET request id was reused during pagination",
+                )
             audits.append(response.audit)
             payload = response.data
             if item_key is not None:
@@ -347,6 +375,16 @@ class GitHubGETClient:
                 page_items = payload[item_key]
                 if total_key and page_number == 1:
                     expected_total = payload.get(total_key)
+                    if (
+                        not isinstance(expected_total, int)
+                        or isinstance(expected_total, bool)
+                        or expected_total < 0
+                    ):
+                        raise GitHubObservationError(
+                            ObservationOutcome.MALFORMED_RESPONSE,
+                            surface,
+                            "GitHub GET page total is malformed",
+                        )
             else:
                 page_items = payload
             if not isinstance(page_items, list) or any(not isinstance(item, Mapping) for item in page_items):
@@ -381,7 +419,7 @@ class GitHubGETClient:
             last_cursor = next_target
         total = expected_total if isinstance(expected_total, int) else len(items)
         return PageResponse(
-            tuple(items), self.max_pages, total, False, True, last_cursor, tuple(audits)
+            tuple(items), limit, total, False, True, last_cursor, tuple(audits)
         )
 
     @classmethod

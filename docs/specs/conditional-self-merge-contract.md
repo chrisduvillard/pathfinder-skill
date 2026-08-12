@@ -185,11 +185,20 @@ missing request ids, and byte/page ceilings. It accepts only the exact read-only
 credential declaration and exposes no arbitrary query, mutation, URL, environment loader, or
 enabled caller.
 
-The fixed-query client, identity verifier, qualified feature reader, and REST client are still not
-the production collector: no source composes the REST families, records the credential receipt and
-all identity audits in a snapshot, resolves membership absence, walks every check suite, or binds
-the authenticated controller's exact last pusher. The system must not substitute UI text or omit
-those facts. Conditional merge therefore remains unsupported for live use.
+The source now also has an uncalled bypass-membership reader and complete check-run traversal. Team
+and organization `404` become absence only on the exact endpoint with GitHub's `Members=read`
+qualification; repository-role reads require `Metadata=read`, exact bot identity, and preserve all
+six GitHub permission levels so `maintain`/`triage` cannot be silently collapsed into `write`.
+Every resolution has a unique request audit. Check collection lists every suite for the exact SHA,
+then paginates runs per suite under one global request ceiling, rejecting duplicate suite/run/request
+ids and SHA or suite drift instead of using GitHub's 1,000-suite shortcut.
+
+These primitives are still not the production collector: no source composes all REST and GraphQL
+families, records the credential receipt and every identity audit in a normalized snapshot,
+transforms policy/ruleset sources, attaches reviewer-permission audits and required-check
+classification to the complete suite/run set, or binds the authenticated controller's exact last
+pusher. The system must not substitute UI text or omit those facts. Conditional merge therefore
+remains unsupported for live use.
 
 ## Typed block and result contract
 

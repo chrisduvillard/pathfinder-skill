@@ -20,6 +20,8 @@ from pathfinder_core.adapters.github_get import (
     GitHubHTTPSGETTransport,
     RawGETResponse,
 )
+from pathfinder_core.adapters.github_checks import GitHubCheckRunReader
+from pathfinder_core.adapters.github_memberships import GitHubBypassMembershipReader
 from pathfinder_core.adapters.github_merge_observer import (
     GitHubObservationError,
     ObservationOutcome,
@@ -325,6 +327,171 @@ class GitHubGETClientTests(unittest.TestCase):
                 feature="classic-protection",
             )
 
+    def test_membership_absence_requires_exact_endpoint_and_members_permission(self):
+        target = (
+            "/orgs/owner/teams/release-engineering/memberships/"
+            "pathfinder-merge%5Bbot%5D"
+        )
+        permission = {"X-Accepted-GitHub-Permissions": "members=read"}
+        absent = {
+            "message": "Not Found",
+            "documentation_url": (
+                "https://docs.github.com/rest/teams/members"
+                "#get-team-membership-for-a-user"
+            ),
+            "status": "404",
+        }
+        transport = FixtureGETTransport(response(
+            404, data=absent, headers=permission,
+        ))
+        observed = GitHubBypassMembershipReader(
+            client(transport)
+        ).read_qualified_membership(
+            target, membership="team"
+        )
+        self.assertEqual(observed.status, 404)
+        self.assertIsNone(observed.data)
+        self.assertEqual(observed.audit.target, target)
+        self.assertTrue(observed.audit.permission_qualified)
+
+        organization_target = (
+            "/orgs/owner/memberships/pathfinder-merge%5Bbot%5D"
+        )
+        transport = FixtureGETTransport(response(
+            data={"state": "active", "role": "member"},
+            headers=permission,
+        ))
+        observed = GitHubBypassMembershipReader(
+            client(transport)
+        ).read_qualified_membership(
+            organization_target, membership="organization"
+        )
+        self.assertEqual(observed.data["role"], "member")
+        self.assertEqual(observed.status, 200)
+
+        for data, headers, outcome in (
+            (absent, {}, ObservationOutcome.PERMISSION_MISSING),
+            ({**absent, "extra": True}, permission,
+             ObservationOutcome.MALFORMED_RESPONSE),
+        ):
+            with self.subTest(data=data, headers=headers):
+                transport = FixtureGETTransport(response(
+                    404, data=data, headers=headers,
+                ))
+                with self.assertRaises(GitHubObservationError) as caught:
+                    GitHubBypassMembershipReader(
+                        client(transport)
+                    ).read_qualified_membership(
+                        target, membership="team"
+                    )
+                self.assertEqual(caught.exception.outcome, outcome)
+
+        with self.assertRaises(ValueError):
+            GitHubBypassMembershipReader(
+                client(FixtureGETTransport())
+            ).read_qualified_membership(
+                organization_target, membership="team"
+            )
+
+    def test_check_collection_walks_every_suite_and_binds_the_exact_sha(self):
+        sha = "c" * 40
+        suites = [
+            {"id": 11, "head_sha": sha},
+            {"id": 12, "head_sha": sha},
+        ]
+        runs = [
+            {"id": 101, "head_sha": sha, "check_suite": {"id": 11}},
+            {"id": 102, "head_sha": sha, "check_suite": {"id": 12}},
+        ]
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 2, "check_suites": suites},
+                headers={"X-GitHub-Request-Id": "suite-page-1"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [runs[0]]},
+                headers={"X-GitHub-Request-Id": "suite-11-runs-1"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [runs[1]]},
+                headers={"X-GitHub-Request-Id": "suite-12-runs-1"},
+            ),
+        )
+        observed = GitHubCheckRunReader(client(transport)).read_all(
+            owner="owner", name="repo", sha=sha
+        )
+        self.assertTrue(observed.complete)
+        self.assertEqual([item["id"] for item in observed.items], [101, 102])
+        self.assertEqual(observed.pages, 3)
+        self.assertEqual(len(observed.audits), 3)
+        self.assertEqual(
+            [call["path"] for call in transport.calls],
+            [
+                f"/repos/owner/repo/commits/{sha}/check-suites?per_page=100",
+                "/repos/owner/repo/check-suites/11/check-runs?per_page=100",
+                "/repos/owner/repo/check-suites/12/check-runs?per_page=100",
+            ],
+        )
+
+        changed = dict(runs[0], head_sha="d" * 40)
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 1, "check_suites": [suites[0]]},
+                headers={"X-GitHub-Request-Id": "suite-page-2"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [changed]},
+                headers={"X-GitHub-Request-Id": "suite-11-runs-2"},
+            ),
+        )
+        with self.assertRaises(GitHubObservationError) as caught:
+            GitHubCheckRunReader(client(transport)).read_all(
+                owner="owner", name="repo", sha=sha
+            )
+        self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
+
+    def test_check_collection_global_page_budget_and_request_ids_fail_closed(self):
+        sha = "c" * 40
+        suites = [
+            {"id": 11, "head_sha": sha},
+            {"id": 12, "head_sha": sha},
+        ]
+        run = {"id": 101, "head_sha": sha, "check_suite": {"id": 11}}
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 2, "check_suites": suites},
+                headers={"X-GitHub-Request-Id": "suite-page-budget"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [run]},
+                headers={"X-GitHub-Request-Id": "suite-11-budget"},
+            ),
+        )
+        observed = GitHubCheckRunReader(
+            client(transport, max_pages=2)
+        ).read_all(
+            owner="owner", name="repo", sha=sha
+        )
+        self.assertFalse(observed.complete)
+        self.assertTrue(observed.truncated)
+        self.assertEqual(len(transport.calls), 2)
+
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 1, "check_suites": [suites[0]]},
+                headers={"X-GitHub-Request-Id": "reused-check-request"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [run]},
+                headers={"X-GitHub-Request-Id": "reused-check-request"},
+            ),
+        )
+        with self.assertRaises(GitHubObservationError) as caught:
+            GitHubCheckRunReader(client(transport)).read_all(
+                owner="owner", name="repo", sha=sha
+            )
+        self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
+
     def test_safe_transient_reads_retry_once_but_rate_limits_do_not(self):
         transport = FixtureGETTransport(
             TimeoutError("contains a secret"), response(data={"id": 1}),
@@ -457,8 +624,10 @@ class GitHubGETClientTests(unittest.TestCase):
                 continue
             if "github_get" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(consumers, [
+        self.assertEqual(sorted(consumers), [
+            "pathfinder_core/adapters/github_checks.py",
             "pathfinder_core/adapters/github_identity.py",
+            "pathfinder_core/adapters/github_memberships.py",
         ])
         identity_consumers = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):
@@ -467,11 +636,26 @@ class GitHubGETClientTests(unittest.TestCase):
             if "GitHubIdentityVerifier(" in path.read_text():
                 identity_consumers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(identity_consumers, [])
+        membership_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_memberships.py":
+                continue
+            if "GitHubBypassMembershipReader(" in path.read_text():
+                membership_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(membership_consumers, [])
+        check_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_checks.py":
+                continue
+            if "GitHubCheckRunReader(" in path.read_text():
+                check_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(check_consumers, [])
         sources = "\n".join(
             (ROOT / "pathfinder_core" / "adapters" / name).read_text()
             for name in (
                 "github_evidence_credentials.py", "github_get.py",
                 "github_get_policy.py", "github_get_transport.py",
+                "github_checks.py", "github_memberships.py",
             )
         )
         self.assertNotIn("os.environ", sources)

@@ -28,8 +28,11 @@ cross-checks the observer App/installation/bot/repository plus the future merge
 App/installation/bot through exact live reads. A dedicated feature read treats the private-plan
 upgrade response as absence only when GitHub also identifies the exact required read permission;
 ordinary 403 remains a permission error. These primitives still do not persist a complete snapshot,
-resolve every membership/ruleset/check-suite surface, bind the controller's last pusher, load a
-credential from the host, or add a caller.
+compose every ruleset/review/check surface, bind the controller's last pusher, load a credential
+from the host, or add a caller. A source-only membership reader now qualifies exact team and
+organization absence and exact repository-role permissions, while the check reader walks suites
+before runs so GitHub's 1,000-suite shortcut cannot hide evidence. Both retain unique request
+audits and fail on identity, permission, pagination, or SHA drift; neither is an installed collector.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full
