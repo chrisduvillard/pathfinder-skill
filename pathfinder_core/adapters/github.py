@@ -41,12 +41,24 @@ class PermissionError(GitHubError):
 
 
 @dataclass(frozen=True)
+class PullRequestIdentity:
+    repository_id: int
+    repository_node_id: str
+    id: int
+    node_id: str
+    number: int
+    head_sha: str
+    base_sha: str
+
+
+@dataclass(frozen=True)
 class PullRequest:
     pr_id: str
     url: str
     head: str
     base: str
     mission_id: str
+    identity: PullRequestIdentity | None = None
 
 
 @dataclass(frozen=True)
@@ -84,8 +96,8 @@ class GitHubPublisher:
         if not 1 <= max_check_polls <= 100:
             raise PolicyError("max_check_polls must be between 1 and 100")
         try:
-            existing = self.backend.find_pull_request(head, base, mission_id)
             self.backend.push(head)
+            existing = self.backend.find_pull_request(head, base, mission_id)
             pull_request = existing or self.backend.create_pull_request(
                 head, base, mission_id, title, body
             )
@@ -110,5 +122,62 @@ class GitHubPublisher:
                 PublicationState.CHECK_TIMEOUT, pull_request, existing is not None,
                 max_check_polls, "required checks remained pending",
             )
+        except GitHubError as error:
+            return PublicationResult(error.state, None, False, 0, str(error))
+
+    def observe(
+        self,
+        *,
+        head: str,
+        base: str,
+        mission_id: str,
+        credential_boundary: str,
+    ) -> PublicationResult:
+        """Observe one exact publication identity without push or PR creation."""
+        if credential_boundary != "publication-only":
+            raise PolicyError(
+                "GitHub credentials must be confined to publication-only boundary"
+            )
+        if (
+            not head.startswith("pathfinder/auto/")
+            or not base
+            or not mission_id.startswith("mission_")
+        ):
+            raise PolicyError("invalid idempotent publication identity")
+        try:
+            pull_request = self.backend.find_pull_request(head, base, mission_id)
+            if pull_request is None:
+                return PublicationResult(
+                    PublicationState.API_UNAVAILABLE,
+                    None,
+                    False,
+                    0,
+                    "exact pull request not found",
+                )
+            state = self.backend.check_state(pull_request)
+            if state is CheckState.SUCCESS:
+                return PublicationResult(
+                    PublicationState.AWAITING_REVIEW,
+                    pull_request,
+                    True,
+                    1,
+                    "required checks passed; human review required",
+                )
+            outcomes = {
+                CheckState.FAILURE: (
+                    PublicationState.CHECKS_FAILED,
+                    "required checks failed",
+                ),
+                CheckState.PENDING: (
+                    PublicationState.CHECK_TIMEOUT,
+                    "required checks remain pending",
+                ),
+                CheckState.UNAVAILABLE: (
+                    PublicationState.API_UNAVAILABLE,
+                    "check state unavailable",
+                ),
+            }
+            outcome, detail = outcomes[state]
+            return PublicationResult(outcome, pull_request, True, 1, detail)
         except GitHubError as error:
             return PublicationResult(error.state, None, False, 0, str(error))

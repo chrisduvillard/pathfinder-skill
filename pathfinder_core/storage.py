@@ -46,6 +46,18 @@ def write_atomic(path: Path, document: dict) -> None:
             temporary.unlink()
 
 
+def canonical_sha256(document: object, hash_field: str | None = None) -> str:
+    payload = document
+    if hash_field is not None:
+        payload = {
+            key: value
+            for key, value in document.items()
+            if key != hash_field
+        }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
 class MissionLock:
     def __init__(self, path: Path, lease_seconds: int = 300):
         self.path = path

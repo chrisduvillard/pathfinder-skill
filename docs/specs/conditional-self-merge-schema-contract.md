@@ -105,3 +105,11 @@ request, restarted reconciliation never credits a pending dispatched operation a
 observation finds matching merged state. The fixture observer can supply a complete dry-run snapshot, while
 the GET-only live boundary cannot collect required GraphQL facts. K5 composition still
 requires the separate security and enablement gates in the security contract.
+
+The source-only publication prerequisite now produces the candidate input shape rather than relying
+on a URL or branch discovery heuristic. Its closed request is authenticated outside repository
+trust and binds the committed mission, authorization, repository, controller branch, exact
+head/base SHAs, and diff hashes. After successful required-check observation, its write-once receipt
+adds the exact PR database id, node id, number, and GitHub URL. The merge authorization candidate is
+a direct projection of that receipt. Pending recovery is read-only; no CLI, enabled mission, or live
+backend currently produces the receipt.

@@ -17,6 +17,16 @@ credited as merged; after restart, a dispatched intent without a terminal result
 reconciliation-required because a local marker cannot prove the remote request began. These interfaces have no
 live implementation in this package; fixture success is not operator enablement.
 
+The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
+controller accepts one fresh authenticated host request, persists that request before dispatch, and
+writes a closed receipt only after the injected publication-only backend returns the exact
+repository and pull-request database/node/number identities, controller head/base refs and SHAs,
+mission-state/authorization binding, diff hashes, GitHub URL, and successful check observation. A
+pending request is never published again; explicit reconciliation performs only exact PR lookup and
+check observation. The source includes no command, live backend, credential loader, ordinary mission
+caller, or installed route. Do not instantiate it manually or interpret its fixture receipt as a
+real published PR.
+
 ## Inspect capabilities
 
 ```bash

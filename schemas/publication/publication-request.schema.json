@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/publication-request.schema.json",
+  "title": "Pathfinder Authenticated Publication Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "publication_request_id", "source", "mission", "repository", "candidate", "title", "body", "max_check_polls", "credential_boundary", "issued_at", "expires_at", "request_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "publication_request_id": {"type": "string", "pattern": "^publication_request_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "source": {"const": "authenticated-controller-publication-request"},
+    "mission": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mission_id", "binding_id", "mission_authorization_id", "mission_state", "mission_state_sha256", "commit_sha"],
+      "properties": {
+        "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "mission_authorization_id": {"type": "string", "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "mission_state": {"const": "committed"},
+        "mission_state_sha256": {"$ref": "#/$defs/sha256"},
+        "commit_sha": {"$ref": "#/$defs/commit"}
+      }
+    },
+    "repository": {"$ref": "#/$defs/repository"},
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["head_ref", "head_sha", "base_ref", "base_sha", "diff"],
+      "properties": {
+        "head_ref": {"$ref": "#/$defs/ref"},
+        "head_sha": {"$ref": "#/$defs/commit"},
+        "base_ref": {"$ref": "#/$defs/ref"},
+        "base_sha": {"$ref": "#/$defs/commit"},
+        "diff": {
+          "type": "object", "additionalProperties": false,
+          "required": ["diff_sha256", "changed_files_sha256", "object_evidence_sha256"],
+          "properties": {
+            "diff_sha256": {"$ref": "#/$defs/sha256"},
+            "changed_files_sha256": {"$ref": "#/$defs/sha256"},
+            "object_evidence_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      }
+    },
+    "title": {"type": "string", "minLength": 1, "maxLength": 256},
+    "body": {"type": "string", "minLength": 1, "maxLength": 65536},
+    "max_check_polls": {"type": "integer", "minimum": 1, "maximum": 100},
+    "credential_boundary": {"const": "publication-only"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "request_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "ref": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"},
+    "repository": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "owner", "name"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "owner": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"}
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/publication-receipt.schema.json",
+  "title": "Pathfinder Authenticated Publication Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "publication_receipt_id", "publication_request_id", "request_sha256", "source", "state", "mission", "repository", "pull_request", "diff", "checks", "reused", "observed_at", "receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "publication_receipt_id": {"type": "string", "pattern": "^publication_receipt_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "publication_request_id": {"type": "string", "pattern": "^publication_request_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "request_sha256": {"$ref": "#/$defs/sha256"},
+    "source": {"const": "authenticated-controller-publication"},
+    "state": {"const": "awaiting-review"},
+    "mission": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mission_id", "binding_id", "mission_authorization_id", "mission_state_sha256"],
+      "properties": {
+        "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "mission_authorization_id": {"type": "string", "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "mission_state_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "repository": {"$ref": "#/$defs/repository"},
+    "pull_request": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "number", "url", "head_ref", "head_sha", "base_ref", "base_sha"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "number": {"type": "integer", "minimum": 1},
+        "url": {"type": "string", "format": "uri", "pattern": "^https://github\\.com/"},
+        "head_ref": {"$ref": "#/$defs/ref"},
+        "head_sha": {"$ref": "#/$defs/commit"},
+        "base_ref": {"$ref": "#/$defs/ref"},
+        "base_sha": {"$ref": "#/$defs/commit"}
+      }
+    },
+    "diff": {
+      "type": "object", "additionalProperties": false,
+      "required": ["diff_sha256", "changed_files_sha256", "object_evidence_sha256"],
+      "properties": {
+        "diff_sha256": {"$ref": "#/$defs/sha256"},
+        "changed_files_sha256": {"$ref": "#/$defs/sha256"},
+        "object_evidence_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "checks": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "polls"],
+      "properties": {
+        "state": {"const": "success"},
+        "polls": {"type": "integer", "minimum": 1, "maximum": 100}
+      }
+    },
+    "reused": {"type": "boolean"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "receipt_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "ref": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"},
+    "repository": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "owner", "name"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "owner": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"}
+      }
+    }
+  }
+}

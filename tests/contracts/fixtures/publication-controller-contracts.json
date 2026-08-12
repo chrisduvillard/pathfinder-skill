@@ -1,0 +1,85 @@
+{
+  "request": {
+    "schema_version": 1,
+    "publication_request_id": "publication_request_example1",
+    "source": "authenticated-controller-publication-request",
+    "mission": {
+      "mission_id": "mission_example1",
+      "binding_id": "binding_example1",
+      "mission_authorization_id": "authorization_example1",
+      "mission_state": "committed",
+      "mission_state_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "commit_sha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "repository": {
+      "id": 123456789,
+      "node_id": "R_kgDOExample1",
+      "owner": "example-owner",
+      "name": "example-repo"
+    },
+    "candidate": {
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "base_ref": "main",
+      "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "diff": {
+        "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb",
+        "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
+        "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
+      }
+    },
+    "title": "Pathfinder fixture publication",
+    "body": "Authenticated mission mission_example1 publication fixture.",
+    "max_check_polls": 3,
+    "credential_boundary": "publication-only",
+    "issued_at": "2026-08-11T12:00:00+00:00",
+    "expires_at": "2026-08-11T12:10:00+00:00",
+    "request_sha256": "34f6cc962a27368bd3754d0bdf958f9ea0ecacc6eaa35250087134704f60dd9e"
+  },
+  "dispatch": {
+    "schema_version": 1,
+    "publication_request_id": "publication_request_example1",
+    "request_sha256": "34f6cc962a27368bd3754d0bdf958f9ea0ecacc6eaa35250087134704f60dd9e",
+    "started_at": "2026-08-11T12:05:00+00:00",
+    "dispatch_sha256": "dbcb1c4c26fd3c21db8e2391d40e4cbf39126e0c2820c0955ee19b760abfc72d"
+  },
+  "receipt": {
+    "schema_version": 1,
+    "publication_receipt_id": "publication_receipt_example1",
+    "publication_request_id": "publication_request_example1",
+    "request_sha256": "34f6cc962a27368bd3754d0bdf958f9ea0ecacc6eaa35250087134704f60dd9e",
+    "source": "authenticated-controller-publication",
+    "state": "awaiting-review",
+    "mission": {
+      "mission_id": "mission_example1",
+      "binding_id": "binding_example1",
+      "mission_authorization_id": "authorization_example1",
+      "mission_state_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    "repository": {
+      "id": 123456789,
+      "node_id": "R_kgDOExample1",
+      "owner": "example-owner",
+      "name": "example-repo"
+    },
+    "pull_request": {
+      "id": 987654321,
+      "node_id": "PR_kwDOExample1",
+      "number": 72,
+      "url": "https://github.com/example-owner/example-repo/pull/72",
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "base_ref": "main",
+      "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "diff": {
+      "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb",
+      "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
+      "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
+    },
+    "checks": {"state": "success", "polls": 1},
+    "reused": false,
+    "observed_at": "2026-08-11T12:06:00+00:00",
+    "receipt_sha256": "9d94f8ec6d4586e09d756070d0c7cf470353cbce32cc5fe0598c52983e212309"
+  }
+}

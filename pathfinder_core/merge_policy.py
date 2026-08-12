@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import fnmatch
-import hashlib
 import json
 import re
 from datetime import datetime
@@ -36,6 +35,7 @@ from .merge_policy_types import (
     UNSUPPORTED_CODES,
 )
 from .protected_surfaces import ProtectedSurfaceRegistry
+from .storage import canonical_sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,14 +72,6 @@ class _Blocks:
             self._items,
             key=lambda item: (item.code.value, item.surface, item.detail),
         ))
-
-
-def canonical_sha256(document: object, hash_field: str | None = None) -> str:
-    payload = document
-    if hash_field is not None:
-        payload = {key: value for key, value in document.items() if key != hash_field}
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(encoded).hexdigest()
 
 
 def _validator(name: str) -> Draft202012Validator:

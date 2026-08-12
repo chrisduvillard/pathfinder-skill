@@ -117,6 +117,33 @@ class GitHubPublisherTests(unittest.TestCase):
         with self.assertRaisesRegex(PolicyError, "publication-only"):
             publish(FixtureBackend(), credential_boundary="shared-with-tests")
 
+    def test_observe_is_read_only_and_never_creates_missing_pull_request(self):
+        backend = FixtureBackend()
+        result = GitHubPublisher(backend).observe(
+            head="pathfinder/auto/test-goal",
+            base="main",
+            mission_id="mission_12345678",
+            credential_boundary="publication-only",
+        )
+        self.assertEqual(result.state, PublicationState.API_UNAVAILABLE)
+        self.assertEqual((backend.pushed, backend.created), (0, 0))
+
+        backend.pr = PullRequest(
+            "pr_12345678",
+            "https://github.com/example/repo/pull/1",
+            "pathfinder/auto/test-goal",
+            "main",
+            "mission_12345678",
+        )
+        result = GitHubPublisher(backend).observe(
+            head="pathfinder/auto/test-goal",
+            base="main",
+            mission_id="mission_12345678",
+            credential_boundary="publication-only",
+        )
+        self.assertEqual(result.state, PublicationState.AWAITING_REVIEW)
+        self.assertEqual((backend.pushed, backend.created), (0, 0))
+
 
 if __name__ == "__main__":
     unittest.main()
