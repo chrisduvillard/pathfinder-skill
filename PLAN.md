@@ -1506,6 +1506,15 @@ branch-ownership fact remains mandatory. The positive-identity/bypass checkbox i
 the composed provenance receipt, while both K5 installed-host readiness items remain unchecked:
 the composer owns no client, credential, durable host store, or installed caller.
 
+**Branch-ownership follow-up (2026-08-12):** a pure, uncalled proof now requires one active,
+repository-scoped ruleset whose only rules restrict controller-branch creation, update, and
+deletion and whose sole always-bypass actor is the authenticated publication App. It then requires
+the complete effective-rule view for the exact controller branch and a final qualified ref read at
+the published SHA, all ordered after the evidence instant with unique request ids. The complete
+evidence composer binds the resulting canonical proof and rejects request-id or identity reuse.
+This closes the source proof shape, not the installed-host gate: no packaged route collects,
+authenticates, or durably persists these inputs, and K5.2 remains closed.
+
 **Composer follow-up (2026-08-12):** the 462-line production adapter exceeds the per-slice estimate
 because it owns the closed backend projection for every observer method, global request/time checks,
 and the separately schema-validated provenance receipt in one auditable boundary. Five focused

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/controller-branch-ownership.schema.json",
+  "title": "Pathfinder Controller Branch Ownership Proof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "ownership_id",
+    "source",
+    "publication_receipt_id",
+    "publication_receipt_sha256",
+    "publication_credential_receipt_id",
+    "publication_credential_receipt_sha256",
+    "repository",
+    "head_ref",
+    "head_sha",
+    "publisher",
+    "ruleset",
+    "observation",
+    "ownership_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "ownership_id": {"type": "string", "pattern": "^controller_branch_ownership_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "source": {"const": "github-active-controller-branch-rules"},
+    "publication_receipt_id": {"type": "string", "pattern": "^publication_receipt_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "publication_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "publication_credential_receipt_id": {"type": "string", "pattern": "^publication_credential_receipt_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "publication_credential_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node_id", "owner", "name"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 39},
+        "name": {"type": "string", "minLength": 1, "maxLength": 100}
+      }
+    },
+    "head_ref": {"type": "string", "pattern": "^pathfinder/auto/[A-Za-z0-9._/-]{1,220}$"},
+    "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "publisher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_id", "app_node_id", "actor_id", "actor_node_id", "login"],
+      "properties": {
+        "app_id": {"type": "integer", "minimum": 1},
+        "app_node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "actor_id": {"type": "integer", "minimum": 1},
+        "actor_node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}
+      }
+    },
+    "ruleset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node_id", "source_type", "source", "updated_at", "bypass_mode", "required_rules"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "source_type": {"const": "Repository"},
+        "source": {"type": "string", "minLength": 3, "maxLength": 140},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "bypass_mode": {"const": "always"},
+        "required_rules": {"const": ["creation", "deletion", "update"]}
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_completed_at", "observed_at", "completed_at", "request_ids", "request_ids_sha256"],
+      "properties": {
+        "evidence_completed_at": {"type": "string", "format": "date-time"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "request_ids": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 256}
+        },
+        "request_ids_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "ownership_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

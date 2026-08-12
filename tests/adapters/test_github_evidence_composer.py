@@ -4,6 +4,9 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
+from pathfinder_core.adapters.github_branch_ownership import (
+    GitHubControllerBranchOwnershipProver,
+)
 from pathfinder_core.adapters.github_evidence_composer import (
     GitHubCompleteEvidenceComposer,
 )
@@ -23,7 +26,18 @@ from pathfinder_core.adapters.github_merge_observer import (
     PageResponse,
     RequestAudit,
 )
+from pathfinder_core.adapters.github_publication_reconciliation import (
+    GitHubPublicationReconciler,
+)
 from pathfinder_core.storage import canonical_sha256
+from tests.adapters.test_github_branch_ownership import (
+    COMPLETED as OWNERSHIP_COMPLETED,
+    OBSERVED as OWNERSHIP_OBSERVED,
+    branch_ref,
+    credential_receipt,
+    effective_rules,
+    ruleset_response,
+)
 from tests.adapters.test_github_merge_observer import (
     FixtureObservationBackend,
     audit,
@@ -72,10 +86,29 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             "permission_qualified": True,
         })
         self.graphql = self._graphql()
+        self.branch_ownership = self._branch_ownership()
         self.rest_reviews = self._reviews()
         self.identity = self._identity()
         self.classic_policy = self._classic_policy()
         self.active_policy = self._active_policy()
+
+    def _branch_ownership(self):
+        pusher = GitHubPublicationReconciler.reconcile(
+            publication_request=self.publication_request,
+            publication_receipt=self.publication_receipt,
+            graphql=self.graphql,
+        )
+        return GitHubControllerBranchOwnershipProver.prove(
+            controller_pusher=pusher,
+            publication_credential_receipt=credential_receipt(),
+            ruleset=ruleset_response(),
+            effective_rules=effective_rules(),
+            branch_ref=branch_ref(),
+            evidence_completed_at=self.context["completed_at"],
+            observed_at=OWNERSHIP_OBSERVED,
+            completed_at=OWNERSHIP_COMPLETED,
+            ownership_id="controller_branch_ownership_composer1",
+        )
 
     def _graphql(self):
         repository = copy.deepcopy(self.publication_receipt["repository"])
@@ -230,6 +263,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             "observer_identity": self.identity,
             "publication_request": self.publication_request,
             "publication_receipt": self.publication_receipt,
+            "branch_ownership": self.branch_ownership,
             "graphql": self.graphql,
             "rest_reviews": self.rest_reviews,
             "host_policy_checks": [{
@@ -260,6 +294,10 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             "context": "preflight (ubuntu-latest)", "app_id": 15368,
         }])
         self.assertEqual(provenance["evidence_sha256"], evidence["evidence_sha256"])
+        self.assertEqual(
+            provenance["branch_ownership_sha256"],
+            self.branch_ownership["ownership_sha256"],
+        )
         self.assertEqual(
             provenance["provenance_sha256"],
             canonical_sha256(provenance, "provenance_sha256"),
@@ -296,6 +334,14 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         with self.assertRaises(GitHubObservationError):
             self.compose(classic_check_policy=different_audit)
 
+        ownership = copy.deepcopy(self.branch_ownership)
+        ownership["head_sha"] = "d" * 40
+        ownership["ownership_sha256"] = canonical_sha256(
+            ownership, "ownership_sha256"
+        )
+        with self.assertRaisesRegex(GitHubObservationError, "ownership"):
+            self.compose(branch_ownership=ownership)
+
     def test_duplicate_cross_surface_request_identity_fails_closed(self):
         graph = replace(
             self.graphql,
@@ -305,6 +351,17 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(GitHubObservationError, "duplicated"):
             self.compose(graphql=graph)
+
+        ownership = copy.deepcopy(self.branch_ownership)
+        ownership["observation"]["request_ids"][0] = "req-pull-request-1"
+        ownership["observation"]["request_ids_sha256"] = canonical_sha256(
+            ownership["observation"]["request_ids"]
+        )
+        ownership["ownership_sha256"] = canonical_sha256(
+            ownership, "ownership_sha256"
+        )
+        with self.assertRaisesRegex(GitHubObservationError, "duplicated"):
+            self.compose(branch_ownership=ownership)
 
     def test_malformed_identity_and_out_of_window_audit_fail_closed(self):
         malformed = replace(
@@ -337,6 +394,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             self.identity,
             self.publication_request,
             self.publication_receipt,
+            self.branch_ownership,
             self.graphql,
             self.rest_reviews,
         ))
@@ -346,6 +404,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             self.identity,
             self.publication_request,
             self.publication_receipt,
+            self.branch_ownership,
             self.graphql,
             self.rest_reviews,
         ))

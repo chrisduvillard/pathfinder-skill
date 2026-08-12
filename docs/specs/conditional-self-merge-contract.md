@@ -228,6 +228,16 @@ Malformed documents, hash drift, request/receipt actor drift, stale observations
 duplicate request ids, or object/ref/SHA drift block. This pure check has no caller and does not
 authenticate host storage or prove exclusive branch ownership against a later same-SHA push.
 
+A separate pure source-only ownership prover closes that missing proof shape. It accepts only a
+canonical one-repository publication credential receipt whose bot identity matches the reconciled
+pusher; one active repository branch ruleset dedicated to restricting creation, update, and
+deletion; exactly that publication App as the sole `always` bypass actor; the complete effective
+rules returned for the exact controller branch; and a final qualified ref read at the published
+SHA. Ruleset, effective-rule, and ref requests must be unique, ordered, permission-qualified, and
+at or after the evidence completion instant. Missing rules, another bypass actor, fetch-and-merge,
+stale or incomplete reads, endpoint drift, request reuse, or identity/SHA drift block. The proof
+has no client, credential loader, storage, command, or installed caller.
+
 The source-only GraphQL projector requires the exact publication-pusher proof and the identical
 repository, PR database/node/number, head/base repositories, refs, and SHAs. It accepts only the
 schema-pinned query hash, complete latest-review/review-request/review-thread connections, unique
@@ -241,15 +251,16 @@ One pure source-only composer now binds these primitives together. It requires t
 one-repository observer receipt and all four App/installation/bot/repository audits, the canonical
 publication request/receipt pair, the fixed-query GraphQL snapshot, the complete permission-
 qualified REST review history, host/classic/ruleset required-check union, exact check/status pages,
-and every remaining normalized REST family. It emits one schema-valid evidence document plus a
+every remaining normalized REST family, and the canonical controller-branch ownership proof. It
+emits one schema-valid evidence document plus a
 separately hashed provenance receipt bound to the evidence hash, credential/publication receipt
-hashes, query hash, reconciled review ids, required checks, request-id hash, and collection window.
-Cross-surface request reuse or any split identity/policy/review/check input blocks. The composer owns
-no client, credential, storage, command, or caller, so it is not an installed production collector.
-The installed host must additionally authenticate the publication journal and prove exclusive
-controller branch ownership through the evidence instant. The system must not substitute UI text or omit those
-facts. Conditional merge therefore remains unsupported
-for live use.
+hashes, ownership proof, query hash, reconciled review ids, required checks, request-id hash, and
+collection window. Cross-surface request reuse or any split identity/policy/review/check/ownership
+input blocks. The composer owns no client, credential, storage, command, or caller, so it is not an
+installed production collector. The installed host must additionally authenticate the publication
+journal, ownership proof, and evidence/provenance pair in durable storage. The system must not
+substitute UI text or omit those facts. Conditional merge therefore remains unsupported for live
+use.
 
 ## Typed block and result contract
 

@@ -30,10 +30,14 @@ upgrade response as absence only when GitHub also identifies the exact required 
 ordinary 403 remains a permission error. A pure source-only composer now requires the verified
 observer receipt and all identity audits, authenticated publication receipt, fixed-query GraphQL
 projection, reconciled REST reviews, policy-derived required checks, exact check/status pages, and
-the remaining normalized REST families. It emits one schema-valid evidence document plus a
+the remaining normalized REST families and a canonical controller-branch ownership proof. It
+emits one schema-valid evidence document plus a
 separately hashed provenance receipt bound to the evidence, credential/publication receipts,
-reviews, checks, request identities, and collection window. It still does not authenticate durable
-host storage, prove installed branch ownership, load a credential from the host, or add a caller. A
+reviews, checks, request identities, and collection window. The ownership proof requires restricted
+create/update/delete rules, the authenticated publication App as the sole always-bypass actor, the
+complete effective-rule view for the exact head branch, and a final exact ref/SHA reread after
+evidence collection. It still does not authenticate durable host storage, install a collector,
+load a credential from the host, or add a caller. A
 source-only membership reader now qualifies exact team and
 organization absence and exact repository-role permissions, while the check reader walks suites
 before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader

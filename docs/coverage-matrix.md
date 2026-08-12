@@ -15,7 +15,7 @@
 | One local commit and zero PRs in the enabled bridge | mission idempotency tests; `host-bridge-local` replay maxima; separate GitHub primitive fixtures |
 | No remote publication in enabled routes | package-wide caller guard rejects publication-controller and lower-level publisher construction, concrete generic/exact GitHub backends, publication commands, and installed-route imports |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
-| Source-only complete merge evidence | composer regressions bind observer/publication receipts, GraphQL/REST reviews, policy/check projections, every request id, and a canonical provenance receipt; package caller guards remain zero |
+| Source-only complete merge evidence | composer regressions bind observer/publication receipts, GraphQL/REST reviews, policy/check projections, every request id, a sole-publication-App branch-ownership proof, and canonical provenance; package caller guards remain zero |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |
 | Safe Git/worktrees | dirty-tree, hook-neutralization, symlink escape, and cleanup-refusal tests |
 | Optional live conversational quality | bounded advisory cases under `evals/live/`; explicitly non-required/non-guaranteeing |

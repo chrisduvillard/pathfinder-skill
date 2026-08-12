@@ -106,10 +106,13 @@ observation finds matching merged state. The fixture observer can supply a compl
 snapshot. A pure uncalled composer now requires the verified observer receipt/identity audits,
 authenticated publication receipt, fixed-query GraphQL projection, reconciled REST reviews,
 policy-derived required checks, exact check/status pages, and the remaining normalized REST
-families before it emits evidence plus a canonical evidence-hash-bound provenance receipt. It owns
-no client, token, storage, or installed caller and does not prove exclusive controller-branch
-ownership, so it is not a live collector. K5 composition still requires the separate security and
-enablement gates in the security contract.
+families plus a canonical controller-branch ownership proof before it emits evidence and an
+evidence-hash-bound provenance receipt. The ownership proof binds an authenticated publication-App
+receipt to an active repository ruleset with restricted create/update/delete operations, that App
+as the sole always-bypass actor, the complete effective-rule view for the exact head branch, and a
+final exact ref/SHA reread after the evidence instant. It owns no client, token, storage, or
+installed caller, so it is not a live collector. K5 composition still requires the separate
+trusted-host, security, and enablement gates in the security contract.
 
 The source-only publication prerequisite now produces the candidate input shape rather than relying
 on a URL or branch discovery heuristic. Its closed request is authenticated outside repository

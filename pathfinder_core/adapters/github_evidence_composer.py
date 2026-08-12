@@ -8,6 +8,7 @@ from typing import Mapping, Sequence
 from jsonschema import Draft202012Validator, FormatChecker
 
 from ..storage import canonical_sha256, read_json
+from .github_branch_ownership import GitHubControllerBranchOwnershipProver
 from .github_check_policy import GitHubRequiredCheckProjector
 from .github_evidence_credentials import GitHubEvidenceCredentialReceipt
 from .github_get import QualifiedFeatureResponse
@@ -289,6 +290,7 @@ class GitHubCompleteEvidenceComposer:
         observer_identity: VerifiedObserverIdentity,
         publication_request: Mapping[str, object],
         publication_receipt: Mapping[str, object],
+        branch_ownership: Mapping[str, object],
         graphql: GraphQLPullRequestSnapshot,
         rest_reviews: PageResponse,
         host_policy_checks: Sequence[Mapping[str, object]],
@@ -354,6 +356,32 @@ class GitHubCompleteEvidenceComposer:
         projection = GitHubGraphQLProjector.project(
             graphql=graphql, controller_pusher=pusher
         )
+        GitHubControllerBranchOwnershipProver.validate_document(branch_ownership)
+        ownership_repository = branch_ownership["repository"]
+        ownership_publisher = branch_ownership["publisher"]
+        ownership_observation = branch_ownership["observation"]
+        if (
+            branch_ownership["publication_receipt_id"]
+            != pusher.publication_receipt_id
+            or branch_ownership["publication_receipt_sha256"]
+            != pusher.publication_receipt_sha256
+            or ownership_repository != {
+                "id": pusher.repository_id,
+                "node_id": pusher.repository_node_id,
+                "owner": pusher.repository_owner,
+                "name": pusher.repository_name,
+            }
+            or branch_ownership["head_ref"] != pusher.head_ref
+            or branch_ownership["head_sha"] != pusher.head_sha
+            or ownership_publisher["actor_id"] != pusher.last_pusher_id
+            or ownership_publisher["actor_node_id"] != pusher.actor_node_id
+            or ownership_publisher["login"] != pusher.actor_login
+            or ownership_observation["evidence_completed_at"] != completed_at
+        ):
+            raise _fail(
+                "branch-ownership",
+                "branch ownership and composed publication identities differ",
+            )
         reconciled_reviews = GitHubReviewReconciler.reconcile(
             rest_reviews=rest_reviews, graphql=graphql
         )
@@ -422,7 +450,11 @@ class GitHubCompleteEvidenceComposer:
         evidence = result.evidence
         requests = evidence["observation"]["requests"]
         request_ids = [value["request_id"] for value in requests]
-        if len(request_ids) != len(set(request_ids)):
+        ownership_request_ids = ownership_observation["request_ids"]
+        if (
+            len(request_ids) != len(set(request_ids))
+            or set(request_ids) & set(ownership_request_ids)
+        ):
             raise _fail("evidence-composition", "composed requests are duplicated")
         request_times = [
             _time(value["observed_at"], "evidence-composition")
@@ -447,6 +479,8 @@ class GitHubCompleteEvidenceComposer:
             ],
             "publication_receipt_id": pusher.publication_receipt_id,
             "publication_receipt_sha256": pusher.publication_receipt_sha256,
+            "branch_ownership_id": branch_ownership["ownership_id"],
+            "branch_ownership_sha256": branch_ownership["ownership_sha256"],
             "graphql_query_sha256": projection.query_sha256,
             "reconciled_review_ids": list(reconciled_reviews),
             "required_checks": list(required_checks),
