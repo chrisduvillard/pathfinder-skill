@@ -117,53 +117,6 @@ class GitHubBypassMembershipReader:
             )
         return QualifiedMembershipResponse(None, response.status, audit)
 
-    def read_qualified_repository_permission(
-        self, target: str
-    ) -> QualifiedMembershipResponse:
-        if re.fullmatch(
-            r"/repos/[^/]+/[^/]+/collaborators/[^/]+/permission", target
-        ) is None:
-            raise ValueError("GitHub repository permission target is unsupported")
-        response = self.client._response("bypass-memberships", target)
-        decoded = self.client._decode_json("bypass-memberships", response)
-        if response.status != 200:
-            raise GitHubObservationError(
-                ObservationOutcome.MALFORMED_RESPONSE,
-                "bypass-memberships",
-                "GitHub repository permission returned an unexpected status",
-            )
-        accepted = {
-            item.strip().lower()
-            for item in decoded.headers.get(
-                "x-accepted-github-permissions", ""
-            ).split(";")
-            if item.strip()
-        }
-        if "metadata=read" not in accepted:
-            raise GitHubObservationError(
-                ObservationOutcome.PERMISSION_MISSING,
-                "bypass-memberships",
-                "GitHub repository permission response did not qualify Metadata read",
-            )
-        if not isinstance(decoded.data, Mapping):
-            raise GitHubObservationError(
-                ObservationOutcome.MALFORMED_RESPONSE,
-                "bypass-memberships",
-                "GitHub repository permission response is not an object",
-            )
-        return QualifiedMembershipResponse(
-            decoded.data,
-            response.status,
-            RequestAudit(
-                decoded.audit.request_id,
-                decoded.audit.observed_at,
-                decoded.audit.etag,
-                target,
-                response.status,
-                True,
-            ),
-        )
-
     @staticmethod
     def _target(value: Mapping[str, object], index: int) -> dict:
         surface = f"bypass-memberships[{index}]"
@@ -358,7 +311,9 @@ class GitHubBypassMembershipReader:
                     f"/repos/{escaped_owner}/{escaped_name}/collaborators/"
                     f"{escaped_login}/permission"
                 )
-                response = self.read_qualified_repository_permission(endpoint)
+                response = self.client.get_qualified_repository_permission(
+                    "bypass-memberships", endpoint
+                )
                 data = response.data
                 if data is None or set(data) != {"permission", "role_name", "user"}:
                     raise _fail(

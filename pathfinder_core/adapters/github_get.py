@@ -326,6 +326,54 @@ class GitHubGETClient:
             )
         return QualifiedFeatureResponse(None, response.status, audit)
 
+    def get_qualified_repository_permission(
+        self, surface: str, target: str
+    ) -> QualifiedFeatureResponse:
+        """Read one exact collaborator permission with positive scope evidence."""
+        if surface not in {"bypass-memberships", "reviews"} or re.fullmatch(
+            r"/repos/[^/]+/[^/]+/collaborators/[^/]+/permission", target
+        ) is None:
+            raise ValueError("GitHub repository permission target is unsupported")
+        response = self._response(surface, target)
+        decoded = self._decode_json(surface, response)
+        if response.status != 200:
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub repository permission returned an unexpected status",
+            )
+        accepted = {
+            item.strip().lower()
+            for item in decoded.headers.get(
+                "x-accepted-github-permissions", ""
+            ).split(";")
+            if item.strip()
+        }
+        if "metadata=read" not in accepted:
+            raise GitHubObservationError(
+                ObservationOutcome.PERMISSION_MISSING,
+                surface,
+                "GitHub repository permission response did not qualify Metadata read",
+            )
+        if not isinstance(decoded.data, Mapping):
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub repository permission response is not an object",
+            )
+        return QualifiedFeatureResponse(
+            decoded.data,
+            response.status,
+            RequestAudit(
+                decoded.audit.request_id,
+                decoded.audit.observed_at,
+                decoded.audit.etag,
+                target,
+                response.status,
+                True,
+            ),
+        )
+
     def get_endpoint(self, surface: str, target: str) -> EndpointResponse:
         response = self.get_json(surface, target)
         if not isinstance(response.data, Mapping):

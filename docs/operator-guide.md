@@ -31,8 +31,11 @@ ordinary 403 remains a permission error. These primitives still do not persist a
 compose every ruleset/review/check surface, bind the controller's last pusher, load a credential
 from the host, or add a caller. A source-only membership reader now qualifies exact team and
 organization absence and exact repository-role permissions, while the check reader walks suites
-before runs so GitHub's 1,000-suite shortcut cannot hide evidence. Both retain unique request
-audits and fail on identity, permission, pagination, or SHA drift; neither is an installed collector.
+before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader
+fully paginates the REST review audit and reads one exact repository permission for every unique
+review actor, requiring positive `Metadata=read` evidence and cross-checking the returned actor.
+These readers retain distinct request audits and fail on identity, permission, pagination, request
+budget, or SHA drift; none is an installed collector.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full
