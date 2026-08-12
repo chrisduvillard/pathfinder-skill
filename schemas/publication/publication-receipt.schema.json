@@ -4,7 +4,7 @@
   "title": "Pathfinder Authenticated Publication Receipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "publication_receipt_id", "publication_request_id", "request_sha256", "source", "state", "mission", "repository", "pull_request", "diff", "checks", "reused", "observed_at", "receipt_sha256"],
+  "required": ["schema_version", "publication_receipt_id", "publication_request_id", "request_sha256", "source", "state", "mission", "repository", "head_push", "pull_request", "diff", "checks", "reused", "observed_at", "receipt_sha256"],
   "properties": {
     "schema_version": {"const": 1},
     "publication_receipt_id": {"type": "string", "pattern": "^publication_receipt_[a-z0-9][a-z0-9_-]{7,63}$"},
@@ -24,6 +24,19 @@
       }
     },
     "repository": {"$ref": "#/$defs/repository"},
+    "head_push": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "actor_id", "actor_node_id", "login", "repository_id", "head_ref", "head_sha"],
+      "properties": {
+        "source": {"const": "authenticated-controller-publication"},
+        "actor_id": {"type": "integer", "minimum": 1},
+        "actor_node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"},
+        "repository_id": {"type": "integer", "minimum": 1},
+        "head_ref": {"$ref": "#/$defs/ref"},
+        "head_sha": {"$ref": "#/$defs/commit"}
+      }
+    },
     "pull_request": {
       "type": "object", "additionalProperties": false,
       "required": ["id", "node_id", "number", "url", "head_ref", "head_sha", "base_ref", "base_sha"],

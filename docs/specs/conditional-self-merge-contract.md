@@ -217,11 +217,21 @@ bindings, identity drift, nonchronological history, incomplete pagination, dupli
 cross-protocol request-id reuse block. This pure check has no caller and does not compose review
 requests, threads, or a complete snapshot.
 
+The source-only publication reconciler validates the canonical authenticated publication request
+and terminal receipt together, including the request's publication bot database/node/login identity
+and the receipt's exact repository/ref/SHA push attestation. It then requires a fixed-query GraphQL
+observation at or after publication whose repository, PR database/node/number, head/base repository,
+refs, and SHAs are identical, and projects the controller bot database id for `last_pusher_id`.
+Malformed documents, hash drift, request/receipt actor drift, stale observations, query drift,
+duplicate request ids, or object/ref/SHA drift block. This pure check has no caller and does not
+authenticate host storage or prove exclusive branch ownership against a later same-SHA push.
+
 These primitives are still not the production collector: no source composes all REST and GraphQL
 families, records the credential receipt and every identity audit in a normalized snapshot,
 transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
-sets, binds those supplied check-policy/candidate inputs into a complete snapshot, or binds the
-authenticated controller's exact last pusher. The system must not substitute UI text or omit those
+sets, or binds those supplied policy/candidate/reconciled-pusher inputs into a complete snapshot.
+The installed host must additionally authenticate the publication journal and prove exclusive
+controller branch ownership through the evidence instant. The system must not substitute UI text or omit those
 facts. Conditional merge therefore remains unsupported
 for live use.
 
@@ -309,14 +319,16 @@ envelope is authenticated.
 The prerequisite publication boundary is also source-only and uncomposed. A fresh authenticated
 host request embeds and canonically binds the full explicit GitHub-awaiting-review authorization,
 its one-PR ceiling, one committed mission, repository, controller branch, exact head/base SHAs,
-canonical diff/file/object hashes, and required check context/App identities. It is journaled before
+canonical diff/file/object hashes, required check context/App identities, and the authenticated
+publication credential's bot database/node/login identity. It is journaled before
 the injected publication-only backend may act. That backend must first perform a read-only preflight
 and return the identical repository/ref/commit/diff/check target; mismatch blocks before push or PR
 creation. Neither publication nor reconciliation accepts a caller-selected timestamp; freshness
 and observation time come only from the injected authenticated-host clock. Successful
 awaiting-review publication writes a closed authenticated receipt containing
 repository identity plus PR database id, node id, number, URL, exact refs/SHAs, mission-state and
-authorization hashes, diff, and each successful check's exact context, App id, and head SHA. The
+authorization hashes, diff, the publication bot identity bound to the exact repository/ref/SHA
+push, and each successful check's exact context, App id, and head SHA. The
 write-once dispatch marker is persisted under lock, then the lock is released before the remote
 callback so actual process death cannot strand reconciliation. A pending request cannot be
 published again; explicit recovery can only find the same exact PR and observe checks. No installed

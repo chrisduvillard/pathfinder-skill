@@ -290,6 +290,15 @@ class PublicationJournal:
             or dispatch["request_sha256"] != request["request_sha256"]
             or receipt["mission"] != expected_mission
             or receipt["repository"] != request["repository"]
+            or receipt["head_push"] != {
+                "source": "authenticated-controller-publication",
+                "actor_id": request["publication_actor"]["actor_id"],
+                "actor_node_id": request["publication_actor"]["actor_node_id"],
+                "login": request["publication_actor"]["login"],
+                "repository_id": request["repository"]["id"],
+                "head_ref": request["candidate"]["head_ref"],
+                "head_sha": request["candidate"]["head_sha"],
+            }
             or any(
                 receipt["pull_request"][key] != value
                 for key, value in expected_pull.items()

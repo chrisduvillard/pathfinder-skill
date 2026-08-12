@@ -490,7 +490,10 @@ class GitHubGraphQLClientTests(unittest.TestCase):
                 consumers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(
             consumers,
-            ["pathfinder_core/adapters/github_review_reconciliation.py"],
+            [
+                "pathfinder_core/adapters/github_review_reconciliation.py",
+                "pathfinder_core/adapters/github_publication_reconciliation.py",
+            ],
         )
         constructors = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):
@@ -502,7 +505,9 @@ class GitHubGraphQLClientTests(unittest.TestCase):
         source = "\n".join(
             (ROOT / "pathfinder_core/adapters" / name).read_text()
             for name in (
-                "github_graphql.py", "github_review_reconciliation.py",
+                "github_graphql.py",
+                "github_publication_reconciliation.py",
+                "github_review_reconciliation.py",
             )
         )
         self.assertNotIn("os.environ", source)

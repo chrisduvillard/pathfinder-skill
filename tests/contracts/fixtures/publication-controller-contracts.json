@@ -41,6 +41,12 @@
       "owner": "example-owner",
       "name": "example-repo"
     },
+    "publication_actor": {
+      "source": "authenticated-host-publication-credential",
+      "actor_id": 97531,
+      "actor_node_id": "U_kgDOBot1234",
+      "login": "pathfinder-publication[bot]"
+    },
     "candidate": {
       "head_ref": "pathfinder/auto/example1",
       "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
@@ -61,20 +67,20 @@
     "credential_boundary": "publication-only",
     "issued_at": "2026-08-11T12:00:00+00:00",
     "expires_at": "2026-08-11T12:10:00+00:00",
-    "request_sha256": "325af8fed0beada212f107d754e074be71ad72d64f9ea1f3ae5164a3d5791ffb"
+    "request_sha256": "8c31dde4edb24c39950bf4147c3fce8f1009541902ae05c8789ea16a47d12f86"
   },
   "dispatch": {
     "schema_version": 1,
     "publication_request_id": "publication_request_example1",
-    "request_sha256": "325af8fed0beada212f107d754e074be71ad72d64f9ea1f3ae5164a3d5791ffb",
+    "request_sha256": "8c31dde4edb24c39950bf4147c3fce8f1009541902ae05c8789ea16a47d12f86",
     "started_at": "2026-08-11T12:05:00+00:00",
-    "dispatch_sha256": "b3553353323ca600e837b48c38521345a1d6c883fcc67dd48d83655dc5a43415"
+    "dispatch_sha256": "20cf0e1c9223ac8965e6784f4b93992d0e515a4c781c818b3a60e3426fbe3e58"
   },
   "receipt": {
     "schema_version": 1,
     "publication_receipt_id": "publication_receipt_example1",
     "publication_request_id": "publication_request_example1",
-    "request_sha256": "325af8fed0beada212f107d754e074be71ad72d64f9ea1f3ae5164a3d5791ffb",
+    "request_sha256": "8c31dde4edb24c39950bf4147c3fce8f1009541902ae05c8789ea16a47d12f86",
     "source": "authenticated-controller-publication",
     "state": "awaiting-review",
     "mission": {
@@ -89,6 +95,15 @@
       "node_id": "R_kgDOExample1",
       "owner": "example-owner",
       "name": "example-repo"
+    },
+    "head_push": {
+      "source": "authenticated-controller-publication",
+      "actor_id": 97531,
+      "actor_node_id": "U_kgDOBot1234",
+      "login": "pathfinder-publication[bot]",
+      "repository_id": 123456789,
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
     },
     "pull_request": {
       "id": 987654321,
@@ -118,6 +133,6 @@
     },
     "reused": false,
     "observed_at": "2026-08-11T12:06:00+00:00",
-    "receipt_sha256": "8d83967570597d7f4a8429649b210d0f9084ed0bd13f7b0afcc7c90eb79d84da"
+    "receipt_sha256": "5ea86ffc28933057705c39b4da0db3215d4e169910b3b29974e2b2fa1fddab87"
   }
 }

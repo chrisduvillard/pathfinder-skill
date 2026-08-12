@@ -137,6 +137,43 @@ class PublicationControllerSchemaTests(unittest.TestCase):
                 )
                 self.validate("request", changed)
 
+    def test_publication_actor_and_push_attestation_are_closed(self):
+        request_cases = (
+            ("source", "caller-asserted"),
+            ("actor_id", 0),
+            ("actor_node_id", ""),
+            ("login", "human-user"),
+        )
+        for field, value in request_cases:
+            with self.subTest(document="request", field=field), self.assertRaises(
+                Exception
+            ):
+                changed = copy.deepcopy(self.bundle["request"])
+                changed["publication_actor"][field] = value
+                changed["request_sha256"] = canonical_sha256(
+                    changed, "request_sha256"
+                )
+                self.validate("request", changed)
+
+        receipt_cases = (
+            ("source", "caller-asserted"),
+            ("actor_id", 0),
+            ("actor_node_id", ""),
+            ("login", "human-user"),
+            ("repository_id", 0),
+            ("head_sha", "f" * 39),
+        )
+        for field, value in receipt_cases:
+            with self.subTest(document="receipt", field=field), self.assertRaises(
+                Exception
+            ):
+                changed = copy.deepcopy(self.bundle["receipt"])
+                changed["head_push"][field] = value
+                changed["receipt_sha256"] = canonical_sha256(
+                    changed, "receipt_sha256"
+                )
+                self.validate("receipt", changed)
+
     def test_default_packaged_routes_have_zero_publication_or_merge_composition(self):
         packaged = {}
         for path in (ROOT / "pathfinder_core").rglob("*.py"):

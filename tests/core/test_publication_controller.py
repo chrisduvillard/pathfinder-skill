@@ -196,6 +196,20 @@ class PublicationControllerTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(first.state, "awaiting-review")
         self.assertEqual(first.receipt, self.bundle["receipt"])
+        self.assertEqual(
+            first.receipt["head_push"],
+            {
+                "source": "authenticated-controller-publication",
+                "actor_id": self.request["publication_actor"]["actor_id"],
+                "actor_node_id": self.request["publication_actor"][
+                    "actor_node_id"
+                ],
+                "login": self.request["publication_actor"]["login"],
+                "repository_id": self.request["repository"]["id"],
+                "head_ref": self.request["candidate"]["head_ref"],
+                "head_sha": self.request["candidate"]["head_sha"],
+            },
+        )
         self.assertEqual((backend.pushes, backend.creates), (1, 1))
         self.assertEqual(reader.calls, [(self.envelope.envelope_id, STARTED)])
 
@@ -372,6 +386,9 @@ class PublicationControllerTests(unittest.TestCase):
             target.changed_files_sha256,
             target.object_evidence_sha256,
             target.required_checks,
+            target.publication_actor_id,
+            target.publication_actor_node_id,
+            target.publication_actor_login,
         )
         backend = ExactBackend(preflight=wrong)
         controller, _reader = self.controller(backend)

@@ -163,6 +163,9 @@ class PublicationController:
                 RequiredCheck(check["context"], check["app_id"])
                 for check in request["required_checks"]
             ),
+            request["publication_actor"]["actor_id"],
+            request["publication_actor"]["actor_node_id"],
+            request["publication_actor"]["login"],
         )
 
     @staticmethod
@@ -198,6 +201,15 @@ class PublicationController:
                 )
             },
             "repository": request["repository"],
+            "head_push": {
+                "source": "authenticated-controller-publication",
+                "actor_id": request["publication_actor"]["actor_id"],
+                "actor_node_id": request["publication_actor"]["actor_node_id"],
+                "login": request["publication_actor"]["login"],
+                "repository_id": request["repository"]["id"],
+                "head_ref": request["candidate"]["head_ref"],
+                "head_sha": request["candidate"]["head_sha"],
+            },
             "pull_request": {
                 "id": identity.id,
                 "node_id": identity.node_id,

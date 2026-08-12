@@ -28,7 +28,7 @@ cross-checks the observer App/installation/bot/repository plus the future merge
 App/installation/bot through exact live reads. A dedicated feature read treats the private-plan
 upgrade response as absence only when GitHub also identifies the exact required read permission;
 ordinary 403 remains a permission error. These primitives still do not persist a complete snapshot,
-compose every ruleset/review/check surface, bind the controller's last pusher, load a credential
+compose every ruleset/review/check surface, prove installed branch ownership, load a credential
 from the host, or add a caller. A source-only membership reader now qualifies exact team and
 organization absence and exact repository-role permissions, while the check reader walks suites
 before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader
@@ -45,18 +45,25 @@ uncalled pure projector can now form that union from the host floor, qualified c
 and all completely paginated active rules; it rejects any unpinned or contradictory check identity.
 An uncalled pure review reconciler also requires the GraphQL latest-opinionated record for every
 actor to match the exact record selected from the complete chronological, permission-qualified REST
-history. These source pieces still are not a complete collector or an installed runtime route.
+history. A second pure reconciler validates the canonical publication request and receipt, requires
+a later fixed-query GraphQL view of the identical repository, PR, refs, and commits, and projects the
+authenticated controller bot id carried through publication preflight and the exact push receipt.
+It does not authenticate storage or prove that an installed host prevented a different actor from
+pushing the same commit later. These source pieces still are not a complete collector or an
+installed runtime route.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full
-explicit GitHub-awaiting-review authorization and one-PR ceiling. Before mutation, its injected
+explicit GitHub-awaiting-review authorization, one-PR ceiling, and publication bot database/node/
+login identity. Before mutation, its injected
 publication-only backend must read-only preflight the exact repository, refs, commits, diff hashes,
-and required check context/App pairs. Publication and reconciliation accept no caller-selected
+required check context/App pairs, and bot identity. Publication and reconciliation accept no caller-selected
 timestamp; only the injected trusted host clock can establish freshness and receipt time. The
 controller writes a closed receipt only after the backend returns
 the exact repository and pull-request database/node/number identities, controller head/base refs
 and SHAs, mission-state/authorization binding, diff hashes, GitHub URL, and successful check
-context/App/head-SHA observations. Dispatch is persisted before the remote callback without holding
+context/App/head-SHA observations. The same receipt attests the exact bot id/node/login against the
+repository, controller ref, and head SHA. Dispatch is persisted before the remote callback without holding
 the journal lock across that callback, so process death leaves a recoverable pending record instead
 of a stale lock. A pending request is never published again; explicit reconciliation performs only
 exact PR lookup and check observation. The source includes no command, live backend, credential

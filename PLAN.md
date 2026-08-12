@@ -1483,14 +1483,19 @@ database/number/head/base identity, and sharing one global request budget. A new
 projector unions host-policy, qualified classic-protection, and every completely paginated active
 ruleset check, rejecting unpinned App ids, duplicate/contradictory identities, or incomplete rule
 pages. These readers still have no caller and do not read/compose those policy inputs or the
-candidate from live sources,
-compose the review/check/PR projections into a snapshot, or bind exact controller last-pusher
-evidence. A pure uncalled review reconciler now proves that GraphQL's complete latest-opinionated
+candidate from live sources or compose the review/check/PR projections into a snapshot. A pure
+uncalled review reconciler now proves that GraphQL's complete latest-opinionated
 review per actor is the exact node/database/actor/state/commit/time/association record selected from
 the complete chronological permission-qualified REST audit; split actor sets, identity drift,
 nonchronological history, incomplete pagination, or reused request ids block. Review requests,
-threads, and the overall snapshot still are not composed, so the positive-identity/bypass checkbox
-and both K5 installed-host readiness items remain unchecked.
+threads, and the overall snapshot still are not composed. The publication request now also binds the
+authenticated publication credential's bot database/node/login identity through exact preflight and
+the durable repository/ref/SHA push receipt. An uncalled pure reconciler validates both canonical
+publication documents, requires a later fixed-query GraphQL observation of the identical
+repository/PR/head/base identity, and projects that bot database id as the controller pusher. This
+does not prove that an installed host prevented a later same-SHA push by a different actor; that
+branch-ownership fact and complete snapshot composition remain mandatory. The positive-identity/
+bypass checkbox and both K5 installed-host readiness items remain unchecked.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 

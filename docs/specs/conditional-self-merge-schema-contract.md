@@ -110,11 +110,15 @@ The source-only publication prerequisite now produces the candidate input shape 
 on a URL or branch discovery heuristic. Its closed request is authenticated outside repository
 trust and embeds the full explicit GitHub-awaiting-review authorization. Its canonical hash binds
 that authorization, one-PR ceiling, committed mission, repository, controller branch, exact
-head/base SHAs, diff hashes, and required check context/App identities. The backend must return the
+head/base SHAs, diff hashes, required check context/App identities, and authenticated publication
+bot database/node/login identity. The backend must return the
 identical target from read-only preflight before mutation, and the controller exposes no
 caller-selected time override for authorization or envelope freshness. After successful required-check
 observation, the write-once receipt adds the exact PR database id, node id, number, GitHub URL, and
-one context/App/head-SHA tuple for every required check. The merge authorization candidate is a
+one context/App/head-SHA tuple for every required check, plus a repository/ref/head-SHA push
+attestation carrying the same bot identity. A pure uncalled reconciler validates the canonical
+request/receipt pair and projects that actor only after a later fixed-query GraphQL snapshot matches
+the exact repository, PR, head/base repositories, refs, and SHAs. The merge authorization candidate is a
 direct projection of that receipt. Pending recovery is read-only and process death cannot leave the
 journal lock around a remote callback; no CLI, enabled mission, or live backend currently produces
 the receipt.

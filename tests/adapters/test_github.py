@@ -139,6 +139,9 @@ def exact_target():
         "2" * 64,
         "3" * 64,
         (RequiredCheck("ci/pathfinder", 24680),),
+        97531,
+        "U_publication_bot",
+        "pathfinder-publication[bot]",
     )
 
 
@@ -169,6 +172,23 @@ class GitHubPublisherTests(unittest.TestCase):
         with self.assertRaisesRegex(PolicyError, "preflight target"):
             publish_exact(backend, target=target)
         self.assertEqual((backend.pushed, backend.created), (0, 0))
+
+    def test_invalid_publication_actor_stops_before_mutation(self):
+        cases = (
+            replace(exact_target(), publication_actor_id=0),
+            replace(exact_target(), publication_actor_id=True),
+            replace(exact_target(), publication_actor_node_id=""),
+            replace(exact_target(), publication_actor_node_id="not a node"),
+            replace(exact_target(), publication_actor_login="human-user"),
+        )
+        for target in cases:
+            with self.subTest(target=target):
+                backend = FixtureBackend()
+                with self.assertRaisesRegex(
+                    PolicyError, "invalid exact publication target"
+                ):
+                    publish_exact(backend, target=target)
+                self.assertEqual((backend.pushed, backend.created), (0, 0))
 
     def test_exact_check_context_app_and_sha_must_match(self):
         cases = (

@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
 
 from ..errors import CapabilityError, PolicyError
+
+
+_GITHUB_NODE_ID = re.compile(r"[A-Za-z0-9_-]{4,128}={0,2}")
+_BOT_LOGIN = re.compile(
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\[bot\]"
+)
 
 
 class PublicationState(str, Enum):
@@ -80,6 +87,9 @@ class PublicationTarget:
     changed_files_sha256: str
     object_evidence_sha256: str
     required_checks: tuple[RequiredCheck, ...]
+    publication_actor_id: int
+    publication_actor_node_id: str
+    publication_actor_login: str
 
 
 @dataclass(frozen=True)
@@ -151,6 +161,13 @@ class GitHubPublisher:
                 target.object_evidence_sha256,
             ))
             or not target.required_checks
+            or not isinstance(target.publication_actor_id, int)
+            or isinstance(target.publication_actor_id, bool)
+            or target.publication_actor_id < 1
+            or _GITHUB_NODE_ID.fullmatch(
+                target.publication_actor_node_id
+            ) is None
+            or _BOT_LOGIN.fullmatch(target.publication_actor_login) is None
             or len({
                 (check.context, check.app_id)
                 for check in target.required_checks

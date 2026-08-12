@@ -154,6 +154,14 @@ class PublicationJournalTests(unittest.TestCase):
         with self.assertRaisesRegex(StateError, "request binding"):
             self.journal.record_receipt(changed)
 
+        changed = copy.deepcopy(self.bundle["receipt"])
+        changed["head_push"]["actor_id"] += 1
+        changed["receipt_sha256"] = canonical_sha256(
+            changed, "receipt_sha256"
+        )
+        with self.assertRaisesRegex(StateError, "request binding"):
+            self.journal.record_receipt(changed)
+
     def test_rehashed_dispatch_outside_request_window_fails_closed(self):
         claim = self.claim()
         self.assertIsNotNone(claim)
