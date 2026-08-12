@@ -13,6 +13,7 @@
 | Persisted Goal packs | ordered binding-hash authorization; one-active-item guard; native completion before advancement; restart/queue-checkpoint recovery; blocked/deadline/symlink/tamper fixtures |
 | Fixed local mission budgets | widening-limit rejection; narrower-limit deadline fixture; restart-expiry and late-success tests; one active Goal/attempt, pack-wide deadline, and zero-PR construction |
 | One local commit and zero PRs in the enabled bridge | mission idempotency tests; `host-bridge-local` replay maxima; separate GitHub primitive fixtures |
+| No remote publication in enabled routes | package-wide caller guard rejects publication-controller and lower-level publisher construction, concrete generic/exact GitHub backends, publication commands, and installed-route imports |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |
 | Safe Git/worktrees | dirty-tree, hook-neutralization, symlink escape, and cleanup-refusal tests |

@@ -142,23 +142,25 @@ class PublicationControllerSchemaTests(unittest.TestCase):
                         errors="ignore"
                     )
 
-        constructor_owners = {
+        constructor_callers = {
             token: {
                 path
                 for path, source in packaged.items()
-                if token in source and path != owner
+                if token in source
             }
-            for token, owner in (
-                (
-                    "PublicationController(",
-                    "pathfinder_core/publication_controller.py",
-                ),
-                ("MergeExecutor(", "pathfinder_core/merge_executor.py"),
+            for token in (
+                "GitHubPublisher(",
+                "PublicationController(",
+                "MergeExecutor(",
             )
         }
         self.assertEqual(
-            constructor_owners,
-            {"PublicationController(": set(), "MergeExecutor(": set()},
+            constructor_callers,
+            {
+                "GitHubPublisher(": set(),
+                "PublicationController(": set(),
+                "MergeExecutor(": set(),
+            },
         )
         self.assertEqual(
             {
@@ -169,22 +171,32 @@ class PublicationControllerSchemaTests(unittest.TestCase):
             },
             set(),
         )
-        exact_backend_methods = (
-            "def preflight(",
-            "def push_exact(",
-            "def find_pull_request_exact(",
-            "def create_pull_request_exact(",
-            "def check_observations_exact(",
-        )
-        self.assertEqual(
-            {
-                path
-                for path, source in packaged.items()
-                if path != "pathfinder_core/adapters/github.py"
-                and all(method in source for method in exact_backend_methods)
-            },
-            set(),
-        )
+        backend_method_sets = {
+            "generic": (
+                "def push(",
+                "def find_pull_request(",
+                "def create_pull_request(",
+                "def check_state(",
+            ),
+            "exact": (
+                "def preflight(",
+                "def push_exact(",
+                "def find_pull_request_exact(",
+                "def create_pull_request_exact(",
+                "def check_observations_exact(",
+            ),
+        }
+        for backend, methods in backend_method_sets.items():
+            with self.subTest(backend=backend):
+                self.assertEqual(
+                    {
+                        path
+                        for path, source in packaged.items()
+                        if path != "pathfinder_core/adapters/github.py"
+                        and all(method in source for method in methods)
+                    },
+                    set(),
+                )
 
         enabled_paths = {
             "pathfinder_core/__main__.py",
@@ -216,6 +228,32 @@ class PublicationControllerSchemaTests(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, enabled)
+
+        routed = "\n".join(
+            source
+            for path, source in packaged.items()
+            if path in enabled_paths - {"pathfinder_core/adapters/github.py"}
+            or path.startswith(
+                (
+                    "scripts/",
+                    "skills/",
+                    ".agents/",
+                    ".codex-plugin/",
+                    ".claude-plugin/",
+                )
+            )
+        )
+        for forbidden in (
+            "GitHubPublisher",
+            "GitHubBackend",
+            "ExactGitHubBackend",
+            "publication_controller",
+            "publication_journal",
+            "publish_exact(",
+            ".publish(",
+        ):
+            with self.subTest(routed_forbidden=forbidden):
+                self.assertNotIn(forbidden, routed)
 
         self.assertTrue(
             command_names(_parser()).isdisjoint(

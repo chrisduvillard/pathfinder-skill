@@ -38,7 +38,9 @@ trusted installed host, complete live evidence, operator-owned policy/credential
 zero-merge disposable-repository publication/evidence rehearsal remain absent. This is separate
 from the later composed merge rehearsal. The shipped CLI therefore intentionally has no
 `merge` command, and packaged routes construct neither the publication controller nor the merge
-executor. The canonical checked/unchecked gate is in
+executor. They also cannot bypass the controller by constructing the lower-level GitHub publisher;
+the package guard rejects that caller and any concrete generic or exact GitHub backend. The
+canonical checked/unchecked gate is in
 [`PLAN.md`](../PLAN.md#phase-k5--compose-an-explicit-default-off-conditional-merge-path).
 
 ## Inspect capabilities

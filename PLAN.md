@@ -1638,9 +1638,11 @@ remote callback, but the journal lock is released before that callback so proces
 strand recovery; a pending operation can only use read-only exact lookup/check observation and
 never pushes or creates again. Deterministic tests, a process-death probe, and an actual-code eval
 prove terminal replay, exact merge-authorization projection, one-use claims, pre-effect target
-rejection, check-identity rejection, and zero production callers. No CLI, mission host, Goal pack,
-installed route, live backend, credential loader, or merge path constructs the controller, so this
-prerequisite grants no publication or K5 authority. Its independent source review is now complete;
+rejection, check-identity rejection, and zero production callers. The package guard rejects both
+controller and lower-level publisher construction plus concrete generic or exact GitHub backends
+outside the source-only protocol owner. No CLI, mission host, Goal pack, installed route, live
+backend, credential loader, or merge path constructs the controller, so this prerequisite grants no
+publication or K5 authority. Its independent source review is now complete;
 K5.1 remains unchecked until the runnable trusted-host publication, complete live evidence, and
 disposable-rehearsal preconditions above are satisfied.
 
