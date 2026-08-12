@@ -103,8 +103,8 @@ ambiguous dispatched operation; only the atomic intent creator may write it, and
 never sends a second mutation. Because a durable local marker cannot be atomic with the remote
 request, restarted reconciliation never credits a pending dispatched operation as merged even when
 observation finds matching merged state. The fixture observer can supply a complete dry-run snapshot, while
-the GET-only live boundary cannot collect required GraphQL facts. K5 composition still
-requires the separate security and enablement gates in the security contract.
+the source REST and fixed-query GraphQL transports are not composed into a live collector. K5
+composition still requires the separate security and enablement gates in the security contract.
 
 The source-only publication prerequisite now produces the candidate input shape rather than relying
 on a URL or branch discovery heuristic. Its closed request is authenticated outside repository

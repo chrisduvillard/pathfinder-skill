@@ -90,7 +90,7 @@ class ObservationResult:
 
 
 class GitHubMergeObservationBackend(Protocol):
-    """Read-only seam. A live GET-only implementation belongs to K2.2."""
+    """Read-only seam. Trusted live REST/GraphQL composition remains a K5 gate."""
 
     def read_repository(self) -> EndpointResponse: ...
     def read_credential_actor(self) -> EndpointResponse: ...

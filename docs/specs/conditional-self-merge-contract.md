@@ -1,8 +1,9 @@
 # Conditional self-merge security contract
 
 > Status: design ratified on 2026-08-11; the evidence contracts, fixture observer, uncomposed
-> GET-only REST transport, pure eligibility/freshness evaluator, and crash-safe K4 merge primitive
-> exist. The writer has no caller, credential loader, command, route, or enabled composition. Live
+> GET-only REST transport, fixed-query GraphQL transport, pure eligibility/freshness evaluator,
+> and crash-safe K4 merge primitive exist. The transports are not composed into a live collector,
+> and the writer has no caller, credential loader, command, route, or enabled composition. Live
 > observation and merge enablement are not authorized.
 
 ## Precedence and invariant
@@ -57,7 +58,7 @@ do not authenticate themselves and add no executable route.
 | M-13 | Initially support synchronous squash only when repository settings and all applicable rules allow it; rebase, merge commits, signed-commit requirements, and method ambiguity block. |
 | M-14 | A merge-queue rule or queue entry requires handoff; never enqueue automatically. |
 | M-15 | Policy must acknowledge ordinary merge-triggered effects, but release, deployment, data, and real-world side-effect Goals remain ineligible. |
-| M-16 | Use three credential boundaries: no forge credential during implementation, an enforced GET-only evidence observer, and a separate narrowly scoped merge writer. |
+| M-16 | Use three credential boundaries: no forge credential during implementation, a mechanically read-only evidence observer (allowlisted REST GET plus one compiled GraphQL query), and a separate narrowly scoped merge writer. |
 | M-17 | Do not use auto-merge, asynchronous merge, stacked merge, or any delayed/multi-PR mutation. |
 | M-18 | Persist a closed one-use merge intent before mutation; an ambiguous pending intent is reconcile-required and is never replayed blindly. |
 | M-19 | Ship observation/eligibility first and keep the writer unreachable/default-off until separately approved. |
@@ -71,7 +72,7 @@ do not authenticate themselves and add no executable route.
 | Host-owned repository policy and current-run authorization | Trusted only after authentication, schema validation, identity/hash binding, and expiry checks. |
 | Existing mission, Goal Binding, authorization, diff, and PR identity | Canonical inputs to bind; they do not independently authorize merge. |
 | GitHub REST/GraphQL responses | Untrusted external data until complete, versioned where possible, normalized, cross-checked, and fresh. |
-| Evidence credential | Separate elevated reader whose implemented runtime mechanically allows only allowlisted REST GETs. GitHub GraphQL evidence requires POST and therefore remains unavailable; missing GraphQL-only facts block. |
+| Evidence credential | Separate elevated reader whose REST runtime mechanically allows only allowlisted GETs and whose GraphQL runtime can POST only one compiled query operation. Neither transport loads secrets or has an ordinary route; incomplete composition or missing GraphQL facts block. |
 | Merge credential | A repository-scoped GitHub App installation identity; user/PAT merge actors are unsupported initially. It cannot be an admin or bypass actor. |
 | Implementation/verification environment | Receives neither evidence nor merge credentials. |
 
@@ -139,7 +140,7 @@ All list/connection evidence must prove pagination completion. `401`, `403`, amb
 rate limit, timeout, `410`, malformed data, response truncation, or a missing permission/field returns
 a typed blocker; none is evidence of absence.
 
-### Implemented GET-only REST boundary
+### Implemented REST and fixed-query GraphQL source boundaries
 
 The uncomposed evidence transport has one fixed network destination: TLS port 443 on
 `api.github.com`. It exposes only `GET`, rejects `/graphql` and non-evidence endpoint paths, and
@@ -161,9 +162,20 @@ repository permissions. Credential and response-body representations are redacte
 These declarations do not authenticate the token's actual scope or prove its App/installation
 identity. A trusted issuance receipt plus positive App, installation, repository, actor, and bypass
 observations are still required before composition. GitHub's ordinary GraphQL queries use HTTP
-`POST`, so review threads, queue state, and any required GraphQL cross-check remain typed
-`api-unavailable` under this boundary. The system must not substitute UI text, omit those facts, or
-widen the transport to POST; conditional merge consequently remains unsupported for live use.
+`POST`, so the REST boundary remains strictly GET-only. A separate source-only transport can POST
+only the compiled `PathfinderPullRequestEvidence` query to `/graphql`; callers supply only the
+owner, repository, PR number, and bounded cursors. Its canonical query hash is fixed in source. It
+collects exact PR/ref/mergeability/review-decision/queue identity plus independently paginated
+latest reviews, code-owner review requests, and review threads, and rejects partial data, GraphQL
+errors, unknown fields/enums, identity or total-count drift, repeated request ids/items/cursors,
+missing request ids, and byte/page ceilings. It accepts only the exact read-only installation
+credential declaration and exposes no arbitrary query, mutation, URL, environment loader, or
+enabled caller.
+
+The fixed-query client is not yet the production collector: it does not compose the REST families,
+positive App/installation/bot identity, qualified protection/rules absence, or host-owned issuance
+receipt. The system must not substitute UI text or omit those facts. Conditional merge therefore
+remains unsupported for live use.
 
 ## Typed block and result contract
 
@@ -222,9 +234,10 @@ ordered.
 
 The evaluator has no credential, network, filesystem mutation, or merge method. Its only production
 consumers are the uncomposed K4 journal/executor boundary. The complete fixture can produce
-`eligible`, but the live GET-only transport cannot collect the required GraphQL
-review-decision/thread/queue evidence. Live conditional merge therefore remains unsupported, and no
-ordinary `/goal`, mission, publication, or resume path evaluates or acts on a verdict.
+`eligible`; the source now has both REST GET-only and GraphQL fixed-query primitives, but no trusted
+host composes them into the required complete live snapshot. Live conditional merge therefore
+remains unsupported, and no ordinary `/goal`, mission, publication, or resume path evaluates or
+acts on a verdict.
 
 Snapshot validity ends at the earliest of the authenticated host's `expires_at`, the policy's
 maximum age, and exactly 60 seconds after `observed_at`; `completed_at`, the policy read, and every

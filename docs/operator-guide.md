@@ -17,6 +17,14 @@ credited as merged; after restart, a dispatched intent without a terminal result
 reconciliation-required because a local marker cannot prove the remote request began. These interfaces have no
 live implementation in this package; fixture success is not operator enablement.
 
+The package now also contains a source-only GraphQL evidence primitive. It can send exactly one
+compiled pull-request query to GitHub's fixed GraphQL endpoint and has no arbitrary query, mutation,
+URL, secret loader, command, or caller. It binds the exact query hash and completely paginates the
+latest effective reviews, code-owner review requests, and review threads while rechecking stable PR
+identity on every page. This does not make live observation available: the REST and GraphQL pieces
+are not yet composed with positive App/installation/bot identity, qualified protection/rules
+absence, an authenticated issuance receipt, or an installed trusted-host credential reader.
+
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full
 explicit GitHub-awaiting-review authorization and one-PR ceiling. Before mutation, its injected
