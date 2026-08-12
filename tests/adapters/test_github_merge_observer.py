@@ -194,6 +194,11 @@ class GitHubMergeObserverTests(unittest.TestCase):
                 "repository_node_id": "R_kgDOExample1", "permission_confirmed": True,
             },
         })
+        responses["classic-protection"]["audit"].update({
+            "target": "/repos/example-owner/example-repo/branches/main/protection",
+            "status": 403,
+            "permission_qualified": True,
+        })
         result, _ = self.observe(responses)
         self.assertEqual(result.outcome, ObservationOutcome.OBSERVED)
         self.assertEqual(result.evidence["classic_protection"]["status"], "absent")

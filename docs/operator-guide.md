@@ -22,8 +22,14 @@ compiled pull-request query to GitHub's fixed GraphQL endpoint and has no arbitr
 URL, secret loader, command, or caller. It binds the exact query hash and completely paginates the
 latest effective reviews, code-owner review requests, and review threads while rechecking stable PR
 identity on every page. This does not make live observation available: the REST and GraphQL pieces
-are not yet composed with positive App/installation/bot identity, qualified protection/rules
-absence, an authenticated issuance receipt, or an installed trusted-host credential reader.
+are not yet composed into a collector or installed trusted-host credential reader. A separate
+source-only verifier now accepts a hash-bound, fresh, one-repository observer issuance receipt and
+cross-checks the observer App/installation/bot/repository plus the future merge
+App/installation/bot through exact live reads. A dedicated feature read treats the private-plan
+upgrade response as absence only when GitHub also identifies the exact required read permission;
+ordinary 403 remains a permission error. These primitives still do not persist a complete snapshot,
+resolve every membership/ruleset/check-suite surface, bind the controller's last pusher, load a
+credential from the host, or add a caller.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full

@@ -159,9 +159,22 @@ organization/team membership and repository-permission GET paths needed for type
 resolution. A separately injected App JWT may read only App/installation identity and declares no
 repository permissions. Credential and response-body representations are redacted.
 
-These declarations do not authenticate the token's actual scope or prove its App/installation
-identity. A trusted issuance receipt plus positive App, installation, repository, actor, and bypass
-observations are still required before composition. GitHub's ordinary GraphQL queries use HTTP
+The source now also has a closed canonical observer-token receipt for exact one-repository
+selection, read permissions, App/installation/account/bot identity, suspension, and one-hour
+issuance/expiry/verification. An uncalled verifier requires a fresh receipt and independently reads
+the exact observer App, repository installation, bot, and repository. It separately validates the
+future merge credential receipt and reads the merge App, exact repository installation, and bot;
+the observer token never substitutes for the merge actor. These source checks do not authenticate
+their own host receipt or install a credential reader.
+
+For private-plan feature absence, the GET boundary accepts `403` only through a dedicated closed
+method for classic protection, active branch rules, or source rulesets. It requires the exact
+allowlisted endpoint, the endpoint-specific read permission in GitHub's
+`X-Accepted-GitHub-Permissions` response header, the exact upgrade-required message, a closed error
+shape/status, and a GitHub REST documentation URL. Every other `403` remains
+`permission-missing`; an ordinary GET cannot opt into this exception.
+
+GitHub's ordinary GraphQL queries use HTTP
 `POST`, so the REST boundary remains strictly GET-only. A separate source-only transport can POST
 only the compiled `PathfinderPullRequestEvidence` query to `/graphql`; callers supply only the
 owner, repository, PR number, and bounded cursors. Its canonical query hash is fixed in source. It
@@ -172,10 +185,11 @@ missing request ids, and byte/page ceilings. It accepts only the exact read-only
 credential declaration and exposes no arbitrary query, mutation, URL, environment loader, or
 enabled caller.
 
-The fixed-query client is not yet the production collector: it does not compose the REST families,
-positive App/installation/bot identity, qualified protection/rules absence, or host-owned issuance
-receipt. The system must not substitute UI text or omit those facts. Conditional merge therefore
-remains unsupported for live use.
+The fixed-query client, identity verifier, qualified feature reader, and REST client are still not
+the production collector: no source composes the REST families, records the credential receipt and
+all identity audits in a snapshot, resolves membership absence, walks every check suite, or binds
+the authenticated controller's exact last pusher. The system must not substitute UI text or omit
+those facts. Conditional merge therefore remains unsupported for live use.
 
 ## Typed block and result contract
 

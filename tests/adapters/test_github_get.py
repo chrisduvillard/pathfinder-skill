@@ -1,7 +1,10 @@
 import inspect
 import json
 import unittest
+from datetime import datetime
 from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
 
 from pathfinder_core.adapters.github_get import (
     ACCEPT,
@@ -12,6 +15,7 @@ from pathfinder_core.adapters.github_get import (
     USER_AGENT,
     GETTransport,
     GitHubEvidenceCredential,
+    GitHubEvidenceCredentialReceipt,
     GitHubGETClient,
     GitHubHTTPSGETTransport,
     RawGETResponse,
@@ -38,6 +42,32 @@ def credential(kind="installation-token"):
         permissions=permissions() if kind == "installation-token" else {},
         boundary=EVIDENCE_BOUNDARY,
     )
+
+
+def credential_receipt(**overrides):
+    values = {
+        "credential_receipt_id": "evidence_credential_receipt_fixture1",
+        "source": "authenticated-host-credential-store",
+        "credential_id": "evidence_credential_fixture1",
+        "kind": "installation-token",
+        "boundary": EVIDENCE_BOUNDARY,
+        "permissions": permissions(),
+        "repository_selection": "selected",
+        "repository_ids": [123456789],
+        "app_id": 86420,
+        "app_node_id": "A_kgDOObserver1",
+        "installation_id": 97531,
+        "installation_account_id": 24680,
+        "actor_id": 112233,
+        "actor_node_id": "U_kgDOObserver1",
+        "login": "pathfinder-observer[bot]",
+        "issued_at": "2026-08-11T12:00:00+00:00",
+        "expires_at": "2026-08-11T13:00:00+00:00",
+        "verified_at": NOW,
+        "suspended": False,
+    }
+    values.update(overrides)
+    return GitHubEvidenceCredentialReceipt(**values)
 
 
 def response(status=200, data=None, headers=None, body=None):
@@ -70,6 +100,60 @@ def client(transport, **overrides):
 
 
 class GitHubGETClientTests(unittest.TestCase):
+    def test_authenticated_credential_receipt_is_hash_bound_and_current(self):
+        receipt = credential_receipt()
+        document = receipt.receipt_document()
+        schema = json.loads((
+            ROOT / "schemas" / "publication"
+            / "evidence-credential-receipt.schema.json"
+        ).read_text())
+        Draft202012Validator(
+            schema, format_checker=FormatChecker()
+        ).validate(document)
+        loaded = GitHubEvidenceCredentialReceipt.from_document(document)
+        loaded.validate_binding(
+            credential(),
+            repository_id=123456789,
+            observed_at=datetime.fromisoformat(NOW),
+        )
+        self.assertEqual(loaded.receipt_document(), document)
+        self.assertNotIn(TOKEN, repr(loaded))
+
+        tampered = dict(document)
+        tampered["actor_id"] += 1
+        with self.assertRaisesRegex(ValueError, "hash differs"):
+            GitHubEvidenceCredentialReceipt.from_document(tampered)
+
+    def test_authenticated_credential_receipt_fails_closed_on_scope_or_binding(self):
+        with self.assertRaisesRegex(ValueError, "permissions must be exact"):
+            credential_receipt(permissions={"metadata": "read"})
+        with self.assertRaisesRegex(ValueError, "select exactly one"):
+            credential_receipt(repository_ids=[123456789, 987654321])
+        with self.assertRaisesRegex(ValueError, "window exceeds one hour"):
+            credential_receipt(expires_at="2026-08-11T13:00:01+00:00")
+        with self.assertRaisesRegex(ValueError, "is suspended"):
+            credential_receipt(suspended=True)
+        with self.assertRaisesRegex(ValueError, "receipt identity is malformed"):
+            credential_receipt(
+                credential_receipt_id="evidence_credential_receipt_short"
+            )
+        with self.assertRaisesRegex(ValueError, "node identity is malformed"):
+            credential_receipt(actor_node_id="bad node")
+
+        receipt = credential_receipt()
+        with self.assertRaisesRegex(ValueError, "repository binding differs"):
+            receipt.validate_binding(
+                credential(), repository_id=987654321,
+                observed_at=datetime.fromisoformat(NOW),
+            )
+        with self.assertRaisesRegex(ValueError, "is not fresh"):
+            receipt.validate_binding(
+                credential(), repository_id=123456789,
+                observed_at=datetime.fromisoformat(
+                    "2026-08-11T12:08:11+00:00"
+                ),
+            )
+
     def test_credential_boundary_rejects_write_scope_and_redacts_repr(self):
         value = credential()
         self.assertNotIn(TOKEN, repr(value))
@@ -182,6 +266,64 @@ class GitHubGETClientTests(unittest.TestCase):
                 self.assertEqual(caught.exception.outcome, outcome)
                 self.assertNotIn(TOKEN, str(caught.exception))
                 self.assertNotIn("body contains", str(caught.exception))
+
+    def test_plan_feature_absence_requires_exact_response_and_permission_header(self):
+        target = "/repos/owner/repo/branches/main/protection"
+        permission = {"X-Accepted-GitHub-Permissions": "administration=read"}
+        transport = FixtureGETTransport(response(
+            data={"required_status_checks": None}, headers=permission,
+        ))
+        observed = client(transport).get_qualified_feature(
+            "classic-protection", target, feature="classic-protection"
+        )
+        self.assertEqual(observed.status, 200)
+        self.assertEqual(observed.audit.target, target)
+        self.assertTrue(observed.audit.permission_qualified)
+
+        absent = {
+            "message": (
+                "Upgrade to GitHub Pro or make this repository public to enable "
+                "this feature."
+            ),
+            "documentation_url": (
+                "https://docs.github.com/rest/branches/branch-protection"
+                "#get-branch-protection"
+            ),
+            "status": "403",
+        }
+        transport = FixtureGETTransport(response(
+            403, data=absent, headers=permission,
+        ))
+        observed = client(transport).get_qualified_feature(
+            "classic-protection", target, feature="classic-protection"
+        )
+        self.assertEqual(observed.status, 403)
+        self.assertIsNone(observed.data)
+
+        for data, headers in (
+            (absent, {}),
+            ({**absent, "message": "Forbidden"}, permission),
+            ({**absent, "extra": True}, permission),
+        ):
+            with self.subTest(data=data, headers=headers):
+                transport = FixtureGETTransport(response(
+                    403, data=data, headers=headers,
+                ))
+                with self.assertRaises(GitHubObservationError) as caught:
+                    client(transport).get_qualified_feature(
+                        "classic-protection", target,
+                        feature="classic-protection",
+                    )
+                self.assertEqual(
+                    caught.exception.outcome,
+                    ObservationOutcome.PERMISSION_MISSING,
+                )
+
+        with self.assertRaises(ValueError):
+            client(FixtureGETTransport()).get_qualified_feature(
+                "classic-protection", "/repos/owner/repo/rulesets",
+                feature="classic-protection",
+            )
 
     def test_safe_transient_reads_retry_once_but_rate_limits_do_not(self):
         transport = FixtureGETTransport(
@@ -315,7 +457,16 @@ class GitHubGETClientTests(unittest.TestCase):
                 continue
             if "github_get" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(consumers, [])
+        self.assertEqual(consumers, [
+            "pathfinder_core/adapters/github_identity.py",
+        ])
+        identity_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_identity.py":
+                continue
+            if "GitHubIdentityVerifier(" in path.read_text():
+                identity_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(identity_consumers, [])
         sources = "\n".join(
             (ROOT / "pathfinder_core" / "adapters" / name).read_text()
             for name in (

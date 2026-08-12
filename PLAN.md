@@ -1464,9 +1464,16 @@ cover fixed operation/body/host/method, connection completion, independent pagin
 byte/page ceilings, response/request-id/identity/count/cursor drift, partial GraphQL errors,
 unknown actors/enums/fields, credential redaction, no secret loader, and zero enabled callers. The
 REST process remains mechanically GET-only. This source primitive is not a production collector,
-does not positively authenticate App/installation/bot identity or qualified feature absence, and
-does not install a host credential route, so the positive-identity checkbox and both K5 installed
-host readiness items remain open.
+and a later source-only identity slice still does not compose it. That slice adds a closed,
+canonical host issuance receipt for the one-repository observer token; independently cross-checks
+the observer App/installation/bot/repository and future merge App/installation/bot against exact
+live responses; and accepts a plan-level protection/rules 403 only when the exact endpoint,
+GitHub's `X-Accepted-GitHub-Permissions` header, and the closed upgrade-required response all
+qualify absence. Ordinary 403 remains `permission-missing`. The identity verifier has no caller,
+does not load either token, and does not yet record its receipt/audits in a complete normalized
+snapshot. REST policy/rules/bypass/check-suite composition, permission-qualified membership
+absence, and exact controller last-pusher evidence remain open, so the positive-identity/bypass
+checkbox and both K5 installed-host readiness items remain unchecked.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 

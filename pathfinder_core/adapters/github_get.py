@@ -12,6 +12,7 @@ from .github_evidence_credentials import (
     EVIDENCE_BOUNDARY,
     REQUIRED_READ_PERMISSIONS,
     GitHubEvidenceCredential,
+    GitHubEvidenceCredentialReceipt,
 )
 from .github_get_transport import (
     API_HOST,
@@ -38,6 +39,14 @@ ACCEPT = "application/vnd.github+json"
 USER_AGENT = "pathfinder-github-get/3"
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,256}$")
+_UPGRADE_REQUIRED = (
+    "Upgrade to GitHub Pro or make this repository public to enable this feature."
+)
+_FEATURE_PERMISSIONS = {
+    "classic-protection": "administration=read",
+    "active-rules": "metadata=read",
+    "source-rulesets": "metadata=read",
+}
 
 
 def _utc_now() -> str:
@@ -58,6 +67,13 @@ class JSONGETResponse:
     data: object = field(repr=False)
     audit: RequestAudit
     headers: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class QualifiedFeatureResponse:
+    data: object = field(repr=False)
+    status: int
+    audit: RequestAudit
 
 
 class GitHubGETClient:
@@ -104,7 +120,13 @@ class GitHubGETClient:
     def _headers_lower(headers: Mapping[str, str]) -> dict[str, str]:
         return {str(key).lower(): str(value) for key, value in headers.items()}
 
-    def _response(self, surface: str, target: str) -> RawGETResponse:
+    def _response(
+        self,
+        surface: str,
+        target: str,
+        *,
+        allowed_statuses: frozenset[int] = frozenset(),
+    ) -> RawGETResponse:
         retries = redirects = 0
         current = validate_evidence_target(target)
         while True:
@@ -160,7 +182,8 @@ class GitHubGETClient:
                 retries += 1
                 self.sleeper(0.25)
                 continue
-            self._raise_status(surface, response.status, headers)
+            if response.status not in allowed_statuses:
+                self._raise_status(surface, response.status, headers)
             return RawGETResponse(response.status, headers, response.body)
 
     @staticmethod
@@ -189,6 +212,11 @@ class GitHubGETClient:
 
     def get_json(self, surface: str, target: str) -> JSONGETResponse:
         response = self._response(surface, target)
+        return self._decode_json(surface, response)
+
+    def _decode_json(
+        self, surface: str, response: RawGETResponse
+    ) -> JSONGETResponse:
         headers = self._headers_lower(response.headers)
         request_id = headers.get("x-github-request-id")
         if not request_id or not _REQUEST_ID.fullmatch(request_id):
@@ -208,6 +236,80 @@ class GitHubGETClient:
             RequestAudit(request_id, self.clock(), headers.get("etag")),
             headers,
         )
+
+    def get_qualified_feature(
+        self,
+        surface: str,
+        target: str,
+        *,
+        feature: str,
+    ) -> QualifiedFeatureResponse:
+        """Read one plan-gated feature, accepting only a qualified upgrade 403."""
+        required_permission = _FEATURE_PERMISSIONS.get(feature)
+        if surface != feature or required_permission is None:
+            raise ValueError("GitHub feature absence surface is unsupported")
+        if (
+            feature == "classic-protection"
+            and not re.fullmatch(
+                r"/repos/[^/]+/[^/]+/branches/[^/]+/protection", target
+            )
+        ) or (
+            feature == "active-rules"
+            and not re.fullmatch(
+                r"/repos/[^/]+/[^/]+/rules/branches/[^/]+", target
+            )
+        ) or (
+            feature == "source-rulesets"
+            and not re.fullmatch(
+                r"/repos/[^/]+/[^/]+/rulesets(?:\?includes_parents=true)?",
+                target,
+            )
+        ):
+            raise ValueError("GitHub feature absence target does not match its surface")
+        response = self._response(surface, target, allowed_statuses=frozenset({403}))
+        decoded = self._decode_json(surface, response)
+        accepted = {
+            item.strip()
+            for item in decoded.headers.get(
+                "x-accepted-github-permissions", ""
+            ).split(";")
+            if item.strip()
+        }
+        qualified = required_permission in accepted
+        audit = RequestAudit(
+            decoded.audit.request_id,
+            decoded.audit.observed_at,
+            decoded.audit.etag,
+            target,
+            response.status,
+            qualified,
+        )
+        if response.status == 200:
+            if not qualified:
+                raise GitHubObservationError(
+                    ObservationOutcome.PERMISSION_MISSING,
+                    surface,
+                    "GitHub feature response did not qualify the required permission",
+                )
+            return QualifiedFeatureResponse(decoded.data, response.status, audit)
+        error = decoded.data
+        if (
+            not qualified
+            or not isinstance(error, Mapping)
+            or set(error) != {"message", "documentation_url", "status"}
+            or error["message"] != _UPGRADE_REQUIRED
+            or error["status"] != "403"
+            or not isinstance(error["documentation_url"], str)
+            or not error["documentation_url"].startswith(
+                "https://docs.github.com/rest/"
+            )
+        ):
+            raise GitHubObservationError(
+                ObservationOutcome.PERMISSION_MISSING,
+                surface,
+                "GitHub feature access was denied without qualified absence proof",
+            )
+        return QualifiedFeatureResponse(None, response.status, audit)
 
     def get_endpoint(self, surface: str, target: str) -> EndpointResponse:
         response = self.get_json(surface, target)
