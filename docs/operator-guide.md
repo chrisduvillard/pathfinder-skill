@@ -36,10 +36,11 @@ fully paginates the REST review audit and reads one exact repository permission 
 review actor, requiring positive `Metadata=read` evidence and cross-checking the returned actor.
 The check reader also reads the combined status envelope, fully paginates the creator-bearing status
 history, derives the latest item per context, cross-checks count/state for the exact repository/SHA,
-and classifies checks only against a closed supplied context/App union. Suites, runs, and both status
-reads share one request budget. These readers retain distinct request audits and fail on identity,
-permission, pagination, request budget, or SHA drift; none is an installed collector, and the
-required union is not yet derived from live policy/rules.
+classifies checks only against a closed supplied context/App union, and requires every required run
+to name the supplied candidate's exact PR/head/base identity. Suites, runs, and both status reads
+share one request budget. These readers retain distinct request audits and fail on identity,
+permission, pagination, request budget, PR binding, or SHA drift; none is an installed collector,
+and the required union/candidate are not yet derived from live policy/PR sources.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
 controller accepts one fresh authenticated host request containing the canonically bound full

@@ -14,6 +14,7 @@ from .github_merge_observer import (
 
 _CONTEXT = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._:/()@,+-]{0,99}")
 _SHA = re.compile(r"[0-9a-f]{40}")
+_REF = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?")
 _RUN_STATUSES = {"queued", "in_progress", "completed"}
 _RUN_CONCLUSIONS = {
     "success", "failure", "neutral", "cancelled", "skipped", "timed_out",
@@ -34,6 +35,13 @@ _STATUS_FIELDS = {
 _COMBINED_STATUS_FIELDS = {
     "state", "statuses", "sha", "total_count", "repository", "commit_url",
     "url",
+}
+_PULL_FIELDS = {"url", "id", "number", "head", "base"}
+_PULL_SIDE_FIELDS = {"ref", "sha", "repo"}
+_PULL_REPOSITORY_FIELDS = {"id", "url", "name"}
+_EXPECTED_PULL_FIELDS = {
+    "id", "number", "head_repository_id", "head_ref", "head_sha",
+    "base_repository_id", "base_ref", "base_sha",
 }
 
 
@@ -213,12 +221,91 @@ class GitHubCheckEvidenceReader:
         return frozenset(requirements)
 
     @staticmethod
+    def _pull_request(value: Mapping[str, object], *, sha: str) -> dict:
+        if not isinstance(value, Mapping) or set(value) != _EXPECTED_PULL_FIELDS:
+            raise _fail("check-runs.pull-request", "candidate PR identity is not closed")
+        result = dict(value)
+        for field in ("id", "number", "head_repository_id", "base_repository_id"):
+            result[field] = _positive_int(result[field], "check-runs.pull-request")
+        for field in ("head_ref", "base_ref"):
+            if not isinstance(result[field], str) or _REF.fullmatch(result[field]) is None:
+                raise _fail(
+                    "check-runs.pull-request", "candidate PR ref is malformed"
+                )
+        if (
+            not isinstance(result["head_sha"], str)
+            or _SHA.fullmatch(result["head_sha"]) is None
+            or not isinstance(result["base_sha"], str)
+            or _SHA.fullmatch(result["base_sha"]) is None
+            or result["head_sha"] != sha
+        ):
+            raise _fail(
+                "check-runs.pull-request", "candidate PR SHA binding differs"
+            )
+        return result
+
+    @staticmethod
+    def _run_pull_request(
+        value: object, index: int, relation_index: int
+    ) -> dict[str, object]:
+        surface = f"check-runs[{index}].pull-requests[{relation_index}]"
+        if not isinstance(value, Mapping) or set(value) != _PULL_FIELDS:
+            raise _fail(surface, "GitHub check PR relation is not closed")
+        sides = {}
+        for side_name in ("head", "base"):
+            side = value[side_name]
+            if not isinstance(side, Mapping) or set(side) != _PULL_SIDE_FIELDS:
+                raise _fail(surface, "GitHub check PR side is not closed")
+            repository = side["repo"]
+            if (
+                not isinstance(repository, Mapping)
+                or set(repository) != _PULL_REPOSITORY_FIELDS
+            ):
+                raise _fail(surface, "GitHub check PR repository is not closed")
+            if (
+                not isinstance(repository["url"], str)
+                or not repository["url"]
+                or not isinstance(repository["name"], str)
+                or not repository["name"]
+            ):
+                raise _fail(
+                    surface, "GitHub check PR repository metadata is malformed"
+                )
+            ref = side["ref"]
+            commit = side["sha"]
+            if (
+                not isinstance(ref, str)
+                or _REF.fullmatch(ref) is None
+                or not isinstance(commit, str)
+                or _SHA.fullmatch(commit) is None
+            ):
+                raise _fail(surface, "GitHub check PR ref or SHA is malformed")
+            sides[side_name] = {
+                "repository_id": _positive_int(repository["id"], surface),
+                "ref": ref,
+                "sha": commit,
+            }
+        if not isinstance(value["url"], str) or not value["url"]:
+            raise _fail(surface, "GitHub check PR URL is malformed")
+        return {
+            "id": _positive_int(value["id"], surface),
+            "number": _positive_int(value["number"], surface),
+            "head_repository_id": sides["head"]["repository_id"],
+            "head_ref": sides["head"]["ref"],
+            "head_sha": sides["head"]["sha"],
+            "base_repository_id": sides["base"]["repository_id"],
+            "base_ref": sides["base"]["ref"],
+            "base_sha": sides["base"]["sha"],
+        }
+
+    @staticmethod
     def _run(
         value: Mapping[str, object],
         index: int,
         *,
         sha: str,
         required: frozenset[tuple[str, int]],
+        pull_request: Mapping[str, object],
     ) -> dict[str, object]:
         surface = f"check-runs[{index}]"
         needed = {
@@ -248,20 +335,34 @@ class GitHubCheckEvidenceReader:
             raise _fail(surface, "GitHub check run identity or state is unknown")
         app_id = _positive_int(app.get("id"), f"{surface}.app")
         slug = app.get("slug")
+        is_required = (name, app_id) in required
+        relations = [
+            GitHubCheckEvidenceReader._run_pull_request(item, index, relation_index)
+            for relation_index, item in enumerate(value["pull_requests"])
+        ]
+        relation_keys = [
+            tuple(relation[field] for field in sorted(_EXPECTED_PULL_FIELDS))
+            for relation in relations
+        ]
         if (
             not isinstance(slug, str)
             or re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?", slug)
             is None
             or (status == "completed") != (completed_at is not None)
             or (status == "completed") != (conclusion is not None)
+            or len(relation_keys) != len(set(relation_keys))
+            or (is_required and pull_request not in relations)
         ):
-            raise _fail(surface, "GitHub check App or terminal state is unknown")
+            raise _fail(
+                surface,
+                "GitHub check App, terminal state, or candidate PR relation is unknown",
+            )
         return {
             "id": run_id,
             "name": name,
             "app": {"id": app_id},
             "head_sha": sha,
-            "required": (name, app_id) in required,
+            "required": is_required,
             "status": status,
             "conclusion": conclusion,
             "completed_at": completed_at,
@@ -429,6 +530,7 @@ class GitHubCheckEvidenceReader:
         repository_id: int,
         sha: str,
         required_checks: Sequence[Mapping[str, object]],
+        pull_request: Mapping[str, object],
     ) -> tuple[PageResponse, PageResponse]:
         if (
             not isinstance(repository_id, int)
@@ -439,6 +541,7 @@ class GitHubCheckEvidenceReader:
         ):
             raise ValueError("invalid exact GitHub check evidence identity or budget")
         required = self._requirements(required_checks)
+        candidate_pull = self._pull_request(pull_request, sha=sha)
         check_page = self.runs.read_all(
             owner=owner, name=name, sha=sha,
             request_limit=self.client.max_pages - 2,
@@ -453,7 +556,8 @@ class GitHubCheckEvidenceReader:
         seen_runs = set()
         for index, item in enumerate(check_page.items):
             normalized = self._run(
-                item, index, sha=sha, required=required
+                item, index, sha=sha, required=required,
+                pull_request=candidate_pull,
             )
             identity = (normalized["name"], normalized["app"]["id"])
             if identity in seen_runs:

@@ -196,14 +196,17 @@ paginates runs per suite instead of using GitHub's 1,000-suite shortcut. It read
 `/status` envelope, fully paginates the creator-bearing `/statuses` history, derives the latest item
 per context, and cross-checks the derived count/state against the exact repository id/name and SHA
 in the combined response. Required evidence is marked only from a closed context/App union supplied
-by the future policy composer. One global request ceiling covers suites, runs, and both status reads;
-duplicate suite/run/status/request ids and repository/SHA/suite/state drift fail closed.
+by the future policy composer, and each required run must include the exact supplied candidate PR
+database id/number plus head/base repository ids, refs, and SHAs. One global request ceiling covers
+suites, runs, and both status reads; duplicate suite/run/status/request ids and
+repository/PR/SHA/suite/state drift fail closed.
 
 These primitives are still not the production collector: no source composes all REST and GraphQL
 families, records the credential receipt and every identity audit in a normalized snapshot,
 transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
-sets or check-run PR links, or binds the authenticated controller's exact last pusher. The system
-must not substitute UI text or omit those facts. Conditional merge therefore remains unsupported
+sets, binds those supplied check-policy/candidate inputs into a complete snapshot, or binds the
+authenticated controller's exact last pusher. The system must not substitute UI text or omit those
+facts. Conditional merge therefore remains unsupported
 for live use.
 
 ## Typed block and result contract

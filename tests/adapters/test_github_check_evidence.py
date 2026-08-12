@@ -32,6 +32,32 @@ def suite(suite_id=11):
     return {"id": suite_id, "head_sha": SHA}
 
 
+def pull_relation(*, base_sha="b" * 40):
+    return {
+        "url": "https://api.github.com/repos/owner/repo/pulls/72",
+        "id": 987654321,
+        "number": 72,
+        "head": {
+            "ref": "pathfinder/goal",
+            "sha": SHA,
+            "repo": {
+                "id": 123,
+                "url": "https://api.github.com/repos/owner/repo",
+                "name": "repo",
+            },
+        },
+        "base": {
+            "ref": "main",
+            "sha": base_sha,
+            "repo": {
+                "id": 123,
+                "url": "https://api.github.com/repos/owner/repo",
+                "name": "repo",
+            },
+        },
+    }
+
+
 def run(run_id=101, *, suite_id=11, name="preflight", app_id=15368):
     return {
         "id": run_id,
@@ -49,7 +75,7 @@ def run(run_id=101, *, suite_id=11, name="preflight", app_id=15368):
         "output": {},
         "check_suite": {"id": suite_id},
         "app": {"id": app_id, "slug": "actions"},
-        "pull_requests": [],
+        "pull_requests": [pull_relation()],
         "deployment": None,
     }
 
@@ -122,6 +148,16 @@ def read(value):
         repository_id=123,
         sha=SHA,
         required_checks=[{"context": "preflight", "app_id": 15368}],
+        pull_request={
+            "id": 987654321,
+            "number": 72,
+            "head_repository_id": 123,
+            "head_ref": "pathfinder/goal",
+            "head_sha": SHA,
+            "base_repository_id": 123,
+            "base_ref": "main",
+            "base_sha": "b" * 40,
+        },
     )
 
 
@@ -247,6 +283,36 @@ class GitHubCheckEvidenceReaderTests(unittest.TestCase):
             read(value)
         self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
 
+        wrong_relation = run()
+        wrong_relation["pull_requests"] = [pull_relation(base_sha="d" * 40)]
+        value, _transport = reader(
+            response(
+                {"total_count": 1, "check_suites": [suite()]}, "suites"
+            ),
+            response(
+                {"total_count": 1, "check_runs": [wrong_relation]}, "runs"
+            ),
+        )
+        with self.assertRaises(GitHubObservationError) as caught:
+            read(value)
+        self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
+
+        malformed_relation = pull_relation()
+        malformed_relation["head"]["repo"]["url"] = 7
+        malformed_run = run()
+        malformed_run["pull_requests"] = [malformed_relation]
+        value, _transport = reader(
+            response(
+                {"total_count": 1, "check_suites": [suite()]}, "suites"
+            ),
+            response(
+                {"total_count": 1, "check_runs": [malformed_run]}, "runs"
+            ),
+        )
+        with self.assertRaises(GitHubObservationError) as caught:
+            read(value)
+        self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
+
         stale = status(201, context="same", state="pending")
         current = status(202, context="same")
         duplicated = combined([current])
@@ -290,6 +356,16 @@ class GitHubCheckEvidenceReaderTests(unittest.TestCase):
                     {"context": "preflight", "app_id": 15368},
                     {"context": "preflight", "app_id": 15368},
                 ],
+                pull_request={
+                    "id": 987654321,
+                    "number": 72,
+                    "head_repository_id": 123,
+                    "head_ref": "pathfinder/goal",
+                    "head_sha": SHA,
+                    "base_repository_id": 123,
+                    "base_ref": "main",
+                    "base_sha": "b" * 40,
+                },
             )
         self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
         self.assertEqual(transport.calls, [])
