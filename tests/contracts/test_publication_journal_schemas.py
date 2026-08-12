@@ -530,7 +530,10 @@ class PublicationJournalSchemaTests(unittest.TestCase):
         }
         self.assertEqual(
             evidence_consumers,
-            {"pathfinder_core/adapters/github_merge_observer.py"},
+            {
+                "pathfinder_core/adapters/github_merge_observer.py",
+                "pathfinder_core/merge_status.py",
+            },
         )
         merge_callers = {
             path for path, source in sources.items() if ".merge(" in source
@@ -549,6 +552,7 @@ class PublicationJournalSchemaTests(unittest.TestCase):
                 "pathfinder_core/mission_host.py",
                 "pathfinder_core/goal_pack.py",
                 "pathfinder_core/adapters/github.py",
+                "pathfinder_core/merge_status.py",
             }
         )
         for forbidden in (

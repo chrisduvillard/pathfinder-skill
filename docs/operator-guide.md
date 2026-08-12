@@ -33,7 +33,7 @@ exact PR lookup and check observation. The source includes no command, live back
 loader, ordinary mission caller, or installed route. Do not instantiate it manually or interpret
 its fixture receipt as a real published PR.
 
-Independent source review is complete, but that is not K5 readiness. A bounded external-host
+Independent publication source review is complete, but that is not execution readiness. A bounded external-host
 rehearsal has now exercised the source publication controller and two complete live evidence
 snapshots with zero merge capability; its sanitized record is in
 [`docs/rehearsals/2026-08-12-zero-merge-publication.md`](rehearsals/2026-08-12-zero-merge-publication.md).
@@ -41,11 +41,48 @@ That one-off host adapter is not a packaged or installed route, and its delibera
 dry-run binding is not an operator merge policy or current-run merge authorization. A trusted
 installed host, supported live backend, and operator-owned schema-valid policy boundary therefore
 remain absent. This is separate from the later composed merge rehearsal. The shipped CLI therefore intentionally has no
-`merge` command, and packaged routes construct neither the publication controller nor the merge
-executor. They also cannot bypass the controller by constructing the lower-level GitHub publisher;
+publication or merge-execution command. It now has only the K5.1 `merge status` and `merge evaluate`
+inspection commands described below. Packaged routes construct neither the publication controller nor
+the merge executor. They also cannot bypass the controller by constructing the lower-level GitHub publisher;
 the package guard rejects that caller and any concrete generic or exact GitHub backend. The
 canonical checked/unchecked gate is in
 [`PLAN.md`](../PLAN.md#phase-k5--compose-an-explicit-default-off-conditional-merge-path).
+
+## Inspect conditional merge readiness
+
+K5.1 is an observation-only installed-host boundary. It reads one exact, persisted
+`awaiting-review` publication receipt and optional operator-supplied policy and evidence documents.
+It never contacts GitHub, discovers a pull request, loads a merge credential, persists or exposes a
+readiness proof, creates a merge intent, or calls the K4 writer. Even an `eligible` report remains
+`state: awaiting-review` with `intent_ready`, `execution_available`,
+`writer_credential_loaded`, and `merge_intent_created` all fixed to `false`.
+
+The host directory must be an existing owner-only, non-symlink directory outside the repository.
+Its fixed layout is:
+
+```text
+<host-dir>/
+  journal/publication-operations/<publication-request-id>.{request,dispatch,receipt}.json
+  merge-policy.json                 # optional; missing is typed
+  merge-authorization.json          # optional; missing is typed
+  merge-evidence-initial.json       # optional; missing is typed
+  merge-evidence-reread.json        # optional; missing is typed
+  protected-policy.json             # optional additive policy; shipped baseline otherwise
+```
+
+Run either view explicitly:
+
+```bash
+bash scripts/pathfinder-controller.sh merge status --repo-root <repository> --host-dir <host-dir> --publication-request-id <id> --json
+bash scripts/pathfinder-controller.sh merge evaluate --repo-root <repository> --host-dir <host-dir> --publication-request-id <id>
+```
+
+`--json` emits the closed canonical report. The default Markdown is only a rendering of that report.
+The two commands use the same pure two-snapshot evaluator; `operation` records which view the
+operator requested. Missing, expired, malformed, unsupported, drifted, or incomplete inputs produce
+typed blocks without widening authority. A missing exact publication receipt is a hard error.
+Supplying these files does not authorize execution, and no repository file, environment variable,
+or ordinary `/goal`, mission, Goal-pack, publication, or resume route can escalate into it.
 
 ## Inspect capabilities
 

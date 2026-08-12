@@ -62,8 +62,10 @@ hashes.
   an explicit non-authorizing dry-run binding so it could not be mistaken for merge authority.
 - [ ] Keep current-run merge authorization absent until an actual merge evaluation or execution is
   separately and explicitly requested.
-- [ ] Implement and independently review K5.1 as observation-only status/evaluation; it must load no
-  writer credential and create no merge intent.
+- [x] Implement K5.1 as observation-only status/evaluation; it loads no writer credential, creates
+  no merge intent, and remains awaiting-review even when eligible.
+- [ ] Obtain a separate independent K5.1 review; local implementation review is not relabeled as
+  independent evidence.
 - [ ] Keep K5.2 closed until its separate human security approval. Repeated implementation or
   rehearsal approval is not merge approval.
 - [ ] If a later composed merge rehearsal is approved, use a newly bounded authorization and fresh

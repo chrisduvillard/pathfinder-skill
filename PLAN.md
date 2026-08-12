@@ -1616,7 +1616,7 @@ approved composed merge rehearsal in K6.2.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
 - [x] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
-- [ ] K5.1 read-only composition is implemented and independently reviewed.
+- [ ] K5.1 read-only composition is implemented and independently reviewed. Source implementation is complete; independent review is still pending.
 - [ ] K5.2 has separate human security approval. Repeated implementation approval does not satisfy this gate.
 
 Until every prerequisite above K5.1 is checked, the safe next work is contract clarification and
@@ -1635,8 +1635,9 @@ and rulesets unavailable on this private Free-plan target, so it cannot be eligi
 [`docs/rehearsals/2026-08-12-zero-merge-publication.md`](docs/rehearsals/2026-08-12-zero-merge-publication.md).
 This closes only the bounded rehearsal checkbox: the adapter is not an installed package route, the
 package still has no live backend/credential loader, and the host binding deliberately was not a
-schema-valid merge policy or authorization. The first two readiness items and K5.1 therefore remain
-unchecked.
+schema-valid merge policy or authorization. The first two readiness items remain unchecked. K5.1
+now has an explicitly approved observation-only source implementation, but its combined
+implementation-and-independent-review readiness item remains unchecked pending separate review.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and
@@ -1657,22 +1658,35 @@ rejection, check-identity rejection, and zero production callers. The package gu
 controller and lower-level publisher construction plus concrete generic or exact GitHub backends
 outside the source-only protocol owner. No CLI, mission host, Goal pack, installed route, live
 backend, credential loader, or merge path constructs the controller, so this prerequisite grants no
-publication or K5 authority. Its independent source review is now complete;
-K5.1 remains unchecked until the runnable trusted-host publication, complete live evidence, and
-disposable-rehearsal preconditions above are satisfied.
+publication or K5 execution authority. Its independent source review is now complete. The later
+K5.1 observation-only implementation does not make publication runnable, install a live evidence
+collector, or supply operator authorization, policy, or credentials.
 
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 
-- [ ] `[writes code]` Add only a `merge status`/`merge evaluate` surface, composition state, operator docs, and focused tests; present the call graph before editing.
-- [ ] Default output is a typed eligibility/block report. It may collect evidence but cannot create an intent or load the merge token.
-- [ ] Keep normal `/goal`, `/pathfinder`, `/pathfinder auto`, mission host, Goal packs, publisher, and resume behavior unchanged. No automatic route escalation may call merge evaluation or execution.
-- [ ] Require exact persisted mission/PR metadata from the separately authorized publisher; never discover an arbitrary open PR by title, branch prefix alone, or latest timestamp.
-- [ ] Imitate concise controller status and structured `--json` output; rendered Markdown remains a view of canonical JSON.
-- [ ] Existing tests must pass unmodified. Add call-graph/behavior guards proving default routes and package installs load no merge credential and issue zero merge requests.
-- [ ] No deletion is expected. Show zero callers before adding the dry-run caller.
-- [ ] Expected diff: 180-280 lines.
-- [ ] Append a `PROGRESS.md` line recording dry-run-only composition.
-- [ ] Stop if awaiting-review publication lacks persisted exact PR identity or if reading merge status would implicitly authorize execution.
+- [x] `[writes code]` Add only a `merge status`/`merge evaluate` surface, composition state, operator docs, and focused tests; present the call graph before editing.
+- [x] Default output is a typed eligibility/block report. It may collect evidence but cannot create an intent or load the merge token.
+- [x] Keep normal `/goal`, `/pathfinder`, `/pathfinder auto`, mission host, Goal packs, publisher, and resume behavior unchanged. No automatic route escalation may call merge evaluation or execution.
+- [x] Require exact persisted mission/PR metadata from the separately authorized publisher; never discover an arbitrary open PR by title, branch prefix alone, or latest timestamp.
+- [x] Imitate concise controller status and structured `--json` output; rendered Markdown remains a view of canonical JSON.
+- [x] Existing behavior tests pass unchanged; three exact source-consumer allowlists were minimally updated for the sole read-only evaluator caller. Call-graph/behavior guards prove default routes and package installs load no merge credential and issue zero merge requests.
+- [x] No deletion occurred. Constructor scans showed zero publication, publisher, or merge-executor callers before and after; the new caller reaches only the pure evaluator.
+- [x] Scope remained K5.1-only. The additive diff exceeded the estimate because the closed report schema, exact receipt/evidence rebinding, installed-host ownership/symlink checks, and deterministic negative suite are explicit rather than implicit.
+- [x] Append a `PROGRESS.md` line recording dry-run-only composition.
+- [x] Stop if awaiting-review publication lacks persisted exact PR identity or if reading merge status would implicitly authorize execution.
+
+**K5.1 implementation note (2026-08-12):** the explicitly selected command lazily loads one
+observation-only reader rooted in an owner-only, current-user-owned non-symlink host directory
+outside repository trust. It requires one exact validated publication request/dispatch/receipt,
+reads only fixed policy/authorization/two-snapshot evidence filenames, falls back only to the
+shipped protected-surface baseline, and rebinds both snapshots and authorization to the receipt's
+repository, mission, PR, refs, SHAs, and diff. Its closed hashed report always remains
+`awaiting-review` with execution, writer credential, intent readiness, and intent creation fixed to
+false; even an eligible evaluation discards the generated readiness proof. Missing or malformed
+inputs are typed, while a missing exact publication receipt stops. The package scan forbids every
+writer, credential, environment-token, subprocess, and network primitive from the caller. The full
+376-test preflight and exact worktree archive smoke pass. K5.2 remains closed, and the K5.1
+readiness item above remains unchecked until a separate independent review is clean.
 
 #### Sub-prompt K5.2 — separately approved execution gate
 

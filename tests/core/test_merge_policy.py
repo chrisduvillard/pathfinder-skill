@@ -1326,7 +1326,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             DenyCode.DRAFT,
         } <= codes(verdict))
 
-    def test_evaluator_stays_pure_with_only_the_isolated_k4_consumers(self):
+    def test_evaluator_stays_pure_with_only_isolated_security_consumers(self):
         sources = "\n".join(
             (ROOT / "pathfinder_core" / name).read_text()
             for name in (
@@ -1348,6 +1348,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertEqual(set(consumers), {
             "pathfinder_core/merge_executor.py",
             "pathfinder_core/merge_journal.py",
+            "pathfinder_core/merge_status.py",
         })
         public = {
             name for name, value in MergePolicyEvaluator.__dict__.items()

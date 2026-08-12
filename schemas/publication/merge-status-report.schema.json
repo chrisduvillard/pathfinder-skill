@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/merge-status-report.schema.json",
+  "title": "Pathfinder Observation-only Merge Status Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation", "source", "state", "outcome", "eligible", "intent_ready", "execution_available", "writer_credential_loaded", "merge_intent_created", "publication", "inputs", "blocks", "required_approvals", "approval_actor_ids", "required_checks", "observed_at", "report_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "operation": {"enum": ["status", "evaluate"]},
+    "source": {"const": "installed-host-read-only-composition"},
+    "state": {"const": "awaiting-review"},
+    "outcome": {"enum": ["unknown", "unsupported", "policy-blocked", "eligible"]},
+    "eligible": {"type": "boolean"},
+    "intent_ready": {"const": false},
+    "execution_available": {"const": false},
+    "writer_credential_loaded": {"const": false},
+    "merge_intent_created": {"const": false},
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publication_request_id", "publication_receipt_id", "receipt_sha256", "repository", "pull_request"],
+      "properties": {
+        "publication_request_id": {"type": "string", "pattern": "^publication_request_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "publication_receipt_id": {"type": "string", "pattern": "^publication_receipt_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "repository": {"$ref": "#/$defs/repository"},
+        "pull_request": {"$ref": "#/$defs/pullRequest"}
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "authorization", "initial_evidence", "reread_evidence", "protected_policy"],
+      "properties": {
+        "policy": {"$ref": "#/$defs/inputState"},
+        "authorization": {"$ref": "#/$defs/inputState"},
+        "initial_evidence": {"$ref": "#/$defs/inputState"},
+        "reread_evidence": {"$ref": "#/$defs/inputState"},
+        "protected_policy": {"enum": ["present", "missing", "invalid", "shipped-baseline"]}
+      }
+    },
+    "blocks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/block"}},
+    "required_approvals": {"type": "integer", "minimum": 0},
+    "approval_actor_ids": {"type": "array", "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
+    "required_checks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/check"}},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "report_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"outcome": {"const": "eligible"}}, "required": ["outcome"]},
+      "then": {"properties": {"eligible": {"const": true}, "blocks": {"maxItems": 0}}},
+      "else": {"properties": {"eligible": {"const": false}, "blocks": {"minItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "nodeId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+    "ref": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"},
+    "inputState": {"enum": ["present", "missing", "invalid"]},
+    "repository": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "owner", "name"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 39},
+        "name": {"type": "string", "minLength": 1, "maxLength": 100}
+      }
+    },
+    "pullRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "number", "url", "head_ref", "head_sha", "base_ref", "base_sha"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"},
+        "number": {"type": "integer", "minimum": 1}, "url": {"type": "string", "format": "uri", "pattern": "^https://github\\.com/"},
+        "head_ref": {"$ref": "#/$defs/ref"}, "head_sha": {"$ref": "#/$defs/commit"},
+        "base_ref": {"$ref": "#/$defs/ref"}, "base_sha": {"$ref": "#/$defs/commit"}
+      }
+    },
+    "block": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "surface", "detail"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
+        "surface": {"type": "string", "minLength": 1, "maxLength": 256},
+        "detail": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["context", "app_id"],
+      "properties": {
+        "context": {"type": "string", "minLength": 1, "maxLength": 100},
+        "app_id": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

@@ -20,6 +20,19 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     doctor = commands.add_parser("doctor", help="inspect capabilities without writes")
     doctor.add_argument("--json", action="store_true", dest="as_json")
+    merge = commands.add_parser(
+        "merge", help="inspect conditional merge readiness without execution"
+    )
+    merge_commands = merge.add_subparsers(dest="merge_command", required=True)
+    for name, help_text in (
+        ("status", "show an observation-only merge status"),
+        ("evaluate", "evaluate installed evidence without creating an intent"),
+    ):
+        command = merge_commands.add_parser(name, help=help_text)
+        command.add_argument("--repo-root", required=True)
+        command.add_argument("--host-dir", required=True)
+        command.add_argument("--publication-request-id", required=True)
+        command.add_argument("--json", action="store_true", dest="as_json")
     mission = commands.add_parser("mission", help="inspect controller mission state")
     mission_commands = mission.add_subparsers(dest="mission_command", required=True)
     start = mission_commands.add_parser("start", help="initialize a local host-driven mission")
@@ -136,6 +149,24 @@ def main(argv=None) -> int:
         args = _parser().parse_args(argv)
         if args.command == "doctor":
             return _doctor(args.as_json)
+        if args.command == "merge":
+            from .merge_status import (
+                InstalledHostMergeReader,
+                MergeStatusController,
+                render_merge_status,
+            )
+
+            report = MergeStatusController(
+                InstalledHostMergeReader(args.repo_root, args.host_dir)
+            ).inspect(
+                args.publication_request_id,
+                operation=args.merge_command,
+            )
+            if args.as_json:
+                print(json.dumps(report, indent=2, sort_keys=True))
+            else:
+                print(render_merge_status(report), end="")
+            return 0
         if args.command == "mission" and args.mission_command == "pack-status":
             state = GoalPackController(args.state_dir).status()
             if args.as_json:

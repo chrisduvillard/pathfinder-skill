@@ -56,6 +56,18 @@ class PublicationControllerSchemaTests(unittest.TestCase):
                     canonical_sha256(self.bundle[name], field),
                 )
 
+    def test_observation_only_merge_report_schema_is_valid_and_closed(self):
+        schema = load(SCHEMAS / "merge-status-report.schema.json")
+        Draft202012Validator.check_schema(schema)
+        self.assertFalse(schema["additionalProperties"])
+        for field in (
+            "intent_ready",
+            "execution_available",
+            "writer_credential_loaded",
+            "merge_intent_created",
+        ):
+            self.assertEqual(schema["properties"][field], {"const": False})
+
     def test_receipt_projects_the_merge_authorization_candidate_exactly(self):
         authorization = load(FIXTURES / "publication-contracts.json")[
             "authorization"
@@ -255,18 +267,35 @@ class PublicationControllerSchemaTests(unittest.TestCase):
             with self.subTest(routed_forbidden=forbidden):
                 self.assertNotIn(forbidden, routed)
 
-        self.assertTrue(
-            command_names(_parser()).isdisjoint(
-                {
-                    "publish",
-                    "publication",
-                    "merge",
-                    "merge-status",
-                    "merge-evaluate",
-                    "merge-execute",
-                }
-            )
+        parser = _parser()
+        names = command_names(parser)
+        self.assertIn("merge", names)
+        self.assertTrue(names.isdisjoint({
+            "publish", "publication", "execute", "merge-status",
+            "merge-evaluate", "merge-execute",
+        }))
+        top_level = next(
+            action for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)
         )
+        merge_parser = top_level.choices["merge"]
+        merge_commands = next(
+            action for action in merge_parser._actions
+            if isinstance(action, argparse._SubParsersAction)
+        )
+        self.assertEqual(set(merge_commands.choices), {"status", "evaluate"})
+
+        observation_source = packaged["pathfinder_core/merge_status.py"]
+        for forbidden in (
+            "MergeExecutor", "merge_executor", "GitHubMergeBackend",
+            "GitHubMergeCredential", "HostMergeCredentialReader",
+            "MergeOperationJournal", "merge_credentials",
+            "github_merge_writer", ".merge(", "dispatch_once(",
+            "record_intent(", "write_atomic(", "subprocess", "socket",
+            "urllib", "http.client", "requests.", "os.environ", "getenv(",
+        ):
+            with self.subTest(observation_forbidden=forbidden):
+                self.assertNotIn(forbidden, observation_source)
 
 
 if __name__ == "__main__":
