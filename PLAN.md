@@ -1602,7 +1602,26 @@ host-owned envelope in any future K4 composition.
 
 **Goal:** expose the primitive only through a separately approved post-publication controller whose default remains observation-only.
 
-**Preconditions:** K4 green and independently reviewed; awaiting-review GitHub publication is itself runnable, idempotent, and isolated; operator has installed trusted policy and credential boundaries; disposable-repository live rehearsal complete.
+**Preconditions:** K4 green and independently reviewed; awaiting-review GitHub publication is
+itself runnable, idempotent, and isolated; the operator has installed trusted policy and credential
+boundaries; and a disposable-repository rehearsal has exercised publication plus complete
+read-only evidence collection with zero merge calls. This is distinct from the later, separately
+approved composed merge rehearsal in K6.2.
+
+**Current readiness gate (2026-08-12):**
+
+- [x] K4 source primitive is green and independently reviewed.
+- [x] The source-only publication prerequisite is crash-tested and independently reviewed.
+- [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
+- [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
+- [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
+- [ ] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
+- [ ] K5.1 read-only composition is implemented and independently reviewed.
+- [ ] K5.2 has separate human security approval. Repeated implementation approval does not satisfy this gate.
+
+Until every prerequisite above K5.1 is checked, the safe next work is contract clarification and
+default-off regression coverage only. Fixture success cannot be relabeled as runnable publication,
+trusted-host installation, live evidence, or rehearsal.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and
@@ -1621,8 +1640,9 @@ never pushes or creates again. Deterministic tests, a process-death probe, and a
 prove terminal replay, exact merge-authorization projection, one-use claims, pre-effect target
 rejection, check-identity rejection, and zero production callers. No CLI, mission host, Goal pack,
 installed route, live backend, credential loader, or merge path constructs the controller, so this
-prerequisite grants no publication or K5 authority. K5.1 remains unchecked until this boundary is
-independently reviewed and the remaining trusted-host/live-rehearsal preconditions are satisfied.
+prerequisite grants no publication or K5 authority. Its independent source review is now complete;
+K5.1 remains unchecked until the runnable trusted-host publication, complete live evidence, and
+disposable-rehearsal preconditions above are satisfied.
 
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 
@@ -1673,6 +1693,9 @@ independently reviewed and the remaining trusted-host/live-rehearsal preconditio
 - [ ] Stop if a fixture can reach the merge backend without first producing valid policy, authorization, evidence, intent, and one-use budget records.
 
 #### Sub-prompt K6.2 — optional disposable live rehearsal and recovery guide
+
+This is the later rehearsal of the composed writer path. It does not satisfy or replace K5's
+earlier zero-merge publication/evidence rehearsal.
 
 - [ ] `[external mutation; separately approved]` Use only a dedicated disposable GitHub repository with no deployment/release hooks, test credentials, and a test PR created for this rehearsal; present exact targets and cleanup before acting.
 - [ ] Exercise one blocked PR for each visible GitHub rule family and at most one eligible squash merge. Capture sanitized endpoint/status evidence, never tokens or private response bodies.
@@ -1725,9 +1748,11 @@ independently reviewed and the remaining trusted-host/live-rehearsal preconditio
 
 ### Recommended first implementation slice
 
-**K0.1 through K4.2 are implemented locally.** The K4 primitive is unreachable and default-off:
+**K0.1 through K4.2 are implemented locally.** The K4 primitive and source-only publication
+prerequisite have passed independent source review, but both remain unreachable and default-off:
 repository search proves no CLI, route, publisher, mission, Goal pack, or host bridge constructs the
-executor. K5 remains closed until K4 passes fresh independent security review, runnable
-awaiting-review publication durably persists the exact PR identity, live evidence collects every
-required fact, a trusted host-owned envelope is installed, and a separate execution-enable decision
-authorizes composition. Do not infer K5 authority from source presence or green fixture tests.
+executor. K5 remains closed until runnable awaiting-review publication durably persists exact PR
+identity through an installed trusted host, live evidence collects every required fact, operator-owned
+policy and credential boundaries exist, the disposable rehearsal passes, and a separate
+execution-enable decision authorizes K5.2. Do not infer K5 authority from source presence, source
+review, or green fixture tests.

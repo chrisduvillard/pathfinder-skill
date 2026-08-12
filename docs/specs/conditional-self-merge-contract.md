@@ -262,6 +262,12 @@ published again; explicit recovery can only find the same exact PR and observe c
 or ordinary route constructs this controller, and no live backend currently implements the trusted
 preflight.
 
+Independent source review of this boundary is complete. That closes a code-review prerequisite,
+not an operational one: there is still no installed authenticated envelope reader, exact live
+backend, complete live evidence collector, operator policy/credential store, or zero-merge
+publication/evidence rehearsal in a disposable repository. The later composed merge rehearsal is a
+separate K6 gate. K5 therefore remains closed and the default CLI exposes no merge surface.
+
 Before the unreachable primitive can issue its one remote call, an atomic one-use claim persists a
 write-once intent and binds the two-snapshot readiness-proof hash,
 both evidence ids/hashes, policy and authorization hashes; repository and PR ids; exact head/base

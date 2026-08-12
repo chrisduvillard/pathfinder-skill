@@ -1,3 +1,4 @@
+import argparse
 import copy
 import json
 import unittest
@@ -5,6 +6,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from pathfinder_core.__main__ import _parser
 from pathfinder_core.merge_policy import canonical_sha256
 from tests.contracts.test_intent_schemas import reject_duplicate_keys
 
@@ -12,6 +14,17 @@ from tests.contracts.test_intent_schemas import reject_duplicate_keys
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas" / "publication"
 FIXTURES = ROOT / "tests" / "contracts" / "fixtures"
+
+
+def command_names(parser):
+    names = set()
+    for action in parser._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        for name, child in action.choices.items():
+            names.add(name)
+            names.update(command_names(child))
+    return names
 
 
 def load(path):
@@ -112,20 +125,110 @@ class PublicationControllerSchemaTests(unittest.TestCase):
                 )
                 self.validate("request", changed)
 
-    def test_default_routes_have_zero_publication_controller_callers(self):
-        callers = []
+    def test_default_packaged_routes_have_zero_publication_or_merge_composition(self):
+        packaged = {}
         for path in (ROOT / "pathfinder_core").rglob("*.py"):
-            if path.name == "publication_controller.py":
-                continue
-            if "PublicationController(" in path.read_text():
-                callers.append(path)
-        for folder in ("scripts", "skills", ".codex-plugin", ".claude-plugin"):
+            packaged[path.relative_to(ROOT).as_posix()] = path.read_text()
+        for folder in (
+            "scripts",
+            "skills",
+            ".agents",
+            ".codex-plugin",
+            ".claude-plugin",
+        ):
             for path in (ROOT / folder).rglob("*"):
-                if path.is_file() and "PublicationController(" in path.read_text(
-                    errors="ignore"
-                ):
-                    callers.append(path)
-        self.assertEqual(callers, [])
+                if path.is_file():
+                    packaged[path.relative_to(ROOT).as_posix()] = path.read_text(
+                        errors="ignore"
+                    )
+
+        constructor_owners = {
+            token: {
+                path
+                for path, source in packaged.items()
+                if token in source and path != owner
+            }
+            for token, owner in (
+                (
+                    "PublicationController(",
+                    "pathfinder_core/publication_controller.py",
+                ),
+                ("MergeExecutor(", "pathfinder_core/merge_executor.py"),
+            )
+        }
+        self.assertEqual(
+            constructor_owners,
+            {"PublicationController(": set(), "MergeExecutor(": set()},
+        )
+        self.assertEqual(
+            {
+                path
+                for path, source in packaged.items()
+                if "ExactGitHubBackend" in source
+                and path != "pathfinder_core/adapters/github.py"
+            },
+            set(),
+        )
+        exact_backend_methods = (
+            "def preflight(",
+            "def push_exact(",
+            "def find_pull_request_exact(",
+            "def create_pull_request_exact(",
+            "def check_observations_exact(",
+        )
+        self.assertEqual(
+            {
+                path
+                for path, source in packaged.items()
+                if path != "pathfinder_core/adapters/github.py"
+                and all(method in source for method in exact_backend_methods)
+            },
+            set(),
+        )
+
+        enabled_paths = {
+            "pathfinder_core/__main__.py",
+            "pathfinder_core/mission_host.py",
+            "pathfinder_core/goal_pack.py",
+            "pathfinder_core/adapters/github.py",
+        }
+        enabled = "\n".join(
+            source
+            for path, source in packaged.items()
+            if path in enabled_paths
+            or path.startswith(
+                (
+                    "scripts/",
+                    "skills/",
+                    ".agents/",
+                    ".codex-plugin/",
+                    ".claude-plugin/",
+                )
+            )
+        )
+        for forbidden in (
+            "PublicationController",
+            "MergeExecutor",
+            "GitHubMergeBackend",
+            "GitHubMergeCredential",
+            "HostMergeCredentialReader",
+            "merge_credentials",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, enabled)
+
+        self.assertTrue(
+            command_names(_parser()).isdisjoint(
+                {
+                    "publish",
+                    "publication",
+                    "merge",
+                    "merge-status",
+                    "merge-evaluate",
+                    "merge-execute",
+                }
+            )
+        )
 
 
 if __name__ == "__main__":

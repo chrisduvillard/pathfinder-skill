@@ -33,6 +33,14 @@ exact PR lookup and check observation. The source includes no command, live back
 loader, ordinary mission caller, or installed route. Do not instantiate it manually or interpret
 its fixture receipt as a real published PR.
 
+Independent source review is complete, but that is not K5 readiness. Runnable publication, a
+trusted installed host, complete live evidence, operator-owned policy/credential boundaries, and a
+zero-merge disposable-repository publication/evidence rehearsal remain absent. This is separate
+from the later composed merge rehearsal. The shipped CLI therefore intentionally has no
+`merge` command, and packaged routes construct neither the publication controller nor the merge
+executor. The canonical checked/unchecked gate is in
+[`PLAN.md`](../PLAN.md#phase-k5--compose-an-explicit-default-off-conditional-merge-path).
+
 ## Inspect capabilities
 
 ```bash
