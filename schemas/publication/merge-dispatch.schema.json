@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/merge-dispatch.schema.json",
+  "title": "Pathfinder Merge Dispatch Boundary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "intent_sha256", "dispatch_started_at", "dispatch_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "operation_id": {"type": "string", "pattern": "^merge_operation_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "intent_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "dispatch_started_at": {"type": "string", "format": "date-time"},
+    "dispatch_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

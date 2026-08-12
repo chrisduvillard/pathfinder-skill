@@ -30,7 +30,7 @@ Pathfinder protects user intent and authorization, repository integrity, local c
 | Budget reset or overrun | Authorization cannot widen Goal Binding limits; every action carries the persisted wall deadline; restart cannot reset it; late success is rejected. | Token/cost accounting is not exposed by the host protocol and remains host-controlled. |
 | Duplicate PR after crash | Exact head/base/mission lookup and persistent lost-response fixtures reuse one PR record. | Publication is not composed into the enabled bridge. |
 | Forge API confusion/auth/rate limits | Publication primitives model exact head/base/mission lookup and distinct auth, rate, timeout, failed-check, and unavailable states. | They are tested building blocks only; publication is not composed into the enabled bridge. |
-| Destructive/external action | Closed safety enum, hard-stop denylist, diff-grounded recheck, no force push/release/remote mutation, no merge method. | Human actions after handoff are outside Pathfinder core. |
+| Destructive/external action | The enabled bridge retains its closed safety enum, hard-stop denylist, diff-grounded recheck, and zero remote mutation. The separate K4 merge primitive is unreachable, atomically spends one authorization/proof, persists a host-authenticated credential receipt and dispatch boundary, is squash-only/SHA-bound, and never retries mutation. | K4 has no caller or installed envelope/credential reader; K5 composition requires separate approval and live rehearsal. Human actions after handoff remain outside the enabled bridge. |
 | Compromised dependency | Two pinned direct validation dependencies, required CI, package smoke from exact archive, immutable stable tags. | Transitive/platform supply-chain risk remains; dependency updates require review. |
 
 ## Security invariants
@@ -41,6 +41,6 @@ The local bridge may run only one existing Goal sequentially through an attested
 
 Publication, self-merge, parallel Goals, autonomous opportunity generation, non-Git autonomous commits, release automation by missions, and formal verification of host/model truthfulness are not supported by the local bridge.
 
-The [conditional self-merge security contract](specs/conditional-self-merge-contract.md) is a
-future design and grants no v1 authority. It preserves the enabled bridge's zero-publication and
-zero-merge boundary.
+The [conditional self-merge security contract](specs/conditional-self-merge-contract.md) includes
+an unreachable K4 building block and grants no v1 authority. It preserves the enabled bridge's
+zero-publication and zero-merge boundary.

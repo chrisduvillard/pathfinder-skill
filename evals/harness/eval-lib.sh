@@ -326,6 +326,17 @@ assert_merge_evidence_contract() {
   )" || add_error "merge evidence contract invalid: $validation_output"
 }
 
+assert_merge_writer_contract() {
+  local file validation_output
+  require_artifact "merge-writer-contract.json" || return
+  file="$(artifact_file "merge-writer-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-merge-writer-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "merge writer contract invalid: $validation_output"
+}
+
 run_assertion() {
   case "$1" in
     goal-contract) assert_goal_contract ;;
@@ -345,6 +356,7 @@ run_assertion() {
     manual-handoff-review) assert_manual_handoff_review ;;
     publication-safety) assert_publication_safety ;;
     merge-evidence-contract) assert_merge_evidence_contract ;;
+    merge-writer-contract) assert_merge_writer_contract ;;
     replay-contract) assert_replay_contract ;;
     injection-surface-fixtures) assert_injection_surface_fixtures ;;
     mission-view-repair) assert_mission_view_repair ;;

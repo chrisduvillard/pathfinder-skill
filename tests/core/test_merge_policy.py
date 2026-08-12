@@ -1326,7 +1326,7 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
             DenyCode.DRAFT,
         } <= codes(verdict))
 
-    def test_evaluator_has_zero_network_mutation_credentials_or_production_callers(self):
+    def test_evaluator_stays_pure_with_only_the_isolated_k4_consumers(self):
         sources = "\n".join(
             (ROOT / "pathfinder_core" / name).read_text()
             for name in (
@@ -1345,7 +1345,10 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
                 continue
             if "merge_policy" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(consumers, [])
+        self.assertEqual(set(consumers), {
+            "pathfinder_core/merge_executor.py",
+            "pathfinder_core/merge_journal.py",
+        })
         public = {
             name for name, value in MergePolicyEvaluator.__dict__.items()
             if callable(value) and not name.startswith("_")

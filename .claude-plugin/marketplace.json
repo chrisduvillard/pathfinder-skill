@@ -12,7 +12,7 @@
       "source": {
         "source": "github",
         "repo": "chrisduvillard/pathfinder-skill",
-        "ref": "v3.0.0"
+      "ref": "v3.1.0"
       },
       "category": "productivity"
     }

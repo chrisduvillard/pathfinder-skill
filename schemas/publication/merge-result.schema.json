@@ -3,13 +3,14 @@
   "$id": "https://pathfinder.local/schemas/publication/merge-result.schema.json",
   "title": "Pathfinder Terminal Merge Result",
   "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "result_id", "operation_id", "intent_sha256", "outcome", "binding", "merge_proof", "completed_at", "result_sha256"],
+  "required": ["schema_version", "result_id", "operation_id", "intent_sha256", "outcome", "reason", "binding", "merge_proof", "completed_at", "result_sha256"],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {"const": 2},
     "result_id": {"type": "string", "pattern": "^merge_result_[a-z0-9][a-z0-9_-]{7,63}$"},
     "operation_id": {"type": "string", "pattern": "^merge_operation_[a-z0-9][a-z0-9_-]{7,63}$"},
     "intent_sha256": {"$ref": "#/$defs/sha256"},
     "outcome": {"enum": ["merged", "not-merged", "reconcile-required", "policy-blocked", "auth-error", "rate-limited", "permission-missing", "api-unavailable"]},
+    "reason": {"enum": ["confirmed-merged", "confirmed-after-response-loss", "remote-reported-not-merged", "head-mismatch", "unmergeable", "already-merged", "validation-failed", "pending-intent", "dispatch-not-started", "transport-ambiguous", "merge-proof-incomplete", "identity-drift", "policy-ineligible", "authentication-failed", "rate-limit-exceeded", "permission-denied", "not-found", "malformed-response", "server-error"]},
     "binding": {
       "type": "object", "additionalProperties": false,
       "required": ["readiness_proof_sha256", "policy_sha256", "authorization_sha256", "repository", "pull_request", "actor", "merge_method"],
@@ -25,7 +26,14 @@
     "result_sha256": {"$ref": "#/$defs/sha256"}
   },
   "allOf": [
-    {"if": {"properties": {"outcome": {"const": "merged"}}, "required": ["outcome"]}, "then": {"properties": {"merge_proof": {"$ref": "#/$defs/mergeProof"}}}},
+    {"if": {"properties": {"outcome": {"const": "merged"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"enum": ["confirmed-merged", "confirmed-after-response-loss"]}, "merge_proof": {"$ref": "#/$defs/mergeProof"}}}},
+    {"if": {"properties": {"outcome": {"const": "not-merged"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"enum": ["remote-reported-not-merged", "head-mismatch", "unmergeable", "already-merged", "validation-failed"]}}}},
+    {"if": {"properties": {"outcome": {"const": "reconcile-required"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"enum": ["pending-intent", "dispatch-not-started", "transport-ambiguous", "merge-proof-incomplete", "identity-drift", "malformed-response"]}}}},
+    {"if": {"properties": {"outcome": {"const": "policy-blocked"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"const": "policy-ineligible"}}}},
+    {"if": {"properties": {"outcome": {"const": "auth-error"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"const": "authentication-failed"}}}},
+    {"if": {"properties": {"outcome": {"const": "rate-limited"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"const": "rate-limit-exceeded"}}}},
+    {"if": {"properties": {"outcome": {"const": "permission-missing"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"enum": ["permission-denied", "not-found"]}}}},
+    {"if": {"properties": {"outcome": {"const": "api-unavailable"}}, "required": ["outcome"]}, "then": {"properties": {"reason": {"enum": ["malformed-response", "server-error"]}}}},
     {"if": {"not": {"properties": {"outcome": {"const": "merged"}}, "required": ["outcome"]}}, "then": {"properties": {"merge_proof": {"type": "null"}}}}
   ],
   "$defs": {
@@ -36,14 +44,19 @@
     "actor": {"type": "object", "additionalProperties": false, "required": ["app_id", "installation_id", "actor_id", "actor_node_id", "login"], "properties": {"app_id": {"type": "integer", "minimum": 1}, "installation_id": {"type": "integer", "minimum": 1}, "actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}}},
     "mergeProof": {
       "type": "object", "additionalProperties": false,
-      "required": ["proof_source", "repository_id", "pull_request_id", "pull_request_node_id", "pull_request_number", "head_sha", "base_sha_before", "merge_commit_sha", "merged_at", "merged_by"],
+      "required": ["proof_source", "repository_id", "pull_request_id", "pull_request_node_id", "pull_request_number", "head_sha", "base_ref", "base_sha_before", "base_sha_after", "merge_commit_sha", "merge_commit_parent_shas", "merged_at", "merged_by", "merge_endpoint_status", "request_ids", "observed_at"],
       "properties": {
         "proof_source": {"enum": ["response-and-reread", "reconciliation-reread"]},
         "repository_id": {"type": "integer", "minimum": 1}, "pull_request_id": {"type": "integer", "minimum": 1},
         "pull_request_node_id": {"$ref": "#/$defs/nodeId"}, "pull_request_number": {"type": "integer", "minimum": 1},
-        "head_sha": {"$ref": "#/$defs/commit"}, "base_sha_before": {"$ref": "#/$defs/commit"},
-        "merge_commit_sha": {"$ref": "#/$defs/commit"}, "merged_at": {"type": "string", "format": "date-time"},
-        "merged_by": {"type": "object", "additionalProperties": false, "required": ["actor_id", "actor_node_id", "login"], "properties": {"actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}}}
+        "head_sha": {"$ref": "#/$defs/commit"}, "base_ref": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"},
+        "base_sha_before": {"$ref": "#/$defs/commit"}, "base_sha_after": {"$ref": "#/$defs/commit"},
+        "merge_commit_sha": {"$ref": "#/$defs/commit"}, "merge_commit_parent_shas": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/commit"}},
+        "merged_at": {"type": "string", "format": "date-time"},
+        "merged_by": {"type": "object", "additionalProperties": false, "required": ["actor_id", "actor_node_id", "login"], "properties": {"actor_id": {"type": "integer", "minimum": 1}, "actor_node_id": {"$ref": "#/$defs/nodeId"}, "login": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\\[bot\\]$"}}},
+        "merge_endpoint_status": {"const": 204},
+        "request_ids": {"type": "array", "minItems": 4, "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"}},
+        "observed_at": {"type": "string", "format": "date-time"}
       }
     }
   }

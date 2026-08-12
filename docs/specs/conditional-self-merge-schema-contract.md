@@ -1,8 +1,8 @@
 # Conditional self-merge policy and authorization schemas
 
-> Status: closed data contracts with unused read-only observation, pure evaluation helpers, and an
-> inert two-snapshot readiness-proof contract. No credentialed reader, eligibility route, or merge
-> writer is enabled.
+> Status: closed data contracts with unused read-only observation, pure evaluation helpers, an
+> inert two-snapshot readiness-proof contract, and an unreachable K4 journal/writer primitive. No
+> credentialed observer, eligibility route, merge command, or writer composition is enabled.
 
 The Draft 2020-12 schemas under `schemas/publication/` represent the two independent keys required
 by the [conditional self-merge security contract](conditional-self-merge-contract.md). They are
@@ -67,15 +67,21 @@ block. Schema validity alone is never an eligibility verdict or authority to loa
 
 ## Current executable boundary
 
-These schemas and the pure evaluator have no production caller. A single-snapshot verdict is
-advisory and always has `intent_ready = false`. The evaluator applies the earlier of host expiry,
-host policy age, and the 60-second shipped ceiling. Only its pure reread path can produce the closed,
+These schemas and the pure evaluator are consumed only by the uncomposed K4 journal/executor. A
+single-snapshot verdict is advisory and always has `intent_ready = false`. The evaluator applies the
+earlier of host expiry, host policy age, and the 60-second shipped ceiling. Only its pure reread path can produce the closed,
 canonical `merge-readiness-proof` binding two disjoint evidence hashes, request-audit hashes,
-policy-read receipts, and observation windows. The inert merge-intent/result schemas require that
-proof hash instead of accepting a lone evidence hash. A journal must persist both complete evidence
-documents—not only their summary fields—and replay the pure two-snapshot evaluator at the intent
-timestamp. Each document hash, the generated readiness proof, and the intent binding must match
-exactly; fabricated initial metadata or a proof outside either effective freshness window blocks.
+policy-read receipts, and observation windows. The v2 merge-intent/result schemas require that proof
+hash instead of accepting a lone evidence hash. The K4 journal persists both complete evidence
+documents—not only their summary fields—and replays the pure two-snapshot evaluator at the intent
+timestamp. The intent also directly binds the controller diff, changed-file, and Git-object evidence
+hashes plus the authenticated merge-credential receipt id/hash. The closed receipt records exact
+repository selection, permissions, App/installation/account/bot identity, suspension, and issuance,
+expiry, and host verification times. Each document hash, generated readiness proof, and intent binding must match exactly;
+fabricated initial metadata or a proof outside either effective freshness window blocks. The
+uncomposed K1 preview used schema version 1; K4 replaces those preview shapes with version 2 before
+any production caller or durable production record exists. Consumers reject v1 merge intents and
+results rather than guessing a migration.
 
 The protected-policy input is either the byte-equivalent shipped baseline or a schema-valid
 additive override anchored to that shipped baseline. A caller-supplied replacement baseline is
@@ -83,10 +89,19 @@ invalid even when its hash is internally consistent. The policy and evidence bin
 effective registry hash.
 
 The readiness document remains content-addressed data, not a self-authenticating cross-process
-attestation. Any future K4 consumer must authenticate its host-owned storage/envelope before it may
-accept the proof. The v1 mission authorization enum remains
-`none`, `local-branch`, or
+attestation. The K4 executor accepts it only through an injected authenticated host-envelope reader
+whose contract requires a newly collected, host-authenticated envelope for the exact execution
+instant; the executor rejects an older authentication timestamp and replays both snapshots. No
+repository, CLI, or live reader implements that trust boundary. The v1 mission authorization enum
+remains `none`, `local-branch`, or
 `github-awaiting-review`; enabled host transition maps still contain no remote publication or merge
-action. The fixture observer can supply a complete dry-run snapshot, while the GET-only live
-boundary cannot collect required GraphQL facts. Remote mutation still requires the separate
-security and enablement gates in the security contract.
+action. Terminal results carry a closed reason and exact squash proof: repository/PR/head/base,
+single pre-merge base parent, post-merge base/commit, actor, merged and observed times, merge-status
+observation, and unique request ids. The separate dispatch record distinguishes a durable intent
+that never reached dispatch from an
+ambiguous dispatched operation; only the atomic intent creator may write it, and reconciliation
+never sends a second mutation. Because a durable local marker cannot be atomic with the remote
+request, restarted reconciliation never credits a pending dispatched operation as merged even when
+observation finds matching merged state. The fixture observer can supply a complete dry-run snapshot, while
+the GET-only live boundary cannot collect required GraphQL facts. K5 composition still
+requires the separate security and enablement gates in the security contract.

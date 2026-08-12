@@ -1,8 +1,9 @@
 # Conditional self-merge security contract
 
-> Status: design ratified on 2026-08-11; inert evidence contracts, a fixture observer, an
-> uncomposed GET-only REST transport, and an unused pure eligibility/freshness evaluator exist.
-> Live observation, mutation, and enablement are not authorized.
+> Status: design ratified on 2026-08-11; the evidence contracts, fixture observer, uncomposed
+> GET-only REST transport, pure eligibility/freshness evaluator, and crash-safe K4 merge primitive
+> exist. The writer has no caller, credential loader, command, route, or enabled composition. Live
+> observation and merge enablement are not authorized.
 
 ## Precedence and invariant
 
@@ -12,8 +13,9 @@ merge. This document defines the evidence and authority that a future, separatel
 post-publication controller would need. Its presence grants no authority, adds no credential, and
 does not make repository policy executable.
 
-The first safe product is observation and a typed eligibility verdict. A remote merge writer stays
-unreachable until it has an independent security review and a separate enablement decision.
+The first safe product is observation and a typed eligibility verdict. The remote merge primitive
+is implemented but stays unreachable until it has an independent security review and a separate
+K5 enablement decision.
 
 ## Authority model
 
@@ -218,11 +220,11 @@ unioned and the approval floor is the maximum. Typed outcome precedence is `unkn
 even when a higher-precedence outcome wins. Blocks and proof summaries are deterministically
 ordered.
 
-The evaluator has no credential, network, filesystem mutation, merge method, or production caller.
-The complete fixture can produce `eligible`, but the live GET-only transport cannot collect the
-required GraphQL review-decision/thread/queue evidence. Live conditional merge therefore remains
-unsupported, and no ordinary `/goal`, mission, publication, or resume path evaluates or acts on a
-verdict.
+The evaluator has no credential, network, filesystem mutation, or merge method. Its only production
+consumers are the uncomposed K4 journal/executor boundary. The complete fixture can produce
+`eligible`, but the live GET-only transport cannot collect the required GraphQL
+review-decision/thread/queue evidence. Live conditional merge therefore remains unsupported, and no
+ordinary `/goal`, mission, publication, or resume path evaluates or acts on a verdict.
 
 Snapshot validity ends at the earliest of the authenticated host's `expires_at`, the policy's
 maximum age, and exactly 60 seconds after `observed_at`; `completed_at`, the policy read, and every
@@ -236,18 +238,35 @@ head/base and merge state, diff, classic/ruleset/bypass-membership, review/decis
 Any mismatch is typed unknown and invalidates the attempt; consumers must start a new complete
 two-snapshot cycle and may not patch or retain an earlier green domain. Success returns a distinct,
 immutable, closed, canonical readiness proof binding both snapshots; failure returns no proof.
-The future journal must retain both complete evidence documents and reproduce the same proof by
-running this evaluator at the intent time. Summary-only snapshot metadata is insufficient. A proof
+The K4 journal retains both complete evidence documents and reproduces the same proof by running
+this evaluator at the intent time. Summary-only snapshot metadata is insufficient. A proof
 that has crossed a process boundary is still untrusted until its host-owned storage or attestation
 envelope is authenticated.
 
-## Future mutation and crash reconciliation
+## Implemented unreachable mutation and crash reconciliation
 
-Before any future remote call, a write-once intent must bind the two-snapshot readiness-proof hash,
+Before the unreachable primitive can issue its one remote call, an atomic one-use claim persists a
+write-once intent and binds the two-snapshot readiness-proof hash,
 both evidence ids/hashes, policy and authorization hashes; repository and PR ids; exact head/base
-SHAs; diff; merge App/installation; squash method; endpoint class; start time; and one-use operation
-id. A single advisory verdict is never accepted. The executor may send one synchronous, SHA-bound
-request only.
+SHAs; all three controller diff hashes; merge App/installation; squash method; endpoint class; start
+time; authenticated credential-receipt id/hash; and one-use operation id. The journal rejects the
+same authorization or readiness proof under another operation id. A single advisory verdict is
+never accepted. Only the process that creates the intent claim receives the process-local
+capability required to enter one combined dispatch-and-send boundary. That boundary holds the
+journal lock while the backend prepares the fixed request, then lets that backend persist
+`dispatch-started` only at its final pre-transport boundary before the one synchronous, SHA-bound
+request. There is no separately callable dispatch marker. A preparation crash therefore remains
+known-zero-send, while any failure after the marker is conservatively ambiguous. Concurrent,
+second-instance, or restarted execution never sends another request.
+
+The executor accepts the dedicated GitHub App installation token only from an injected fresh,
+authenticated host credential reader. Its closed receipt positively records selected-one-repository
+scope; exactly `contents: write`, `pull_requests: read`, and implicit `metadata: read`; App,
+installation/account, and bot identities; suspension state; issuance/expiry; and verification time.
+The receipt is persisted and bound into the intent. User/PAT credentials, administration access,
+extra repositories or permissions, stale/self-declared receipts, environment loading, arbitrary
+URLs, redirects, and generic HTTP methods are rejected. Its actor/App/installation identity must
+exactly match the final K3 evidence and intent. No live reader or token loader is installed.
 
 The current-run authorization additionally carries an authenticated controller Goal-risk binding.
 Only `low-risk-code-change` with release, deployment, data mutation, and real-world-side-effect
@@ -255,10 +274,24 @@ flags all false can validate. This makes the existing hard-stop class representa
 eligibility is evaluated; repo content cannot mint the binding.
 
 `merged` requires a successful response plus exact follow-up observation, or exact follow-up proof
-after a lost response. `409`, `405`, malformed success, connection loss, or PR closure never implies
-success. A pending intent without exact merged proof becomes `reconcile-required` and sends no
-second `PUT`. A completed merge is forward-only; the controller never deletes the branch,
-comments, deploys, releases, pushes to base, or automatically reverts.
+within the same live execution after a typed lost response. After a process restart, a dispatch
+record with no terminal result is permanently `reconcile-required`: observation may aid a human,
+but it can never attribute or credit the merge because the crash may have occurred after the local
+marker and before the remote request. The proof binds the repository and PR ids, head SHA, base ref, pre-merge base
+as the squash commit's single parent, post-merge base as the merge commit, merge endpoint status,
+merge actor, request ids, and ordered timestamps. `409`, `405`, malformed success, connection loss,
+or PR closure never implies success. A pending intent without exact merged proof becomes
+`reconcile-required` and sends no second `PUT`. An intent with no `dispatch-started` record is
+terminally classified `dispatch-not-started` without observing or crediting a merge. A completed
+merge is forward-only; the primitive
+never deletes the branch, comments, deploys, releases, pushes directly to base, or automatically
+reverts.
+
+Crash fixtures cover failure before intent, after intent/before dispatch, during request
+preparation, after dispatch/remote effect before response, after response/before result, and after
+terminal persistence. An explicit reconciliation entry point performs observation only, never
+credits a restarted pending operation as merged, and has no mutation method. Repository search proves no CLI,
+mission, Goal pack, publisher, host bridge, or installed route constructs `MergeExecutor`.
 
 ## Residual race
 
@@ -283,9 +316,8 @@ between the last response and a future merge request.
 
 ## Ratification evidence
 
-At ratification, `GitHubPublisher` exposes only `push`, exact PR lookup/creation, and check polling;
-its backend protocol and production callers contain no merge method. The only fixture `merge`
-method raises if called, and tests assert zero attempts. The enabled mission host and Goal-pack
-transition maps emit no push, PR, remote-publication, or merge action; the generic host protocol's
-unused `publish` enum grants no caller or transition. Existing no-self-merge behavior guards and
-awaiting-review contracts remain unchanged.
+`GitHubPublisher` still exposes only `push`, exact PR lookup/creation, and check polling; its backend
+protocol and production callers contain no merge method. The K4 backend is separate, and only the
+uncomposed executor can call it. The enabled mission host and Goal-pack transition maps emit no push,
+PR, remote-publication, or merge action; the generic host protocol's unused `publish` enum grants no
+caller or transition. Existing awaiting-review behavior remains unchanged.

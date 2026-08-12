@@ -2,6 +2,21 @@
 
 This guide covers local controller state. The enabled mission bridge creates no remote side effects and has no publication action.
 
+The package contains an internal K4 merge primitive for deterministic security and crash-recovery
+testing. It has no command, route, configured host-envelope reader, credential loader, or normal
+caller. Do not instantiate it manually or place a merge token in repository files or environment
+variables. Conditional merge remains unavailable until the separately reviewed K5 composition and
+operator-owned enablement gate exist.
+
+Its source contract requires two host-owned, fresh authenticated readers: one that collects and
+attests the complete two-snapshot evidence envelope at the execution instant, and one that returns a
+GitHub App token with a closed scope/identity/issuance receipt. The journal atomically spends the
+authorization/readiness proof once, persists that receipt, and records dispatch at the final
+pre-transport boundary before the sole possible request. An intent without dispatch cannot be
+credited as merged; after restart, a dispatched intent without a terminal result also remains
+reconciliation-required because a local marker cannot prove the remote request began. These interfaces have no
+live implementation in this package; fixture success is not operator enablement.
+
 ## Inspect capabilities
 
 ```bash

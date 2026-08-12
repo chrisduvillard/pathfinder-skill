@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-08-10
+Generated: 2026-08-12
 
-Version: 3.0.0
+Version: 3.1.0
 
 ## Versioning & distribution
 
@@ -17,6 +17,11 @@ channel and pins `source.ref` to the immutable `v<version>` tag. Repository
 `main` is the explicitly labeled edge channel for development/manual installs.
 The stable tag becomes installable only after the release workflow smoke-tests
 the exact archive and creates the tag; tags are never rewritten.
+
+Changes in v3.1.0:
+- Added the unreachable/default-off K4 conditional-merge primitive: a one-repository GitHub App credential boundary, authenticated host-envelope input interface, separate write-once merge journal, fixed-host synchronous squash backend, exact response/reconciliation proof, closed terminal reasons, and crash recovery with no blind replay. The primitive permits at most one SHA-bound PUT, confirms success only through exact repository/PR/head/base-parent/actor/time evidence in the live execution, maps definitive GitHub failures without retry, and performs observation-only reconciliation after ambiguous outcomes. Restarted pending dispatches are never credited as merged because a durable local marker cannot prove the remote request began. CLI, mission host, Goal packs, ordinary publication, installed routes, and live evidence remain unable to construct it; K5 composition and enablement are still closed.
+- Replaced the never-composed K1 preview merge-intent/result v1 shapes with v2 before enabling any caller. V2 directly binds controller diff/file/object evidence in the intent and requires a closed result reason plus exact squash proof. There are no production v1 records to migrate; consumers must reject v1 merge intents/results and select the v2 schemas explicitly.
+- Hardened K4 review findings: intent creation now atomically spends an authorization/readiness proof across operation ids, only its creator may persist dispatch and issue the sole request, known pre-dispatch crashes cannot be credited as merges, and fresh host readers must supply both the execution-time evidence envelope and a persisted closed credential receipt proving exact repository scope, permissions, identity, suspension, and issuance window. Typed 405/already-merged, malformed-success, server-error, commit-SHA cross-check, concurrent execution, and every restart boundary have deterministic regressions.
 
 Changes in v3.0.0:
 - Hardened the still-inert conditional-merge evaluator after independent review: authorization now binds the exact controller PR/refs/diff, authenticated Git-object receipt, and low-risk Goal class; protected policy is anchored to the shipped baseline with additive-only overrides; protected/special surfaces, host policy reads, freshness, human/check identities, classic-protection semantics, ruleset bypass modes, and exact-coverage typed team/repository-role/organization-admin membership resolution are explicit. Membership facts bind source-projected team/role metadata and one qualified exact-endpoint audit, and the whole membership domain participates in the two-snapshot drift check. Only a replayed readiness proof over both persisted evidence documents—not a single advisory verdict—can satisfy the future intent/result schemas. Deterministic adversarial tests and an actual-code offline eval cover the reproduced bypasses. The fail-closed acceptance matrix links all 17 observer/evaluator/inert-composition cases to direct executable evidence and leaves the two writer-only response-loss/reconciliation cases deferred to K4. No merge route, credential, writer, or production caller was added, and any future cross-process proof consumer must authenticate a host-owned envelope.

@@ -155,6 +155,7 @@ def main() -> int:
         "host policy read receipt is absent",
     )
     readiness = journal["readiness_proof"]
+    credential_receipt = journal["credential_receipt"]
     require(
         journal["intent"]["bindings"]["readiness_proof_sha256"]
         == journal["result"]["binding"]["readiness_proof_sha256"]
@@ -168,6 +169,13 @@ def main() -> int:
         == readiness["reread_snapshot"]["evidence_sha256"]
         == evidence["evidence_sha256"],
         "intent does not bind both readiness snapshots",
+    )
+    require(
+        journal["intent"]["bindings"]["credential_receipt_id"]
+        == credential_receipt["credential_receipt_id"]
+        and journal["intent"]["bindings"]["credential_receipt_sha256"]
+        == credential_receipt["receipt_sha256"],
+        "intent does not bind the authenticated merge credential receipt",
     )
 
     from pathfinder_core.adapters.github_merge_observer import (

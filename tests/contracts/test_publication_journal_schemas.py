@@ -53,6 +53,7 @@ def validate_journal(journal, authority, protected_policy=None):
         journal.get("intent"),
         journal.get("result"),
     )
+    dispatch = journal.get("dispatch")
     if intent is None:
         if result is not None:
             raise ValidationError("merge result cannot exist without its intent")
@@ -63,6 +64,16 @@ def validate_journal(journal, authority, protected_policy=None):
     validate_schema("evidence", evidence)
     validate_schema("readiness_proof", readiness)
     validate_schema("intent", intent)
+    credential_schema = load_json(
+        SCHEMA_ROOT / "merge-credential-receipt.schema.json"
+    )
+    Draft202012Validator(
+        credential_schema, format_checker=FormatChecker()
+    ).validate(journal["credential_receipt"])
+    if journal["credential_receipt"]["receipt_sha256"] != canonical_sha256(
+        journal["credential_receipt"], "receipt_sha256"
+    ):
+        raise ValidationError("credential receipt hash does not match canonical document")
     for name, document in (
         ("initial_evidence", initial_evidence), ("evidence", evidence),
         ("readiness_proof", readiness), ("intent", intent)
@@ -166,6 +177,13 @@ def validate_journal(journal, authority, protected_policy=None):
         "initial_evidence_sha256": initial_snapshot["evidence_sha256"],
         "reread_evidence_id": reread_snapshot["evidence_id"],
         "reread_evidence_sha256": reread_snapshot["evidence_sha256"],
+        **authorization["candidate"]["diff"],
+        "credential_receipt_id": journal["credential_receipt"][
+            "credential_receipt_id"
+        ],
+        "credential_receipt_sha256": journal["credential_receipt"][
+            "receipt_sha256"
+        ],
         **{key: evidence["bindings"][key] for key in (
             "policy_id", "policy_sha256", "merge_authorization_id",
             "authorization_sha256", "mission_id", "binding_id",
@@ -210,6 +228,21 @@ def validate_journal(journal, authority, protected_policy=None):
 
     if result is None:
         return {"state": "pending", "disposition": "reconcile-required"}
+    dispatch_schema = load_json(SCHEMA_ROOT / "merge-dispatch.schema.json")
+    Draft202012Validator(
+        dispatch_schema, format_checker=FormatChecker()
+    ).validate(dispatch)
+    if dispatch["dispatch_sha256"] != canonical_sha256(
+        dispatch, "dispatch_sha256"
+    ):
+        raise ValidationError("dispatch hash does not match canonical document")
+    if (
+        dispatch["operation_id"] != intent["operation_id"]
+        or dispatch["intent_sha256"] != intent["intent_sha256"]
+        or not started
+        <= datetime.fromisoformat(dispatch["dispatch_started_at"])
+    ):
+        raise ValidationError("dispatch does not match its intent")
     validate_schema("result", result)
     if result["result_sha256"] != canonical_sha256(result, "result_sha256"):
         raise ValidationError("result_sha256 does not match canonical document")
@@ -247,11 +280,27 @@ def validate_journal(journal, authority, protected_policy=None):
             expected_actor, ("actor_id", "actor_node_id", "login")
         ):
             raise ValidationError("merged proof actor drift")
+        if (
+            proof["base_ref"] != policy["repository"]["base_branch"]
+            or proof["base_sha_after"] != proof["merge_commit_sha"]
+            or proof["merge_commit_parent_shas"] != [expected_pr["base_sha"]]
+            or proof["merge_endpoint_status"] != 204
+            or len(proof["request_ids"]) != len(set(proof["request_ids"]))
+        ):
+            raise ValidationError("merged proof does not prove exact squash semantics")
+        merged_at = datetime.fromisoformat(proof["merged_at"])
+        observed_at = datetime.fromisoformat(proof["observed_at"])
+        completed_at = datetime.fromisoformat(result["completed_at"])
+        dispatched_at = datetime.fromisoformat(dispatch["dispatch_started_at"])
+        if not started <= dispatched_at <= merged_at <= observed_at <= completed_at:
+            raise ValidationError("merged proof timeline is invalid")
     return {"state": "terminal", "disposition": result["outcome"]}
 
 
 def mutate_journal(bundle, case):
     changed = {name: copy.deepcopy(bundle[name]) for name in HASH_FIELDS}
+    changed["credential_receipt"] = copy.deepcopy(bundle["credential_receipt"])
+    changed["dispatch"] = copy.deepcopy(bundle["dispatch"])
     if case["operation"] == "remove-document":
         changed[case["document"]] = None
     else:
@@ -343,6 +392,13 @@ class PublicationJournalSchemaTests(unittest.TestCase):
             {"state": "terminal", "disposition": "merged"},
         )
 
+    def test_uncomposed_v1_intent_and_result_previews_are_rejected(self):
+        for name in ("intent", "result"):
+            with self.subTest(name=name), self.assertRaises(ValidationError):
+                document = copy.deepcopy(self.bundle[name])
+                document["schema_version"] = 1
+                validate_schema(name, document)
+
     def test_journal_replay_accepts_an_additive_protected_policy(self):
         from pathfinder_core.merge_policy import MergePolicyEvaluator
         from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
@@ -401,6 +457,11 @@ class PublicationJournalSchemaTests(unittest.TestCase):
             "authorization_sha256": authorization["authorization_sha256"],
         })
         intent["intent_sha256"] = canonical_sha256(intent, "intent_sha256")
+        dispatch = journal["dispatch"]
+        dispatch["intent_sha256"] = intent["intent_sha256"]
+        dispatch["dispatch_sha256"] = canonical_sha256(
+            dispatch, "dispatch_sha256"
+        )
         result = journal["result"]
         result["intent_sha256"] = intent["intent_sha256"]
         result["binding"].update({
@@ -428,13 +489,20 @@ class PublicationJournalSchemaTests(unittest.TestCase):
         )
 
     def test_every_nonmerged_outcome_has_no_merge_proof(self):
-        for outcome in (
-            "not-merged", "reconcile-required", "policy-blocked", "auth-error",
-            "rate-limited", "permission-missing", "api-unavailable",
-        ):
+        reasons = {
+            "not-merged": "unmergeable",
+            "reconcile-required": "transport-ambiguous",
+            "policy-blocked": "policy-ineligible",
+            "auth-error": "authentication-failed",
+            "rate-limited": "rate-limit-exceeded",
+            "permission-missing": "permission-denied",
+            "api-unavailable": "server-error",
+        }
+        for outcome, reason in reasons.items():
             with self.subTest(outcome=outcome):
                 journal = copy.deepcopy(self.bundle)
                 journal["result"]["outcome"] = outcome
+                journal["result"]["reason"] = reason
                 journal["result"]["merge_proof"] = None
                 journal["result"]["result_sha256"] = canonical_sha256(
                     journal["result"], "result_sha256"
@@ -443,7 +511,16 @@ class PublicationJournalSchemaTests(unittest.TestCase):
                     validate_journal(journal, self.authority)["disposition"], outcome
                 )
 
-    def test_evidence_observer_is_only_production_consumer_and_has_no_merge_call(self):
+    def test_result_reason_must_match_its_outcome(self):
+        journal = copy.deepcopy(self.bundle)
+        journal["result"]["reason"] = "head-mismatch"
+        journal["result"]["result_sha256"] = canonical_sha256(
+            journal["result"], "result_sha256"
+        )
+        with self.assertRaises(ValidationError):
+            validate_journal(journal, self.authority)
+
+    def test_k4_writer_is_isolated_and_has_no_enabled_caller(self):
         sources = {
             path.relative_to(ROOT).as_posix(): path.read_text()
             for path in (ROOT / "pathfinder_core").rglob("*.py")
@@ -455,10 +532,44 @@ class PublicationJournalSchemaTests(unittest.TestCase):
             evidence_consumers,
             {"pathfinder_core/adapters/github_merge_observer.py"},
         )
-        production = "\n".join(sources.values())
-        for schema_name in ("merge-intent", "merge-result"):
-            self.assertNotIn(schema_name, production)
-        self.assertNotIn(".merge(", production)
+        merge_callers = {
+            path for path, source in sources.items() if ".merge(" in source
+        }
+        self.assertEqual(merge_callers, {"pathfinder_core/merge_executor.py"})
+        executor_callers = {
+            path for path, source in sources.items()
+            if "MergeExecutor(" in source
+            and path != "pathfinder_core/merge_executor.py"
+        }
+        self.assertEqual(executor_callers, set())
+        enabled = "\n".join(
+            source for path, source in sources.items()
+            if path in {
+                "pathfinder_core/__main__.py",
+                "pathfinder_core/mission_host.py",
+                "pathfinder_core/goal_pack.py",
+                "pathfinder_core/adapters/github.py",
+            }
+        )
+        for forbidden in (
+            "MergeExecutor", "GitHubMergeBackend", "GitHubMergeCredential",
+            "MergeOperationJournal",
+        ):
+            self.assertNotIn(forbidden, enabled)
+        executor_source = sources["pathfinder_core/merge_executor.py"]
+        for forbidden in (
+            ".push(", "create_pull_request", "delete", "release", "deploy",
+            "subprocess", "os.environ", "getenv(", "GoalAdapter",
+        ):
+            self.assertNotIn(forbidden, executor_source)
+        credential_sources = "\n".join(
+            sources[path] for path in (
+                "pathfinder_core/merge_credentials.py",
+                "pathfinder_core/adapters/github_merge_writer.py",
+            )
+        )
+        self.assertNotIn("os.environ", credential_sources)
+        self.assertNotIn("getenv(", credential_sources)
 
     def test_fixture_loader_rejects_duplicate_keys(self):
         with self.assertRaises(ValueError):

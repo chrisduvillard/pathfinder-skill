@@ -1329,8 +1329,8 @@ Observable completion means:
 ### Fail-closed acceptance matrix
 
 K3 closes all 17 observer/evaluator and inert-composition cases below with direct executable
-evidence. The two remaining unchecked cases require the still-closed K4 writer and must not be
-inferred from schemas or fixtures alone.
+evidence. K4 closes the two writer cases with the unreachable executor and deterministic crash
+fixtures; no normal route can call it.
 
 - [x] Protected branch with classic checks/reviews, an active additive ruleset, complete non-bypass actor evidence, independent approval, and exact green checks can produce `eligible`; the observer still performs zero merge calls. (`test_complete_layered_fixture_is_deterministically_eligible`, `test_backend_protocol_exposes_read_methods_only`)
 - [x] Classic protection absent and no active rulesets returns `policy-unenforced`, even when the host-owned policy says enabled. (`test_policy_layers_take_the_most_restrictive_review_floor`)
@@ -1348,9 +1348,9 @@ inferred from schemas or fixtures alone.
 - [x] A current `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, requested code-owner review, or unresolved non-outdated thread blocks. (`test_review_changes_code_owner_and_threads_are_independent_blocks`, `test_fixture_driven_candidate_matrix_returns_exact_codes`)
 - [x] Any protected path, workflow, CODEOWNERS/policy surface, schema/migration, dependency-policy exception surface, submodule, symlink, binary, or diff-limit excess blocks. (`test_protected_and_special_surface_matrix_is_independently_derived`, `test_diff_hash_paths_protected_surfaces_and_effective_limits`, `test_authenticated_git_object_evidence_drives_special_file_blocking`)
 - [x] Base advancement, head force-push, PR retarget, changed diff hash, policy expiry, ruleset update, review dismissal, or evidence timeout between observation and intent blocks. (`test_reread_drift_matrix_forces_a_new_complete_snapshot_cycle`, `test_authority_and_evidence_windows_are_independently_current`, `test_complete_disjoint_reread_is_required_and_stays_pure`)
-- [ ] **K4 deferred:** a `409` head mismatch, `405` unmergeable response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success. No merge request exists yet against which to prove these writer outcomes.
-- [ ] **K4 deferred:** a lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT. The inert journal proves only the pending disposition until a crash-safe writer exists.
-- [x] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential. (`test_forge_policy_and_mergeability_fixtures_never_trigger_merge`, `test_evidence_observer_is_only_production_consumer_and_has_no_merge_call`, `test_evaluator_has_zero_network_mutation_credentials_or_production_callers`, full `scripts/check-all.sh`)
+- [x] A `409` head mismatch, `405` unmergeable/already-merged response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success without the exact allowed proof. (`test_definitive_http_failures_are_typed_and_never_retried`, `test_405_uses_exact_state_to_distinguish_already_merged`, `test_malformed_or_server_response_never_becomes_success`)
+- [x] A lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT. (`test_response_loss_can_merge_only_with_exact_reconciliation_proof`, `test_pending_intent_is_not_replayed_and_explicit_reconcile_sends_no_put`, crash-boundary regressions in `test_merge_executor.py`)
+- [x] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential. (`test_forge_policy_and_mergeability_fixtures_never_trigger_merge`, `test_k4_writer_is_isolated_and_has_no_enabled_caller`, `test_evaluator_stays_pure_with_only_the_isolated_k4_consumers`, full `scripts/check-all.sh`)
 
 ### Phase K0 — ratify a standalone security contract
 
@@ -1560,36 +1560,39 @@ host-owned envelope in any future K4 composition.
 
 **Goal:** implement one exact synchronous merge operation behind a dedicated boundary without routing any normal user flow to it.
 
-**Preconditions:** K0-K3 independently security-reviewed; runnable awaiting-review publication exists separately; exact PR identity is persisted; no merge queue or unsupported active rule.
+**Preconditions:** K0-K3 independently security-reviewed; runnable awaiting-review publication exists separately; exact PR identity is persisted; no merge queue or unsupported active rule. The isolated primitive may be built and tested before publication is composed, but it must retain zero callers until every precondition is satisfied.
 
 #### Sub-prompt K4.1 — dedicated merge credential and journal
 
-- [ ] `[writes code]` Add only a separate merge executor module/process, dedicated journal implementation using K1 schemas, focused fixtures, and credential policy; present the state machine and credential scopes before editing.
-- [ ] The executor accepts only schema-valid policy, authorization, exact protected policy, an
+- [x] `[writes code]` Add only a separate merge executor module/process, dedicated journal implementation using K1 schemas, focused fixtures, and credential policy; present the state machine and credential scopes before editing.
+- [x] The executor accepts only schema-valid policy, authorization, exact protected policy, an
   intent-ready two-snapshot proof, both bound evidence records, and merge intent inputs. It rejects
   a single advisory verdict. It cannot discover work, update a Goal, push, open/edit/comment on a
   PR, change protection/rulesets, delete a branch, release, deploy, or invoke repository code.
-- [ ] Restrict the merge token to the one repository and permissions needed for reading the exact PR and writing contents through the merge endpoint. Bind and compare its exact actor/app/installation identity with observer evidence and every bypass list.
-- [ ] Persist the write-once intent before network mutation. An intent with no terminal result is `reconcile-required`; it is never automatically replayed.
-- [ ] Imitate `OperationJournal` atomic write-once behavior and binding checks, but keep its namespace/action enums separate from the local mission journal until composition is explicitly approved.
-- [ ] Existing operation/publication tests must pass unmodified and retain zero merge calls.
-- [ ] No deletion is expected. Show zero callers for the new executor before and after this phase.
-- [ ] Expected diff: 220-340 lines. Split credential policy from journaling if larger.
-- [ ] Append a `PROGRESS.md` line recording that the primitive is unreachable/default-off.
-- [ ] Stop if the merge token is also available to implementation, observer, repository commands, or ordinary publication, or if its actor may bypass a rule.
+- [x] Restrict the merge token to the one repository and permissions needed for reading the exact PR and writing contents through the merge endpoint. Bind and compare its exact actor/app/installation identity with observer evidence and every bypass list.
+- [x] Persist the write-once intent before network mutation. An intent with no terminal result is `reconcile-required`; it is never automatically replayed.
+- [x] Atomically claim the authorization/readiness proof once across operation ids, persist a closed authenticated credential receipt, and allow only the intent creator to record dispatch and send.
+- [x] Imitate `OperationJournal` atomic write-once behavior and binding checks, but keep its namespace/action enums separate from the local mission journal until composition is explicitly approved.
+- [x] Existing operation/publication behavior remains green and retains zero merge calls. The two deliberate K3 absence guards now assert exact K4 isolation instead of asserting that no writer source exists.
+- [x] No deletion is expected. Show zero callers for the new executor before and after this phase.
+- [x] Split credential policy, journaling, execution, and the fixed-host backend. The implementation exceeds the estimate because the closed result reasons, exact squash proof, host-envelope boundary, and full crash matrix are explicit rather than implicit.
+- [x] Append a `PROGRESS.md` line recording that the primitive is unreachable/default-off.
+- [x] Stop if the merge token is also available to implementation, observer, repository commands, or ordinary publication, or if its actor may bypass a rule.
 
 #### Sub-prompt K4.2 — exact synchronous request and reconciliation
 
-- [ ] `[writes code]` Change only the unreachable executor/backend protocol and fixture tests; present the request, response, crash points, and reconciliation table before editing.
-- [ ] Permit one `PUT /repos/{owner}/{repo}/pulls/{number}/merge` with exact `sha` and `merge_method: squash` only. Reject missing SHA, default method, rebase, merge commit, async, stacked, auto-merge, or queue endpoints.
-- [ ] Re-read and re-evaluate fresh evidence immediately before issuing the intent; after intent persistence, send at most one request.
-- [ ] Record success only when the response says merged and exact follow-up observation confirms repository/PR/head/base, method-compatible merge commit, merging actor, and time. Do not trust the response message string.
-- [ ] On timeout/connection loss, read the exact PR/merged endpoint once through the read-only boundary. Exact proof records the result; non-merged, closed-without-merge, changed identity, or unavailable evidence returns `reconcile-required` and sends no second PUT.
-- [ ] Map 401/403/404/405/409/422, rate limits, malformed success, and already-merged responses to typed results without retrying mutation.
-- [ ] Existing tests must pass unmodified. Add crashes before intent, after intent, before send, after remote side effect/before response, after response/before result, and after result; assert one or zero merge calls as appropriate.
-- [ ] No deletion is expected. Expected diff: 180-280 lines.
-- [ ] Append a `PROGRESS.md` line recording fixture call counts and the absence of a normal caller.
-- [ ] Stop if response-loss reconciliation cannot attribute the exact merge or if any path retries a pending intent.
+- [x] `[writes code]` Change only the unreachable executor/backend protocol and fixture tests; present the request, response, crash points, and reconciliation table before editing.
+- [x] Permit one `PUT /repos/{owner}/{repo}/pulls/{number}/merge` with exact `sha` and `merge_method: squash` only. Reject missing SHA, default method, rebase, merge commit, async, stacked, auto-merge, or queue endpoints.
+- [x] Re-read and re-evaluate fresh evidence immediately before issuing the intent; after intent persistence, send at most one request.
+- [x] Record success only when the response says merged and exact follow-up observation confirms repository/PR/head/base, method-compatible merge commit, merging actor, and time. Do not trust the response message string.
+- [x] On timeout/connection loss, read the exact PR/merged endpoint once through the read-only boundary. Exact proof records the result; non-merged, closed-without-merge, changed identity, or unavailable evidence returns `reconcile-required` and sends no second PUT.
+- [x] Map 401/403/404/405/409/422, rate limits, malformed success, and already-merged responses to typed results without retrying mutation.
+- [x] Existing functional tests remain green. Add crashes before intent, after intent, before send, after remote side effect/before response, after response/before result, and after result; assert one or zero merge calls as appropriate.
+- [x] Distinguish a pre-dispatch crash from an ambiguous dispatched operation so reconciliation cannot credit known-zero-send state; prove concurrent callers and repackaged operation ids cannot create a second send.
+- [x] Version the strengthened intent/result shapes as v2, explicitly reject the uncomposed K1 preview v1, and cover the actual writer plus artifacts with a deterministic offline eval.
+- [x] No deletion is expected. The explicit transport, proof normalization, and crash fixtures exceed the estimate without adding an enabled caller.
+- [x] Append a `PROGRESS.md` line recording fixture call counts and the absence of a normal caller.
+- [x] Stop if response-loss reconciliation cannot attribute the exact merge or if any path retries a pending intent.
 
 **Phase verification:** the primitive is internally crash-safe and adversarially tested, but repository search proves no CLI, route, publisher, mission, or host bridge can call it.
 
@@ -1702,8 +1705,9 @@ host-owned envelope in any future K4 composition.
 
 ### Recommended first implementation slice
 
-**K0.1 through K3.3 are implemented, locally verified, and independently reviewed clean.** K4 is
-still closed: runnable awaiting-review publication must durably persist the exact PR identity, a
-trusted host-owned envelope must authenticate any cross-process readiness proof, live evidence must
-collect every required fact, and a separate explicit security/enablement decision must authorize
-the next phase. Do not infer that authority from this plan, green tests, or the K3 review verdict.
+**K0.1 through K4.2 are implemented locally.** The K4 primitive is unreachable and default-off:
+repository search proves no CLI, route, publisher, mission, Goal pack, or host bridge constructs the
+executor. K5 remains closed until K4 passes fresh independent security review, runnable
+awaiting-review publication durably persists the exact PR identity, live evidence collects every
+required fact, a trusted host-owned envelope is installed, and a separate execution-enable decision
+authorizes composition. Do not infer K5 authority from source presence or green fixture tests.
