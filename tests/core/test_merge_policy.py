@@ -1286,6 +1286,28 @@ class MergePolicyEvaluatorTests(unittest.TestCase):
         self.assertIn(DenyCode.FIELD_UNKNOWN, codes(self.evaluate(evidence=evidence)))
 
         evidence = copy.deepcopy(self.evidence)
+        evidence["observation"]["requests"] = [
+            item for item in evidence["observation"]["requests"]
+            if item["surface"] != "graphql-pull-request"
+        ]
+        evidence["observation"]["request_ids_sha256"] = canonical_sha256([
+            item["request_id"] for item in evidence["observation"]["requests"]
+        ])
+        rehash_evidence(evidence)
+        self.assertIn(DenyCode.FIELD_UNKNOWN, codes(self.evaluate(evidence=evidence)))
+
+        evidence = copy.deepcopy(self.evidence)
+        evidence["observation"]["requests"] = [
+            item for item in evidence["observation"]["requests"]
+            if item["surface"] not in {"review-requests", "review-threads"}
+        ]
+        evidence["observation"]["request_ids_sha256"] = canonical_sha256([
+            item["request_id"] for item in evidence["observation"]["requests"]
+        ])
+        rehash_evidence(evidence)
+        self.assertTrue(self.evaluate(evidence=evidence).eligible)
+
+        evidence = copy.deepcopy(self.evidence)
         evidence["observation"]["unknown_payloads_sha256"] = "a" * 64
         rehash_evidence(evidence)
         self.assertIn(DenyCode.FIELD_UNKNOWN, codes(self.evaluate(evidence=evidence)))

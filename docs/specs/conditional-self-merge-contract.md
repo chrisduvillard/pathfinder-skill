@@ -183,7 +183,9 @@ latest reviews, code-owner review requests, and review threads, and rejects part
 errors, unknown fields/enums, identity or total-count drift, repeated request ids/items/cursors,
 missing request ids, and byte/page ceilings. It accepts only the exact read-only installation
 credential declaration and exposes no arbitrary query, mutation, URL, environment loader, or
-enabled caller.
+enabled caller. The merge-evidence schema pins this exact compiled query hash and requires a real
+`graphql-pull-request` audit; separate synthetic review-request/thread audits cannot substitute for
+the single query that supplied all three connections.
 
 The source now also has uncalled bypass-membership, review, and check-evidence readers. Team and
 organization `404` become absence only on the exact endpoint with GitHub's `Members=read`
@@ -226,10 +228,20 @@ Malformed documents, hash drift, request/receipt actor drift, stale observations
 duplicate request ids, or object/ref/SHA drift block. This pure check has no caller and does not
 authenticate host storage or prove exclusive branch ownership against a later same-SHA push.
 
+The source-only GraphQL projector requires the exact publication-pusher proof and the identical
+repository, PR database/node/number, head/base repositories, refs, and SHAs. It accepts only the
+schema-pinned query hash, complete latest-review/review-request/review-thread connections, unique
+closed reviewer and thread identities, and one request audit plus rate-limit record per actual
+GraphQL response. It emits the normalized review-request/thread, mergeability/queue, pagination,
+and shared `graphql-pull-request` audit inputs. Incomplete connections, synthetic per-surface audit
+coverage, query drift, identity drift, duplicate reviewers/threads/request ids, or audit-count/time
+drift block. This projector is pure, uncalled, and not a complete snapshot composer.
+
 These primitives are still not the production collector: no source composes all REST and GraphQL
 families, records the credential receipt and every identity audit in a normalized snapshot,
 transforms policy/ruleset sources into the required-check union, reconciles the REST/GraphQL review
-sets, or binds those supplied policy/candidate/reconciled-pusher inputs into a complete snapshot.
+sets, or binds those supplied policy/candidate/reconciled-pusher/GraphQL projection inputs into a
+complete snapshot.
 The installed host must additionally authenticate the publication journal and prove exclusive
 controller branch ownership through the evidence instant. The system must not substitute UI text or omit those
 facts. Conditional merge therefore remains unsupported

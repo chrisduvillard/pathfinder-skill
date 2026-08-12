@@ -63,6 +63,7 @@ class FixtureObservationBackend:
     def read_repository(self): return self._endpoint("repository")
     def read_credential_actor(self): return self._endpoint("actor")
     def read_pull_request(self): return self._endpoint("pull-request")
+    def read_graphql_pull_request(self): return self._endpoint("graphql-pull-request")
     def read_refs(self): return self._endpoint("refs")
     def read_changed_files(self): return self._page("changed-files")
     def read_classic_protection(self): return self._endpoint("classic-protection")
@@ -128,14 +129,21 @@ class GitHubMergeObserverTests(unittest.TestCase):
             ["Integration:86420:always"],
         )
         self.assertEqual(evidence["bypass_memberships"], [])
-        self.assertEqual(len(evidence["observation"]["requests"]), 16)
+        self.assertEqual(len(evidence["observation"]["requests"]), 17)
         request_ids = [item["request_id"] for item in evidence["observation"]["requests"]]
         encoded = json.dumps(request_ids, sort_keys=True, separators=(",", ":")).encode()
         self.assertEqual(
             evidence["observation"]["request_ids_sha256"],
             hashlib.sha256(encoded).hexdigest(),
         )
-        self.assertEqual(len(backend.calls), 17)
+        self.assertEqual(len(backend.calls), 18)
+
+    def test_graphql_query_hash_and_request_audit_are_exact(self):
+        responses = copy.deepcopy(self.responses)
+        responses["graphql-pull-request"]["data"]["query_sha256"] = "0" * 64
+        result, _ = self.observe(responses)
+        self.assertEqual(result.outcome, ObservationOutcome.FIELD_UNKNOWN)
+        self.assertEqual(result.surface, "graphql-pull-request")
 
     def test_transport_failures_are_distinct_typed_outcomes(self):
         cases = (

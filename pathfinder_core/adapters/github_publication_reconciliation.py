@@ -55,11 +55,16 @@ class ControllerPusherProof:
     publication_receipt_id: str
     publication_receipt_sha256: str
     repository_id: int
+    repository_node_id: str
+    repository_owner: str
+    repository_name: str
     pull_request_id: int
     pull_request_node_id: str
     pull_request_number: int
     head_ref: str
     head_sha: str
+    base_ref: str
+    base_sha: str
     receipt_observed_at: str
     graphql_observed_at: str
 
@@ -275,11 +280,16 @@ class GitHubPublicationReconciler:
             publication_receipt_id=receipt["publication_receipt_id"],
             publication_receipt_sha256=receipt["receipt_sha256"],
             repository_id=repository["id"],
+            repository_node_id=repository["node_id"],
+            repository_owner=repository["owner"],
+            repository_name=repository["name"],
             pull_request_id=pull["id"],
             pull_request_node_id=pull["node_id"],
             pull_request_number=pull["number"],
             head_ref=pull["head_ref"],
             head_sha=pull["head_sha"],
+            base_ref=pull["base_ref"],
+            base_sha=pull["base_sha"],
             receipt_observed_at=receipt["observed_at"],
             graphql_observed_at=graph_time_text,
         )

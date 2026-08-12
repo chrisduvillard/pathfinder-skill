@@ -49,7 +49,10 @@ history. A second pure reconciler validates the canonical publication request an
 a later fixed-query GraphQL view of the identical repository, PR, refs, and commits, and projects the
 authenticated controller bot id carried through publication preflight and the exact push receipt.
 It does not authenticate storage or prove that an installed host prevented a different actor from
-pushing the same commit later. These source pieces still are not a complete collector or an
+pushing the same commit later. A pure GraphQL projector then requires that same pusher-bound
+snapshot, the exact schema-pinned compiled query hash, complete review/reviewer/thread connections,
+and one-to-one request/rate-limit audit coverage before emitting mergeability, queue, requested-
+reviewer, thread, pagination, and `graphql-pull-request` audit inputs. These source pieces still are not a complete collector or an
 installed runtime route.
 
 The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit

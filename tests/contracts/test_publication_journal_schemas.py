@@ -392,6 +392,15 @@ class PublicationJournalSchemaTests(unittest.TestCase):
             {"state": "terminal", "disposition": "merged"},
         )
 
+    def test_evidence_requires_the_compiled_graphql_query_hash(self):
+        evidence = copy.deepcopy(self.bundle["evidence"])
+        evidence["observation"]["graphql_query_sha256"] = "1" * 64
+        evidence["evidence_sha256"] = canonical_sha256(
+            evidence, "evidence_sha256"
+        )
+        with self.assertRaises(ValidationError):
+            validate_schema("evidence", evidence)
+
     def test_uncomposed_v1_intent_and_result_previews_are_rejected(self):
         for name in ("intent", "result"):
             with self.subTest(name=name), self.assertRaises(ValidationError):

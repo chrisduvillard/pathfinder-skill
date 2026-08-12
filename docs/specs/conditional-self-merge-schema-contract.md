@@ -118,7 +118,11 @@ observation, the write-once receipt adds the exact PR database id, node id, numb
 one context/App/head-SHA tuple for every required check, plus a repository/ref/head-SHA push
 attestation carrying the same bot identity. A pure uncalled reconciler validates the canonical
 request/receipt pair and projects that actor only after a later fixed-query GraphQL snapshot matches
-the exact repository, PR, head/base repositories, refs, and SHAs. The merge authorization candidate is a
+the exact repository, PR, head/base repositories, refs, and SHAs. The evidence schema pins the
+compiled query hash and requires one actual `graphql-pull-request` request audit rather than
+invented per-connection provenance. A pure uncalled projector requires complete latest-review,
+review-request, and review-thread connections plus exact request/rate-limit audit coverage before
+emitting normalized review/thread, mergeability, queue, and pagination inputs. The merge authorization candidate is a
 direct projection of that receipt. Pending recovery is read-only and process death cannot leave the
 journal lock around a remote callback; no CLI, enabled mission, or live backend currently produces
 the receipt.

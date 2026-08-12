@@ -1488,7 +1488,10 @@ uncalled review reconciler now proves that GraphQL's complete latest-opinionated
 review per actor is the exact node/database/actor/state/commit/time/association record selected from
 the complete chronological permission-qualified REST audit; split actor sets, identity drift,
 nonchronological history, incomplete pagination, or reused request ids block. Review requests,
-threads, and the overall snapshot still are not composed. The publication request now also binds the
+threads, mergeability, and queue state now pass through a second pure projector that requires the
+exact compiled query hash, one real GraphQL audit family, complete independent connections, exact
+repository/PR/ref/SHA identity, rate-limit/audit coverage, and the reconciled publication-pusher
+proof. The overall snapshot still is not composed. The publication request now also binds the
 authenticated publication credential's bot database/node/login identity through exact preflight and
 the durable repository/ref/SHA push receipt. An uncalled pure reconciler validates both canonical
 publication documents, requires a later fixed-query GraphQL observation of the identical

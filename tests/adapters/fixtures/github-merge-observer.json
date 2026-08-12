@@ -4,7 +4,7 @@
     "observed_at": "2026-08-11T12:08:00+00:00",
     "completed_at": "2026-08-11T12:08:20+00:00",
     "expires_at": "2026-08-11T12:09:20+00:00",
-    "graphql_query_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "graphql_query_sha256": "dcb086d66394c7380a8933204c23d7aac3bde96762d05e69c5cc37edb770fdb5",
     "policy_read": {"source": "host-policy-store", "receipt_id": "policy_read_observer1", "policy_id": "merge_policy_example1", "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176", "observed_at": "2026-08-11T12:08:01+00:00"},
     "object_evidence": {"source": "authenticated-controller-git-diff", "receipt_id": "object_evidence_observer1", "files": [{"path": "docs/guide.md", "previous_path": null, "object_kind": "regular-file", "binary": false}, {"path": "src/helper.py", "previous_path": null, "object_kind": "regular-file", "binary": false}]}
   },
@@ -20,6 +20,10 @@
     "pull-request": {
       "data": {"id": 987654321, "node_id": "PR_kwDOExample1", "number": 72, "state": "open", "draft": false, "user": {"id": 22222}, "last_pusher": {"id": 33333}, "head": {"repo": {"id": 123456789, "node_id": "R_kgDOExample1"}, "ref": "pathfinder/auto/example1", "sha": "cccccccccccccccccccccccccccccccccccccccc"}, "base": {"repo": {"id": 123456789, "node_id": "R_kgDOExample1"}, "ref": "main", "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}, "mergeable": "MERGEABLE", "merge_state_status": "CLEAN", "review_decision": "APPROVED", "merge_queue_entry": false},
       "audit": {"request_id": "req-pull-request-1", "etag": "W/\"fixture-1\"", "observed_at": "2026-08-11T12:08:10+00:00"}
+    },
+    "graphql-pull-request": {
+      "data": {"query_sha256": "dcb086d66394c7380a8933204c23d7aac3bde96762d05e69c5cc37edb770fdb5"},
+      "audit": {"request_id": "req-graphql-pull-request-1", "etag": null, "observed_at": "2026-08-11T12:08:10+00:00"}
     },
     "refs": {
       "data": {"head": {"ref": "pathfinder/auto/example1", "sha": "cccccccccccccccccccccccccccccccccccccccc"}, "base": {"ref": "main", "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}},

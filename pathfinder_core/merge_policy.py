@@ -50,7 +50,7 @@ CONTROLLER_BRANCH = re.compile(r"^pathfinder/auto/[a-z0-9][a-z0-9-]{0,62}$")
 REQUIRED_EVIDENCE_SURFACES = frozenset({
     "repository", "actor", "pull-request", "refs", "changed-files",
     "classic-protection", "active-rules", "source-rulesets", "bypass-actors",
-    "reviews", "review-requests", "review-threads", "check-runs",
+    "reviews", "graphql-pull-request", "check-runs",
     "commit-statuses", "deployments", "merged-state",
 })
 

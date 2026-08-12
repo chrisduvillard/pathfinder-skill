@@ -95,6 +95,7 @@ class GitHubMergeObservationBackend(Protocol):
     def read_repository(self) -> EndpointResponse: ...
     def read_credential_actor(self) -> EndpointResponse: ...
     def read_pull_request(self) -> EndpointResponse: ...
+    def read_graphql_pull_request(self) -> EndpointResponse: ...
     def read_refs(self) -> EndpointResponse: ...
     def read_changed_files(self) -> PageResponse: ...
     def read_classic_protection(self) -> EndpointResponse: ...
@@ -241,6 +242,7 @@ class GitHubMergeObserver:
         repository = self.backend.read_repository()
         actor = self.backend.read_credential_actor()
         pull_request = self.backend.read_pull_request()
+        graphql_pull_request = self.backend.read_graphql_pull_request()
         refs = self.backend.read_refs()
         changed_files = self.backend.read_changed_files()
         classic = self.backend.read_classic_protection()
@@ -250,6 +252,7 @@ class GitHubMergeObserver:
             "repository": repository,
             "actor": actor,
             "pull-request": pull_request,
+            "graphql-pull-request": graphql_pull_request,
             "refs": refs,
             "changed-files": changed_files,
             "classic-protection": classic,
@@ -271,6 +274,19 @@ class GitHubMergeObserver:
         unsupported: list[str] = []
         unknown_reasons: list[str] = []
         audits = self._audits(raw)
+
+        graphql = _take(
+            raw["graphql-pull-request"].data,
+            required={"query_sha256"},
+            surface="graphql-pull-request",
+            unknowns=unknowns,
+        )
+        if graphql["query_sha256"] != context["graphql_query_sha256"]:
+            raise _Stop(
+                ObservationOutcome.FIELD_UNKNOWN,
+                "graphql-pull-request",
+                "GraphQL query hash differs from the evidence binding",
+            )
 
         repository = self._repository(raw["repository"], unknowns)
         actor = self._actor(raw["actor"], unknowns)

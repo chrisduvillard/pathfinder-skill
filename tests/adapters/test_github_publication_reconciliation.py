@@ -80,8 +80,10 @@ class GitHubPublicationReconcilerTests(unittest.TestCase):
         self.assertEqual(proof.actor_node_id, "U_kgDOBot1234")
         self.assertEqual(proof.actor_login, "pathfinder-publication[bot]")
         self.assertEqual(proof.repository_id, 123456789)
+        self.assertEqual(proof.repository_node_id, "R_kgDOExample1")
         self.assertEqual(proof.pull_request_number, 72)
         self.assertEqual(proof.head_sha, "c" * 40)
+        self.assertEqual(proof.base_sha, "b" * 40)
         self.assertEqual(
             proof.publication_receipt_sha256,
             self.receipt["receipt_sha256"],

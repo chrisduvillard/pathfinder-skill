@@ -192,6 +192,20 @@ class GitHubGraphQLClientTests(unittest.TestCase):
             PULL_REQUEST_QUERY_SHA256,
             hashlib.sha256(PULL_REQUEST_QUERY.encode()).hexdigest(),
         )
+        evidence_schema = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "publication"
+                / "merge-evidence.schema.json"
+            ).read_text()
+        )
+        self.assertEqual(
+            evidence_schema["properties"]["observation"]["properties"][
+                "graphql_query_sha256"
+            ],
+            {"const": PULL_REQUEST_QUERY_SHA256},
+        )
         self.assertIn(OPERATION_NAME, PULL_REQUEST_QUERY)
         methods = {
             name for name, value in PullRequestGraphQLTransport.__dict__.items()
@@ -488,11 +502,13 @@ class GitHubGraphQLClientTests(unittest.TestCase):
                 continue
             if "github_graphql" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
+        consumers.sort()
         self.assertEqual(
             consumers,
             [
-                "pathfinder_core/adapters/github_review_reconciliation.py",
+                "pathfinder_core/adapters/github_graphql_projection.py",
                 "pathfinder_core/adapters/github_publication_reconciliation.py",
+                "pathfinder_core/adapters/github_review_reconciliation.py",
             ],
         )
         constructors = []
@@ -506,6 +522,7 @@ class GitHubGraphQLClientTests(unittest.TestCase):
             (ROOT / "pathfinder_core/adapters" / name).read_text()
             for name in (
                 "github_graphql.py",
+                "github_graphql_projection.py",
                 "github_publication_reconciliation.py",
                 "github_review_reconciliation.py",
             )
