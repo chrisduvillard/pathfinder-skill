@@ -1615,13 +1615,28 @@ approved composed merge rehearsal in K6.2.
 - [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
-- [ ] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
+- [x] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
 - [ ] K5.1 read-only composition is implemented and independently reviewed.
 - [ ] K5.2 has separate human security approval. Repeated implementation approval does not satisfy this gate.
 
 Until every prerequisite above K5.1 is checked, the safe next work is contract clarification and
 default-off regression coverage only. Fixture success cannot be relabeled as runnable publication,
 trusted-host installation, live evidence, or rehearsal.
+
+**Bounded operational rehearsal (2026-08-12):** an external operator-hosted adapter used two
+repository-scoped GitHub Apps against the private disposable
+`Chris-Archive-Archive/pathfinder-merge-rehearsal` repository. The real source controller persisted
+one exact awaiting-review receipt for PR 1 and replayed without another remote effect. A separate
+read-only App collected two complete 16-request REST/GraphQL snapshots with disjoint request ids,
+matching receipt diff hashes, no unknown/unsupported fields, and no security-domain drift. The PR
+remained open and unmerged; deployments and releases stayed at zero; no merge App, credential,
+intent, or request existed. GitHub's qualified upgrade-required response proved classic protection
+and rulesets unavailable on this private Free-plan target, so it cannot be eligible. See
+[`docs/rehearsals/2026-08-12-zero-merge-publication.md`](docs/rehearsals/2026-08-12-zero-merge-publication.md).
+This closes only the bounded rehearsal checkbox: the adapter is not an installed package route, the
+package still has no live backend/credential loader, and the host binding deliberately was not a
+schema-valid merge policy or authorization. The first two readiness items and K5.1 therefore remain
+unchecked.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and

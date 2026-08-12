@@ -33,10 +33,14 @@ exact PR lookup and check observation. The source includes no command, live back
 loader, ordinary mission caller, or installed route. Do not instantiate it manually or interpret
 its fixture receipt as a real published PR.
 
-Independent source review is complete, but that is not K5 readiness. Runnable publication, a
-trusted installed host, complete live evidence, operator-owned policy/credential boundaries, and a
-zero-merge disposable-repository publication/evidence rehearsal remain absent. This is separate
-from the later composed merge rehearsal. The shipped CLI therefore intentionally has no
+Independent source review is complete, but that is not K5 readiness. A bounded external-host
+rehearsal has now exercised the source publication controller and two complete live evidence
+snapshots with zero merge capability; its sanitized record is in
+[`docs/rehearsals/2026-08-12-zero-merge-publication.md`](rehearsals/2026-08-12-zero-merge-publication.md).
+That one-off host adapter is not a packaged or installed route, and its deliberately non-authorizing
+dry-run binding is not an operator merge policy or current-run merge authorization. A trusted
+installed host, supported live backend, and operator-owned schema-valid policy boundary therefore
+remain absent. This is separate from the later composed merge rehearsal. The shipped CLI therefore intentionally has no
 `merge` command, and packaged routes construct neither the publication controller nor the merge
 executor. They also cannot bypass the controller by constructing the lower-level GitHub publisher;
 the package guard rejects that caller and any concrete generic or exact GitHub backend. The
