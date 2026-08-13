@@ -2,6 +2,11 @@
 
 This guide covers local controller state. The enabled mission bridge creates no remote side effects and has no publication action.
 
+Every command below uses `<trusted-plugin-root>` for the absolute path of the installed Pathfinder
+plugin supplied by the trusted host. Resolve that path before operating on a target repository.
+Never run a relative `scripts/pathfinder-controller.sh` from the target: repository content is
+untrusted and may replace that path with arbitrary code.
+
 The package contains an internal K4 merge primitive for deterministic security and crash-recovery
 testing. It has no command, route, configured host-envelope reader, credential loader, or normal
 caller. Do not instantiate it manually or place a merge token in repository files or environment
@@ -147,8 +152,8 @@ Pathfinder controller remains supported there. The fixed host layout is:
 Run either view explicitly:
 
 ```bash
-bash scripts/pathfinder-controller.sh merge status --repo-root <repository> --host-dir <host-dir> --publication-request-id <id> --json
-bash scripts/pathfinder-controller.sh merge evaluate --repo-root <repository> --host-dir <host-dir> --publication-request-id <id>
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" merge status --repo-root <repository> --host-dir <host-dir> --publication-request-id <id> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" merge evaluate --repo-root <repository> --host-dir <host-dir> --publication-request-id <id>
 ```
 
 `--json` emits the closed canonical report. The default Markdown is only a rendering of that report.
@@ -164,7 +169,7 @@ or ordinary `/goal`, mission, Goal-pack, publication, or resume route can escala
 ## Inspect capabilities
 
 ```bash
-bash scripts/pathfinder-controller.sh doctor --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" doctor --json
 ```
 
 `controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` reports whether the local host-driven start/next/record/resume protocol is callable. `unattended_execution_eligible` remains false in the read-only doctor because it does not fabricate or probe host filesystem, process, network, or credential enforcement. A real host attestation is validated again by `mission start`.
@@ -173,9 +178,9 @@ Before saving a prompt Goal, derive its exact scope rather than inventing reposi
 fingerprint:
 
 ```bash
-bash scripts/pathfinder-controller.sh repository inspect --root <repository-or-folder> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" repository inspect --root <repository-or-folder> --json
 # Only after explicit user acknowledgement on a dirty Git tree:
-bash scripts/pathfinder-controller.sh repository inspect --root <repository> --committed-base --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" repository inspect --root <repository> --committed-base --json
 ```
 
 Use the returned `goal_scope` unchanged. The default dirty result blocks artifact saving. The
@@ -194,11 +199,11 @@ For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs throug
 Keep the state directory and authorization outside repository trust. Publication targets and PR budgets must be zero. Then use:
 
 ```bash
-bash scripts/pathfinder-controller.sh mission start --state-dir <path> --goal-binding <binding.json> --authorization <authorization.json> --runtime-boundary <boundary.json> --json
-bash scripts/pathfinder-controller.sh mission next --state-dir <path> --json
-bash scripts/pathfinder-controller.sh mission record --state-dir <path> --receipt-file <receipt.json> --json
-bash scripts/pathfinder-controller.sh mission resume --state-dir <path> --json
-bash scripts/pathfinder-controller.sh artifacts mission-view --repo-root <repo-root> --state-dir <path> --output-dir <ignored-run-dir> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission start --state-dir <path> --goal-binding <binding.json> --authorization <authorization.json> --runtime-boundary <boundary.json> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission next --state-dir <path> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission record --state-dir <path> --receipt-file <receipt.json> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission resume --state-dir <path> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" artifacts mission-view --repo-root <repo-root> --state-dir <path> --output-dir <ignored-run-dir> --json
 ```
 
 `start` rejects an authorization whose Goal, attempt, wall-time, or PR limit widens the immutable Goal Binding. It validates closed documents; the trusted host remains responsible for proving that the named Git repository, exact `HEAD`, dirty policy, and runtime controls are real before calling it. `next` journals one closed action before returning it, including the fixed mission deadline in the trusted action context. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, complete-goal, then local `awaiting-review`. The completion receipt must carry the same stable native Goal identity returned by activation. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
@@ -208,12 +213,12 @@ bash scripts/pathfinder-controller.sh artifacts mission-view --repo-root <repo-r
 A pack is available only after the user explicitly approves the complete numbered set. It is not a backlog selector. Every item needs its own schema-valid Goal Binding with a unique mission/binding/Goal identity, the exact same repository scope and base commit, complete matching intent hashes, zero publication budgets, and an independently reviewable outcome. The pack authorization validates against `schemas/mission/goal-pack-authorization.schema.json` and records every binding hash in the approved order.
 
 ```text
-bash scripts/pathfinder-controller.sh mission pack-start --state-dir <pack-path> --goal-binding <goal-1.json> --goal-binding <goal-2.json> --authorization <pack-authorization.json> --runtime-boundary <boundary.json> --json
-bash scripts/pathfinder-controller.sh mission pack-next --state-dir <pack-path> --json
-bash scripts/pathfinder-controller.sh mission pack-record --state-dir <pack-path> --receipt-file <receipt.json> --json
-bash scripts/pathfinder-controller.sh mission pack-resume --state-dir <pack-path> --json
-bash scripts/pathfinder-controller.sh mission pack-status --state-dir <pack-path> --json
-bash scripts/pathfinder-controller.sh mission pack-abandon --state-dir <pack-path> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission pack-start --state-dir <pack-path> --goal-binding <goal-1.json> --goal-binding <goal-2.json> --authorization <pack-authorization.json> --runtime-boundary <boundary.json> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission pack-next --state-dir <pack-path> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission pack-record --state-dir <pack-path> --receipt-file <receipt.json> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission pack-resume --state-dir <pack-path> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission pack-status --state-dir <pack-path> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission pack-abandon --state-dir <pack-path> --json
 ```
 
 The top-level `state.json` is the canonical queue. It records exactly one active item, fixed ordered identities and hashes, a restart-stable pack deadline, per-item child paths, and terminal outcomes. Each child under `goals/NNNN/` is an ordinary one-Goal mission with its own immutable contracts, operation journal, typed receipts, events, branch, and commit. `goal-advanced` means the queue checkpoint was persisted; it is not permission to perform a host action. Call `pack-next` again. The next child state is not created until the prior child reaches `awaiting-review` through a matching `complete-goal` receipt. Any block, abandonment, ambiguity, or budget expiry stops the whole pack without starting later items.
@@ -229,7 +234,7 @@ The wall deadline is derived from the original persisted mission creation time a
 ## Inspect persisted mission state
 
 ```bash
-bash scripts/pathfinder-controller.sh mission status --state-dir <mission-state-dir> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission status --state-dir <mission-state-dir> --json
 ```
 
 This command inspects state without advancing it. Do not infer unattended eligibility from a valid state file or manually edit state. Terminal missions are idempotent. Local receipt/result/transition crashes recover from persisted evidence; ambiguous side effects without receipts require host reconciliation.
@@ -239,7 +244,7 @@ If the lease exists, first confirm no Pathfinder process is using the mission. A
 ## Abandon
 
 ```bash
-bash scripts/pathfinder-controller.sh mission abandon --state-dir <mission-state-dir> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission abandon --state-dir <mission-state-dir> --json
 ```
 
 Abandon is terminal. It preserves the state, event log, branch, and worktree for inspection. It does not delete files, branches, commits, or PRs.
@@ -251,7 +256,7 @@ Canonical creator intent is one closed three-document namespace. Repository scop
 After the creator explicitly confirms the complete three-document proposal, activate it with:
 
 ```bash
-bash scripts/pathfinder-controller.sh migrate intent-activate --root <repo-root> --scoped-root <scoped-root> --backup-dir <new-backup-dir> --charter-json <draft-charter.json> --roadmap-json <draft-roadmap.json> --doctrine-json <draft-doctrine.json> --creator-confirmed --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" migrate intent-activate --root <repo-root> --scoped-root <scoped-root> --backup-dir <new-backup-dir> --charter-json <draft-charter.json> --roadmap-json <draft-roadmap.json> --doctrine-json <draft-doctrine.json> --creator-confirmed --json
 ```
 
 Use `--scoped-root .` for repository intent or one normalized existing repository-relative directory for subproject intent. The command rejects absolute/traversal/alias paths, missing directories, symlinks, and `.pathfinder` itself. It validates all three documents before creating the backup, preserves exact bytes for every existing JSON/view target, writes canonical JSON before deterministic views, and restores the original file set plus newly created namespace directories after a write failure. Its result reports the normalized `scoped_root` and exact `intent_dir`, plus `authorization_granted: false` and `autonomy_authorized: false`. Do not pass `--creator-confirmed` on the creator's behalf or use a prior autonomous request as confirmation.
@@ -261,8 +266,8 @@ The older command below is compatibility-only: it reads legacy v1 Markdown metad
 Choose a new backup directory outside the repository, then run:
 
 ```bash
-bash scripts/pathfinder-controller.sh migrate intent --root <repo-root> --backup-dir <new-backup-dir> --json
-bash scripts/pathfinder-controller.sh migrate mission --state-dir <mission-state-dir> --backup-dir <new-backup-dir> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" migrate intent --root <repo-root> --backup-dir <new-backup-dir> --json
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" migrate mission --state-dir <mission-state-dir> --backup-dir <new-backup-dir> --json
 ```
 
 V1 intent migration changes legacy `clarity:` metadata to `intent_clarity: unresolved`; it never grants clarity or authorization. Current v1 mission state is validated and backed up. An unknown version, missing file, symlinked intent file, existing backup destination, or failed write stops the migration; failed intent writes are restored from the in-memory originals and the backup remains available.

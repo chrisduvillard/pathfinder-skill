@@ -14,7 +14,7 @@
 # between Claude and Codex plugin manifests; (5) Codex default prompts cover the
 # supported entry paths; (6) neither marketplace.json declares a version anywhere
 # (plugin.json is the single source Claude Code resolves first); (7) the Codex
-# marketplace pins source.ref to the immutable release tag for the stable channel;
+# marketplace pins source.ref to the versioned release tag for the stable channel;
 # (8) the release workflow is manual-only, main-only, and version-confirmed.
 #
 # Usage: bash scripts/check-manifests.sh [ROOT]   (ROOT defaults to ".")
@@ -168,14 +168,14 @@ for f in "$root"/.claude-plugin/marketplace.json "$root"/.agents/plugins/marketp
   fi
 done
 
-# (7) Stable installs resolve immutably on both hosts. The release tag must
+# (7) Stable installs resolve through a versioned tag on both hosts. The release tag must
 #     match VERSION.md; `main` is documented separately as the edge channel.
 codex_market="$root/.agents/plugins/marketplace.json"
 codex_refs=$("$jq_bin" -r '[.plugins[]? | select(.name == "pathfinder") | .source.ref?] | @tsv' "$codex_market" | tr -d '\r')
 if [ "$codex_refs" = "v$v" ]; then
   echo "ok: $codex_market stable pathfinder source.ref = v$v"
 else
-  echo "::error file=$codex_market::stable pathfinder source.ref must equal immutable tag \"v$v\", got \"${codex_refs:-<missing>}\""
+  echo "::error file=$codex_market::stable pathfinder source.ref must equal versioned release tag \"v$v\", got \"${codex_refs:-<missing>}\""
   fail=1
 fi
 claude_market="$root/.claude-plugin/marketplace.json"

@@ -27,7 +27,7 @@ Intent, host-receipt, terminal-result, and transition crash boundaries are teste
 
 The host/runtime must prove filesystem and process isolation, network policy, credential isolation, and native Goal lifecycle access. The local bridge must have no publication credential. Repository understanding, candidate value, code quality, and verifier judgment remain model behavior backed by evidence and replays—not formal proofs. `unknown` host enforcement blocks unattended execution.
 
-Stable installs use immutable release tags. Repository `main` is the edge channel and may change between commits.
+Stable installs use versioned release tags that project policy forbids rewriting. Repository `main` is the edge channel and may change between commits.
 
 Before writing a saved Goal, use `repository inspect` to obtain the controller-derived repository
 identity and scope fingerprint. Dirty Git defaults to `block`; `--committed-base` is an explicit

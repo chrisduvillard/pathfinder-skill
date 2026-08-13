@@ -13,7 +13,7 @@ version: Claude Code resolves a plugin's version from `plugin.json` first, so
 declaring it in a marketplace entry as well would let a stale manifest silently
 mask it (per the official plugin-marketplaces docs). CI fails if either
 marketplace file adds a version. The default Codex marketplace is the stable
-channel and pins `source.ref` to the immutable `v<version>` tag. Repository
+channel and pins `source.ref` to the versioned `v<version>` release tag. Repository
 `main` is the explicitly labeled edge channel for development/manual installs.
 The stable tag becomes installable only after the release workflow smoke-tests
 the exact archive and creates the tag; tags are never rewritten.

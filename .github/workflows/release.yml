@@ -8,7 +8,7 @@ name: release
 # and a release whose body is the matching
 # "Changes in v<version>:" changelog block. It is idempotent: if the tag/release
 # already exists, it does nothing. A push or VERSION.md edit can never trigger
-# this workflow. The default marketplace resolves the matching immutable tag;
+# this workflow. The default marketplace resolves the matching versioned tag;
 # `main` remains the explicitly documented edge channel.
 
 on:

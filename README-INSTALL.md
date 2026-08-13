@@ -34,7 +34,7 @@ active Goal.
 
 Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
 
-The marketplace entry is the stable channel and resolves to an immutable `v<version>` tag. Repository `main` is the edge channel for manual/development installs; use it only when you intentionally want unreleased changes.
+The marketplace entry is the stable channel and resolves to the versioned `v<version>` release tag. Published release tags are never rewritten by project policy. Repository `main` is the edge channel for manual/development installs; use it only when you intentionally want unreleased changes.
 
 ## Manual Claude Code install
 

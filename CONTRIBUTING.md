@@ -123,7 +123,8 @@ before you push, not after.
   generated process artifacts.
 - Do not add runtime dependencies unless the pull request explains why the
   dependency is necessary and safe.
-- Stable marketplace refs must equal the immutable `v<version>` tag. `main` is edge.
+- Stable marketplace refs must equal the versioned `v<version>` release tag, and published release
+  tags must never be rewritten. `main` is edge.
   Run `bash scripts/package-smoke.sh .` before proposing a release; the release workflow
   repeats it against the exact Git archive before creating a tag.
 
