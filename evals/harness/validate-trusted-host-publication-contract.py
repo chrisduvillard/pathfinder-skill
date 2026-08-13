@@ -89,60 +89,56 @@ def orchestrator(publication, collector):
     )
 
 
-def dotted_name(node):
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        prefix = dotted_name(node.value)
-        if prefix:
-            return f"{prefix}.{node.attr}"
-    return None
+def isolated_module_references(tree, module_name):
+    """Reject every non-owner import/reference, including re-export aliases."""
 
-
-def constructor_calls(tree, *, module_name, symbol):
-    aliases = {symbol}
-    module_aliases = set()
+    references = []
+    qualified = f"pathfinder_core.{module_name}"
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
-            module = node.module or ""
-            if module.endswith(module_name):
-                for imported in node.names:
-                    if imported.name == symbol:
-                        aliases.add(imported.asname or imported.name)
-            if module == "pathfinder_core":
-                for imported in node.names:
-                    if imported.name == module_name:
-                        module_aliases.add(imported.asname or imported.name)
+            source = node.module or ""
+            if source == module_name or source.endswith(f".{module_name}"):
+                references.append(("import-from", node.lineno))
+            elif source in ("", "pathfinder_core") and any(
+                imported.name == module_name for imported in node.names
+            ):
+                references.append(("package-import", node.lineno))
         elif isinstance(node, ast.Import):
-            for imported in node.names:
-                if imported.name.endswith(module_name):
-                    module_aliases.add(imported.asname or imported.name)
+            if any(
+                imported.name == module_name
+                or imported.name.endswith(f".{module_name}")
+                for imported in node.names
+            ):
+                references.append(("import", node.lineno))
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value == qualified or node.value.endswith(f".{module_name}"):
+                references.append(("dynamic-module-name", node.lineno))
+    return references
 
-    lines = []
+
+def member_references(tree, names):
+    """Find direct, aliased-bound, subscripted, and getattr capability use."""
+
+    references = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        name = dotted_name(node.func)
-        if not name:
-            continue
-        direct = name in aliases
-        qualified = name.endswith(f".{symbol}") and (
-            module_name in name
-            or name.rsplit(".", 1)[0] in module_aliases
-        )
-        if direct or qualified:
-            lines.append(node.lineno)
-    return lines
-
-
-def attribute_calls(tree, names):
-    return [
-        (node.func.attr, node.lineno)
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr in names
-    ]
+        if isinstance(node, ast.Attribute) and node.attr in names:
+            references.append((node.attr, node.lineno))
+        elif (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.slice, ast.Constant)
+            and node.slice.value in names
+        ):
+            references.append((str(node.slice.value), node.lineno))
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "getattr"
+            and len(node.args) >= 2
+            and isinstance(node.args[1], ast.Constant)
+            and node.args[1].value in names
+        ):
+            references.append((str(node.args[1].value), node.lineno))
+    return references
 
 def main() -> int:
     expected = load(Path(sys.argv[1]))
@@ -345,12 +341,10 @@ def main() -> int:
     for relative, tree in trees.items():
         if relative == "pathfinder_core/trusted_host_publication.py":
             continue
-        for line in constructor_calls(
-            tree,
-            module_name="trusted_host_publication",
-            symbol="TrustedHostPublicationEvidenceController",
+        for kind, line in isolated_module_references(
+            tree, "trusted_host_publication"
         ):
-            callers.append(f"{relative}:{line}")
+            callers.append(f"{relative}:{line}:{kind}")
     require(
         len(callers) == expected["production_orchestrator_callers"],
         f"zero-merge orchestrator gained a production caller: {callers}",
@@ -360,12 +354,8 @@ def main() -> int:
     for relative, tree in trees.items():
         if relative == "pathfinder_core/merge_executor.py":
             continue
-        for line in constructor_calls(
-            tree,
-            module_name="merge_executor",
-            symbol="MergeExecutor",
-        ):
-            executor_callers.append(f"{relative}:{line}")
+        for kind, line in isolated_module_references(tree, "merge_executor"):
+            executor_callers.append(f"{relative}:{line}:{kind}")
     require(
         executor_callers == [],
         f"merge executor gained a packaged caller: {executor_callers}",
@@ -375,7 +365,7 @@ def main() -> int:
     for relative, tree in trees.items():
         if relative == "pathfinder_core/merge_executor.py":
             continue
-        for name, line in attribute_calls(tree, {"merge"}):
+        for name, line in member_references(tree, {"merge"}):
             unexpected_merge_calls.append(f"{relative}:{line}:{name}")
     require(
         unexpected_merge_calls == [],
@@ -391,7 +381,7 @@ def main() -> int:
     }
     forbidden_route_calls = []
     for relative in enabled_routes:
-        for name, line in attribute_calls(
+        for name, line in member_references(
             trees[relative],
             {
                 "execute",
