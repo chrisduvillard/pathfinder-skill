@@ -3,11 +3,13 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Callable, Mapping, NoReturn, Protocol
 
 from ..errors import StateError
 from ..host_artifact_store import HostArtifactCollectionStore
 from ..merge_time import parse_aware_timestamp
+from ..publication_journal import PublicationJournal
 from .github_candidate_rest import GitHubCandidateRESTSnapshot
 from .github_check_policy import GitHubRequiredCheckProjector
 from .github_checks import GitHubCheckEvidenceReader
@@ -102,6 +104,17 @@ class NormalizedPolicyBackend(Protocol):
     def read_all(
         self, *, merge_actor: Mapping[str, object]
     ) -> GitHubNormalizedPolicySnapshot: ...
+
+
+class HostEvidenceCollectionInputProvider(Protocol):
+    """External host boundary that authenticates inputs for one exact journal."""
+
+    def read_fresh_authenticated(
+        self,
+        *,
+        publication_records: Mapping[str, object],
+        authenticated_at: str,
+    ) -> Mapping[str, object]: ...
 
 
 @dataclass(frozen=True)
@@ -233,6 +246,18 @@ class GitHubAuthenticatedEvidenceCollector:
         self.store = store
         self.clock = clock
 
+    def _assert_policy_credential(
+        self, policy_backend: NormalizedPolicyBackend
+    ) -> None:
+        if (
+            policy_backend.credential
+            is not self.identity.observer_installation.credential
+        ):
+            raise _fail(
+                "policy-backend",
+                "normalized policy reader does not share the observer credential",
+            )
+
     @staticmethod
     def _prepare(
         backend: NormalizedPolicyBackend,
@@ -321,23 +346,115 @@ class GitHubAuthenticatedEvidenceCollector:
                 "authority", "authenticated authority binding is incomplete"
             ) from None
 
+    @staticmethod
+    def _assert_exact_publication_records(
+        documents: Mapping[str, object],
+        publication_records: Mapping[str, object],
+    ) -> None:
+        try:
+            exact = (
+                publication_records["state"] == "awaiting-review"
+                and publication_records["disposition"] == "awaiting-review"
+                and publication_records["request"]
+                == documents["publication_request"]
+                and publication_records["dispatch"]
+                == documents["publication_dispatch"]
+                and publication_records["receipt"]
+                == documents["publication_receipt"]
+            )
+        except (KeyError, TypeError):
+            exact = False
+        if not exact:
+            raise _fail(
+                "collection-input",
+                "authenticated input differs from the exact publication journal",
+            )
+
+    @staticmethod
+    def _terminal_publication_records(
+        publication_records: Mapping[str, object],
+    ) -> dict[str, object]:
+        records = copy.deepcopy(publication_records)
+        try:
+            validated = PublicationJournal(Path(".")).validate_records(
+                records["request"],
+                records["dispatch"],
+                records["receipt"],
+            )
+        except (KeyError, StateError, TypeError) as error:
+            raise _fail(
+                "collection-input",
+                f"terminal publication journal is invalid: {error}",
+            ) from error
+        if (
+            records.get("state") != "awaiting-review"
+            or records.get("disposition") != "awaiting-review"
+            or validated["state"] != "awaiting-review"
+        ):
+            raise _fail(
+                "collection-input",
+                "evidence collection requires one terminal publication journal",
+            )
+        return {
+            "state": "awaiting-review",
+            "disposition": "awaiting-review",
+            "request": validated["request"],
+            "dispatch": validated["dispatch"],
+            "receipt": validated["receipt"],
+        }
+
+    def collect_from_verified_host(
+        self,
+        *,
+        policy_backend: NormalizedPolicyBackend,
+        input_provider: HostEvidenceCollectionInputProvider,
+        publication_records: Mapping[str, object],
+    ) -> AuthenticatedEvidenceCollection:
+        """Collect only after the host binds fresh inputs to one terminal receipt."""
+
+        self._assert_policy_credential(policy_backend)
+        observed_time = self.clock()
+        observed_at = _timestamp(observed_time)
+        records = self._terminal_publication_records(publication_records)
+        try:
+            input_envelope = input_provider.read_fresh_authenticated(
+                publication_records=copy.deepcopy(records),
+                authenticated_at=observed_at,
+            )
+        except (KeyError, StateError, TypeError) as error:
+            raise _fail("collection-input", str(error)) from error
+        return self._collect_and_persist_at(
+            policy_backend=policy_backend,
+            input_envelope=input_envelope,
+            observed_time=observed_time,
+            observed_at=observed_at,
+            publication_records=records,
+        )
+
     def collect_and_persist(
         self,
         *,
         policy_backend: NormalizedPolicyBackend,
         input_envelope: Mapping[str, object],
     ) -> AuthenticatedEvidenceCollection:
-        if (
-            policy_backend.credential
-            is not self.identity.observer_installation.credential
-        ):
-            raise _fail(
-                "policy-backend",
-                "normalized policy reader does not share the observer credential",
-            )
-
+        self._assert_policy_credential(policy_backend)
         observed_time = self.clock()
-        observed_at = _timestamp(observed_time)
+        return self._collect_and_persist_at(
+            policy_backend=policy_backend,
+            input_envelope=input_envelope,
+            observed_time=observed_time,
+            observed_at=_timestamp(observed_time),
+        )
+
+    def _collect_and_persist_at(
+        self,
+        *,
+        policy_backend: NormalizedPolicyBackend,
+        input_envelope: Mapping[str, object],
+        observed_time: datetime,
+        observed_at: str,
+        publication_records: Mapping[str, object] | None = None,
+    ) -> AuthenticatedEvidenceCollection:
         try:
             input_payload = self.store.verify_collection_inputs(
                 input_envelope, authenticated_at=observed_at
@@ -346,6 +463,10 @@ class GitHubAuthenticatedEvidenceCollector:
             evidence_id = input_payload["evidence_id"]
         except (KeyError, StateError, TypeError) as error:
             raise _fail("collection-input", str(error)) from error
+        if publication_records is not None:
+            self._assert_exact_publication_records(
+                documents, publication_records
+            )
         try:
             observer_receipt = GitHubEvidenceCredentialReceipt.from_document(
                 documents["observer_credential_receipt"]

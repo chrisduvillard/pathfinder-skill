@@ -1820,6 +1820,21 @@ publication or K5 execution authority. Its independent source review is now comp
 K5.1 observation-only implementation does not make publication runnable, install a live evidence
 collector, or supply operator authorization, policy, or credentials.
 
+**Zero-merge trusted-host composition note (2026-08-13):** added one explicit source API that
+connects the already isolated awaiting-review publication controller to the authenticated
+single-snapshot collector. `publish_and_collect` may collect only after publication returns one
+terminal receipt and that exact validated request/dispatch/receipt is reloaded from the journal.
+`reconcile_and_collect` uses only the publisher's read-only recovery path. At the collector boundary,
+the injected host must create a freshly authenticated input for those exact records at the
+collector-owned clock instant; the store verifies the attestation and nested contracts before the
+collector compares all three journal documents byte-for-byte and before any GitHub evidence read.
+Nonterminal publication, host-input failure, or journal/input drift performs no evidence read.
+The source API constructs none of its dependencies and ships no command, live publication backend,
+credential or receipt loader, authenticator/key, environment-token access, merge token, writer,
+intent, request, or merge method. It therefore gives an external trusted host a narrow call graph
+without making either installed-host readiness claim true; both readiness items and K5.2 remain
+unchecked pending a concrete reviewed host integration.
+
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 
 - [x] `[writes code]` Add only a `merge status`/`merge evaluate` surface, composition state, operator docs, and focused tests; present the call graph before editing.

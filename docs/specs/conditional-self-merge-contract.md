@@ -270,7 +270,14 @@ or making any GitHub read. It then independently validates nested canonical hash
 publication/authority/credential/protected-policy bindings, distinct actor identities, and current
 policy/authorization windows; loose, split, expired, re-hashed, wrong-store, or unauthenticated
 inputs block before network.
-After collection, one
+One source-only zero-merge orchestrator now connects the publication and collection boundaries
+without constructing either dependency. It permits collection only after an exact terminal
+awaiting-review receipt is reloaded from the write-once journal. The collector asks an injected
+trusted-host provider for a newly authenticated input at the collector-owned clock instant,
+authenticates the envelope, and compares its request, dispatch, and receipt byte-for-byte with that
+terminal journal before any GitHub evidence read. Its separate recovery entry point invokes only
+the publisher's read-only reconciliation. Nonterminal publication or any journal/input drift stops
+before collection. After collection, one
 immutable externally authenticated v3 envelope contains the exact publication journal, operator
 policy/current-run authorization/protected policy, publication, observer, and non-secret merge
 credential receipts,
@@ -279,10 +286,11 @@ hashes and complete cross-document identities, uses a pinned owner-only POSIX ho
 directory outside repository trust, and rejects partial, replaced, renamed, re-hashed, wrong-store,
 or unauthenticated records. One unconstructed read-only adapter accepts two explicit evidence ids,
 re-verifies both envelopes, and rejects publication, authority, or authenticator/key drift. The
-package ships no authenticator implementation/key loader or route that constructs the adapter;
-Windows fails closed pending equivalent ACL proof. An installed trusted
-host must still inject the authenticator and live collector and persist these facts rather than UI
-text. Conditional merge therefore remains unsupported for live use.
+package ships no authenticator implementation/key loader or route that constructs the adapter or
+the zero-merge orchestrator; Windows fails closed pending equivalent ACL proof. An installed trusted
+host must still inject a concrete publication backend, authenticator, credentials, authority,
+policy, and live collector and persist these facts rather than UI text. Conditional merge therefore
+remains unsupported for live use.
 
 ## Typed block and result contract
 

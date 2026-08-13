@@ -127,6 +127,27 @@ class Store:
         return {"authenticated": True, "evidence_id": values["evidence"]["evidence_id"]}
 
 
+class InputProvider:
+    def __init__(self, envelope):
+        self.envelope = envelope
+        self.calls = []
+
+    def read_fresh_authenticated(
+        self, *, publication_records, authenticated_at
+    ):
+        self.calls.append((copy.deepcopy(publication_records), authenticated_at))
+        return copy.deepcopy(self.envelope)
+
+
+class FailingInputProvider:
+    def __init__(self):
+        self.calls = 0
+
+    def read_fresh_authenticated(self, **_values):
+        self.calls += 1
+        raise StateError("trusted host input unavailable")
+
+
 class PolicyBackend(FixtureObservationBackend):
     def __init__(self, responses, credential, classic_policy, active_policy):
         super().__init__(responses)
@@ -314,6 +335,144 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             {key: value for key, value in inputs.items() if key != "policy_backend"},
         )
         self.assertEqual(len(self.store.input_calls), 1)
+
+    def test_verified_host_input_is_bound_to_the_exact_publication_before_reads(self):
+        inputs = self.inputs()
+        provider = InputProvider(inputs["input_envelope"])
+        records = {
+            "state": "awaiting-review",
+            "disposition": "awaiting-review",
+            "request": copy.deepcopy(self.helper.publication_request),
+            "dispatch": copy.deepcopy(self.dispatch),
+            "receipt": copy.deepcopy(self.helper.publication_receipt),
+        }
+
+        result = self.collector().collect_from_verified_host(
+            policy_backend=inputs["policy_backend"],
+            input_provider=provider,
+            publication_records=records,
+        )
+
+        self.assertEqual(provider.calls, [(records, STARTED.isoformat())])
+        self.assertEqual(
+            result.snapshot.evidence["evidence_id"],
+            self.helper.context["evidence_id"],
+        )
+
+        changed = copy.deepcopy(records)
+        changed["receipt"]["reused"] = not changed["receipt"]["reused"]
+        changed["receipt"]["receipt_sha256"] = canonical_sha256(
+            changed["receipt"], "receipt_sha256"
+        )
+        self.identity.verify_observer.reset_mock()
+        self.identity.verify_merge_actor.reset_mock()
+        self.graphql.read_pull_request.reset_mock()
+        self.reviews.read_all.reset_mock()
+        self.checks.read_all.reset_mock()
+        self.candidate.calls.clear()
+        self.ownership.calls.clear()
+        self.store.calls.clear()
+
+        with self.assertRaisesRegex(
+            GitHubObservationError, "exact publication journal"
+        ):
+            self.collector(clock=lambda: STARTED).collect_from_verified_host(
+                policy_backend=inputs["policy_backend"],
+                input_provider=provider,
+                publication_records=changed,
+            )
+
+        self.identity.verify_observer.assert_not_called()
+        self.identity.verify_merge_actor.assert_not_called()
+        self.graphql.read_pull_request.assert_not_called()
+        self.reviews.read_all.assert_not_called()
+        self.checks.read_all.assert_not_called()
+        self.assertEqual(self.candidate.calls, [])
+        self.assertEqual(self.ownership.calls, [])
+        self.assertEqual(self.store.calls, [])
+
+    def test_verified_host_rejects_nonterminal_or_unavailable_inputs_before_reads(self):
+        inputs = self.inputs()
+        provider = InputProvider(inputs["input_envelope"])
+        pending = {
+            "state": "pending",
+            "disposition": "reconcile-required",
+            "request": copy.deepcopy(self.helper.publication_request),
+            "dispatch": copy.deepcopy(self.dispatch),
+            "receipt": None,
+        }
+
+        with self.assertRaisesRegex(
+            GitHubObservationError, "terminal publication journal"
+        ):
+            self.collector(clock=lambda: STARTED).collect_from_verified_host(
+                policy_backend=inputs["policy_backend"],
+                input_provider=provider,
+                publication_records=pending,
+            )
+        self.assertEqual(provider.calls, [])
+
+        failing = FailingInputProvider()
+        terminal = {
+            "state": "awaiting-review",
+            "disposition": "awaiting-review",
+            "request": copy.deepcopy(self.helper.publication_request),
+            "dispatch": copy.deepcopy(self.dispatch),
+            "receipt": copy.deepcopy(self.helper.publication_receipt),
+        }
+        with self.assertRaisesRegex(
+            GitHubObservationError, "trusted host input unavailable"
+        ):
+            self.collector(clock=lambda: STARTED).collect_from_verified_host(
+                policy_backend=inputs["policy_backend"],
+                input_provider=failing,
+                publication_records=terminal,
+            )
+        self.assertEqual(failing.calls, 1)
+        self.identity.verify_observer.assert_not_called()
+        self.identity.verify_merge_actor.assert_not_called()
+        self.graphql.read_pull_request.assert_not_called()
+        self.reviews.read_all.assert_not_called()
+        self.checks.read_all.assert_not_called()
+        self.assertEqual(self.candidate.calls, [])
+        self.assertEqual(self.ownership.calls, [])
+        self.assertEqual(self.store.calls, [])
+
+    def test_verified_host_rejects_bad_policy_or_journal_before_input_provider(self):
+        inputs = self.inputs()
+        provider = InputProvider(inputs["input_envelope"])
+        terminal = {
+            "state": "awaiting-review",
+            "disposition": "awaiting-review",
+            "request": copy.deepcopy(self.helper.publication_request),
+            "dispatch": copy.deepcopy(self.dispatch),
+            "receipt": copy.deepcopy(self.helper.publication_receipt),
+        }
+        wrong_policy = PolicyBackend(
+            copy.deepcopy(self.helper.responses),
+            installation_credential("different"),
+            self.helper.classic_policy,
+            self.helper.active_policy,
+        )
+
+        with self.assertRaisesRegex(GitHubObservationError, "share the observer"):
+            self.collector(clock=lambda: STARTED).collect_from_verified_host(
+                policy_backend=wrong_policy,
+                input_provider=provider,
+                publication_records=terminal,
+            )
+        self.assertEqual(provider.calls, [])
+
+        terminal["request"]["request_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            GitHubObservationError, "terminal publication journal is invalid"
+        ):
+            self.collector(clock=lambda: STARTED).collect_from_verified_host(
+                policy_backend=inputs["policy_backend"],
+                input_provider=provider,
+                publication_records=terminal,
+            )
+        self.assertEqual(provider.calls, [])
 
     def test_eagerly_materializes_every_remaining_base_surface_before_ownership(self):
         backend = RecordingBackend(
