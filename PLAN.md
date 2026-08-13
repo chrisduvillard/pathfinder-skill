@@ -1687,7 +1687,7 @@ approved composed merge rehearsal in K6.2.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
 - [x] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
 - [x] K5.1 read-only composition is implemented and independently reviewed.
-- [ ] K5.2 has a separate specialized-agent security quorum over its exact design/diff plus explicit user authorization. Repeated implementation approval does not satisfy this gate.
+- [ ] K5.2 is deferred. The user withdrew no-human merge authorization on 2026-08-13 in favor of manual merging; a future implementation would require a new explicit authorization plus a separate specialized-agent security quorum over its exact design/diff. Repeated implementation approval does not satisfy this gate.
 
 Until the remaining operational prerequisites and separate K5.2 approval are checked, the safe
 next work is trusted-host/read-only-collector closure, contract clarification, and default-off
@@ -1873,6 +1873,10 @@ closed report domains. The 382-test preflight and exact archive smoke are green.
 closed and requires a separate specialized-agent security quorum plus explicit user authorization.
 
 #### Sub-prompt K5.2 — separately reviewed and approved execution gate
+
+**Deferred (2026-08-13):** no-human automatic merge is not being implemented. The current release
+keeps PR merging manual. Do not execute this sub-prompt unless the user later gives a new explicit
+authorization and the readiness prerequisites and exact-design quorum are independently satisfied.
 
 - [ ] `[writes code; separately approved enablement]` Change only the explicit merge execution command/controller, authorization loader, package/docs mirrors, and focused tests; present the final call graph, specialized-agent quorum record, and explicit user authorization before editing.
 - [ ] Require an authenticated host-owned policy, fresh merge-enabled run authorization, exact mission/PR binding, one remaining merge budget, fresh eligible evidence, and explicit execution command. Absence of any key returns awaiting-review without loading the writer credential.

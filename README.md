@@ -27,9 +27,27 @@
 
 <br>
 
-Pathfinder is an **agent skill plus a deterministic controller** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks useful next moves, asks only the questions that affect the outcome, and forges a bounded, verifiable **Goal**. Its local host-driven bridge can journal one typed action at a time through a verified local branch. It runs only when the active host can prove its runtime boundary, expose a stable native Goal, and return truthful typed receipts; otherwise Pathfinder stops at the saved Goal/manual handoff.
+Pathfinder is an **agent skill plus a deterministic local controller** for **Claude Code** and **Codex**. It reads a codebase from the source up, ranks useful next moves, asks only the questions that affect the outcome, and forges a bounded, verifiable **Goal**. On a compatible attested host, it can also journal one typed action at a time through a verified local branch. If the host cannot prove its runtime boundary, expose a stable native Goal, or return truthful typed receipts, Pathfinder stops at the saved Goal/manual handoff.
 
 No micro-managing exploration. No guessing where to start.
+
+<br>
+
+## ✅ What works today
+
+| Capability | Current boundary |
+|:--|:--|
+| Explore an unfamiliar codebase and rank useful work | **Supported** in any readable folder |
+| Turn a concrete request into a bounded `/goal` | **Supported** without the full exploration interview |
+| Drive one Goal or an approved fixed pack | **Conditional** on host attestation; sequential, isolated, and local-only |
+| Inspect local Pathfinder state | **Supported** and read-only with `/pathfinder status` |
+| Inspect operator-supplied merge-readiness evidence | **Observation-only on POSIX** with `merge status` / `merge evaluate`; Windows fails closed; no network, credential, intent, or merge |
+| Publish a PR from the enabled controller | **Not enabled** |
+| Automatically merge, release, deploy, force-push, or handle secrets | **Not supported by the current release**; PR merging stays manual |
+
+Pathfinder includes carefully tested, default-off publication and merge building blocks for future
+trusted-host integrations. The publication and merge-execution paths have no installed caller,
+credential loader, or execution command and do not expand the capabilities above.
 
 <br>
 
@@ -64,6 +82,23 @@ is the explicitly labeled **edge** channel for manual/development installs.
 
 > [!NOTE]
 > Prefer no plugin system? Copy `skills/pathfinder/` into `~/.claude/skills/` (Claude Code) or `~/.agents/skills/` (Codex). Full notes in [`README-INSTALL.md`](README-INSTALL.md).
+
+<br>
+
+## ▶️ First run
+
+1. Invoke the installed Pathfinder skill and choose **Explore**, **Prompt-to-goal**, or **Autonomous**.
+2. Review the proposed scope, proof checks, safety boundary, and stop condition.
+3. Start the bounded Goal, or let an attested host drive the local autonomous route.
+4. Use `/pathfinder status` whenever you want a read-only view of intent, artifacts, and mission state.
+5. If separately authorized host tooling creates a pull request, review and merge it yourself; the
+   enabled Pathfinder controller neither creates nor merges it.
+
+The safest starting point is simply:
+
+```text
+Use the pathfinder skill on this repository.
+```
 
 <br>
 
@@ -104,7 +139,7 @@ flowchart LR
 Pathfinder, turn this into a /goal: stop the dashboard empty-state from crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** is the explicitly gated `/pathfinder auto` route. The enabled bridge is one sequential local Goal: **worktree → native Goal → implement → verify → commit → local awaiting review**. It binds authority to the current request and base commit and journals each intent/receipt/result before advancing. It never activates from saved intent, derives an unbounded backlog, edits charter/doctrine policy, publishes, or self-merges. Unknown enforcement, missing native Goal identity, or an ambiguous action response stops or requires reconciliation. → [Compatibility](docs/compatibility.md) · [Safety](#-safety)
+**⚡ Autonomous** is the explicitly gated `/pathfinder auto` route. The enabled bridge is one sequential local Goal: **worktree → native Goal → implement → verify → commit → local awaiting review**. It binds authority to the current request and base commit and journals each intent/receipt/result before advancing. It never activates from saved intent, derives an unbounded backlog, edits charter/doctrine policy, publishes, or self-merges. Unknown enforcement, missing native Goal identity, or an ambiguous action response stops or requires reconciliation. A surrounding agent host may separately offer GitHub tools under its own user authorization, but those effects are outside Pathfinder's controller guarantee. → [Compatibility](docs/compatibility.md) · [Safety](#-safety)
 
 <br>
 
@@ -178,6 +213,11 @@ The local autonomous bridge is the only path designed to commit without a per-st
 - ✅ **No publication or self-merge** — the enabled bridge stops at a local awaiting-review branch with no PR.
 - 🛑 **Unknown enforcement blocks autonomy** — Pathfinder falls back to a saved Goal instead of claiming best-effort isolation.
 
+Security-sensitive Pathfinder development uses a fixed-target quorum of independent standards,
+specification-fidelity, and adversarial-security agents. That quorum is development evidence only:
+it cannot create runtime authority, load credentials, or approve a merge. In the current release,
+pull-request merging remains a deliberate manual action.
+
 <br>
 
 ## 🔬 Under the hood
@@ -212,6 +252,30 @@ Full exploration and autonomous-request preparation establish or reconcile creat
 <br>
 
 Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state—repo/branch, intent files, latest run, controller capabilities, and current mission status—without creating artifacts or triggering the interview. A full plugin install uses its bundled `scripts/pathfinder-controller.sh`; a manual skill-only copy is Goal-generation-only unless the controller is installed separately.
+
+</details>
+
+<details>
+<summary><b>Advanced: inspecting merge readiness without merging</b></summary>
+
+<br>
+
+Operators with an owner-only, externally supplied awaiting-review publication journal can ask the
+bundled controller to validate the exact persisted PR, policy, authorization, and two evidence
+snapshots:
+
+```bash
+bash scripts/pathfinder-controller.sh merge status --repo-root <repository> --host-dir <host-dir> --publication-request-id <id> --json
+bash scripts/pathfinder-controller.sh merge evaluate --repo-root <repository> --host-dir <host-dir> --publication-request-id <id>
+```
+
+These commands are deliberately observation-only. They do not contact GitHub, discover a PR, expose
+a readiness proof, load a writer credential, create an intent, or merge. Missing, malformed, expired,
+unsupported, or drifted input fails closed. The CLI proves local current-user ownership, permissions,
+out-of-repository placement, and symlink-safe reads; it does not instantiate the separate uninstalled
+external-authenticator adapter. This inspection path is POSIX-only and fails closed on Windows. See the
+[operator guide](docs/operator-guide.md#inspect-conditional-merge-readiness) for the protected host
+directory layout and platform boundary.
 
 </details>
 
