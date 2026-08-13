@@ -232,6 +232,22 @@ else
   bad "ShellCheck wrapper missed an unused assignment (exit=$shell_ec)"
 fi
 
+echo "== parser 5d: Chocolatey tools cross Windows workflow step boundaries =="
+P="$(mktemp -d "$tmp/port.XXXXXX")"
+mkdir -p "$P/.github/workflows"
+printf '%s\n' \
+  'jobs:' \
+  '  check:' \
+  '    steps:' \
+  '      - shell: pwsh' \
+  '        run: choco install jq shellcheck --yes' > "$P/.github/workflows/check.yml"
+port_out="$(bash "$here/scripts/check-portability.sh" "$P" 2>&1)"; port_ec=$?
+if [ "$port_ec" -ne 0 ] && printf '%s' "$port_out" | grep -Eq 'ChocolateyInstall/bin|GITHUB_PATH'; then
+  ok "portability guard catches a Chocolatey ShellCheck install hidden from later Git-Bash steps"
+else
+  bad "portability guard missed a Chocolatey ShellCheck install without a cross-step PATH export (exit=$port_ec)"
+fi
+
 echo "== parser 6: orphan-reference guard (TR-5) =="
 # check-skill-consistency.sh must flag a references/*.md that exists on disk but is not a required
 # (cited + expected) reference. Drop an uncited orphan into a fixture and assert the guard fails.

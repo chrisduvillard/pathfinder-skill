@@ -126,7 +126,9 @@ before you push, not after.
 
 ## Security-sensitive changes
 
-Maintainer review is required for changes to:
+The specialized-agent quorum in
+`docs/reviews/specialized-agent-review-protocol.md` and explicit maintainer/user authorization are
+required for changes to:
 
 - `.github/**`
 - `.claude-plugin/**`

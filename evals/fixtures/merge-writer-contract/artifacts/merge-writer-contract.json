@@ -1,0 +1,33 @@
+{
+  "api_host": "api.github.com",
+  "api_version": "2026-03-10",
+  "credential": {
+    "kind": "installation-token",
+    "boundary": "github-merge-executor",
+    "permissions": {
+      "contents": "write",
+      "metadata": "read",
+      "pull_requests": "read"
+    },
+    "repository_ids": [123456789]
+  },
+  "request": {
+    "path": "/repos/example-owner/example-repo/pulls/72/merge",
+    "body": {
+      "sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "merge_method": "squash"
+    }
+  },
+  "follow_up_paths": [
+    "/repos/example-owner/example-repo/pulls/72",
+    "/repos/example-owner/example-repo/pulls/72/merge",
+    "/repos/example-owner/example-repo/git/ref/heads/main",
+    "/repos/example-owner/example-repo/git/commits/dddddddddddddddddddddddddddddddddddddddd"
+  ],
+  "artifact_contract": {
+    "intent_schema_version": 2,
+    "result_schema_version": 2,
+    "result_reason": "confirmed-merged",
+    "proof_source": "response-and-reread"
+  }
+}

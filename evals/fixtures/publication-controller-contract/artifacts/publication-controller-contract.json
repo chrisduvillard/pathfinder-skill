@@ -1,0 +1,15 @@
+{
+  "request_schema_version": 1,
+  "receipt_schema_version": 1,
+  "state": "awaiting-review",
+  "source": "authenticated-controller-publication",
+  "pull_request": {
+    "id": 987654321,
+    "node_id": "PR_kwDOExample1",
+    "number": 72,
+    "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+    "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "first_call_counts": {"find": 1, "push": 1, "create": 1, "check": 1},
+  "production_controller_callers": 0
+}

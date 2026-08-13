@@ -118,7 +118,27 @@ for f in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml \
   done < "$f"
 done
 
+# GitHub Actions runs each step in a separate process. On Windows, Chocolatey
+# can install its shims successfully without making them visible to later
+# Git-Bash steps. Any workflow that installs ShellCheck through Chocolatey must
+# therefore publish Chocolatey's bin directory through GITHUB_PATH.
+for f in "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml; do
+  [ -f "$f" ] || continue
+  if awk '
+    /choco[[:space:]]+install[[:space:]].*shellcheck/ { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$f"; then
+    if ! awk '
+      /ChocolateyInstall/ && /GITHUB_PATH/ { found = 1 }
+      END { exit found ? 0 : 1 }
+    ' "$f"; then
+      echo "::error file=$f::publish ChocolateyInstall/bin through GITHUB_PATH so later Git-Bash steps can find ShellCheck"
+      fail=1
+    fi
+  fi
+done
+
 if [ "$fail" -eq 0 ]; then
-  echo "portability: shell usage is portable and workflow + composite-action actions are SHA-pinned"
+  echo "portability: shell usage is portable, Windows check tools cross step boundaries, and workflow + composite-action actions are SHA-pinned"
 fi
 exit "$fail"

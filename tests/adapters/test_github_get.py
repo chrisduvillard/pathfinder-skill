@@ -1,7 +1,10 @@
 import inspect
 import json
 import unittest
+from datetime import datetime
 from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
 
 from pathfinder_core.adapters.github_get import (
     ACCEPT,
@@ -12,10 +15,13 @@ from pathfinder_core.adapters.github_get import (
     USER_AGENT,
     GETTransport,
     GitHubEvidenceCredential,
+    GitHubEvidenceCredentialReceipt,
     GitHubGETClient,
     GitHubHTTPSGETTransport,
     RawGETResponse,
 )
+from pathfinder_core.adapters.github_checks import GitHubCheckRunReader
+from pathfinder_core.adapters.github_memberships import GitHubBypassMembershipReader
 from pathfinder_core.adapters.github_merge_observer import (
     GitHubObservationError,
     ObservationOutcome,
@@ -38,6 +44,32 @@ def credential(kind="installation-token"):
         permissions=permissions() if kind == "installation-token" else {},
         boundary=EVIDENCE_BOUNDARY,
     )
+
+
+def credential_receipt(**overrides):
+    values = {
+        "credential_receipt_id": "evidence_credential_receipt_fixture1",
+        "source": "authenticated-host-credential-store",
+        "credential_id": "evidence_credential_fixture1",
+        "kind": "installation-token",
+        "boundary": EVIDENCE_BOUNDARY,
+        "permissions": permissions(),
+        "repository_selection": "selected",
+        "repository_ids": [123456789],
+        "app_id": 86420,
+        "app_node_id": "A_kgDOObserver1",
+        "installation_id": 97531,
+        "installation_account_id": 24680,
+        "actor_id": 112233,
+        "actor_node_id": "U_kgDOObserver1",
+        "login": "pathfinder-observer[bot]",
+        "issued_at": "2026-08-11T12:00:00+00:00",
+        "expires_at": "2026-08-11T13:00:00+00:00",
+        "verified_at": NOW,
+        "suspended": False,
+    }
+    values.update(overrides)
+    return GitHubEvidenceCredentialReceipt(**values)
 
 
 def response(status=200, data=None, headers=None, body=None):
@@ -70,6 +102,60 @@ def client(transport, **overrides):
 
 
 class GitHubGETClientTests(unittest.TestCase):
+    def test_authenticated_credential_receipt_is_hash_bound_and_current(self):
+        receipt = credential_receipt()
+        document = receipt.receipt_document()
+        schema = json.loads((
+            ROOT / "schemas" / "publication"
+            / "evidence-credential-receipt.schema.json"
+        ).read_text())
+        Draft202012Validator(
+            schema, format_checker=FormatChecker()
+        ).validate(document)
+        loaded = GitHubEvidenceCredentialReceipt.from_document(document)
+        loaded.validate_binding(
+            credential(),
+            repository_id=123456789,
+            observed_at=datetime.fromisoformat(NOW),
+        )
+        self.assertEqual(loaded.receipt_document(), document)
+        self.assertNotIn(TOKEN, repr(loaded))
+
+        tampered = dict(document)
+        tampered["actor_id"] += 1
+        with self.assertRaisesRegex(ValueError, "hash differs"):
+            GitHubEvidenceCredentialReceipt.from_document(tampered)
+
+    def test_authenticated_credential_receipt_fails_closed_on_scope_or_binding(self):
+        with self.assertRaisesRegex(ValueError, "permissions must be exact"):
+            credential_receipt(permissions={"metadata": "read"})
+        with self.assertRaisesRegex(ValueError, "select exactly one"):
+            credential_receipt(repository_ids=[123456789, 987654321])
+        with self.assertRaisesRegex(ValueError, "window exceeds one hour"):
+            credential_receipt(expires_at="2026-08-11T13:00:01+00:00")
+        with self.assertRaisesRegex(ValueError, "is suspended"):
+            credential_receipt(suspended=True)
+        with self.assertRaisesRegex(ValueError, "receipt identity is malformed"):
+            credential_receipt(
+                credential_receipt_id="evidence_credential_receipt_short"
+            )
+        with self.assertRaisesRegex(ValueError, "node identity is malformed"):
+            credential_receipt(actor_node_id="bad node")
+
+        receipt = credential_receipt()
+        with self.assertRaisesRegex(ValueError, "repository binding differs"):
+            receipt.validate_binding(
+                credential(), repository_id=987654321,
+                observed_at=datetime.fromisoformat(NOW),
+            )
+        with self.assertRaisesRegex(ValueError, "is not fresh"):
+            receipt.validate_binding(
+                credential(), repository_id=123456789,
+                observed_at=datetime.fromisoformat(
+                    "2026-08-11T12:08:11+00:00"
+                ),
+            )
+
     def test_credential_boundary_rejects_write_scope_and_redacts_repr(self):
         value = credential()
         self.assertNotIn(TOKEN, repr(value))
@@ -141,6 +227,24 @@ class GitHubGETClientTests(unittest.TestCase):
             with self.subTest(target=target), self.assertRaises(ValueError):
                 value.get_json("fixture", target)
 
+        transport = FixtureGETTransport(response(data={"permission": "write"}))
+        value = client(transport).get_endpoint(
+            "review-permission",
+            "/repos/owner/repo/collaborators/reviewer/permission",
+        )
+        self.assertEqual(value.data["permission"], "write")
+
+        for target in (
+            "/orgs/owner/memberships/pathfinder-merge%5Bbot%5D",
+            "/orgs/owner/teams/release-engineering/memberships/pathfinder-merge%5Bbot%5D",
+        ):
+            with self.subTest(target=target):
+                transport = FixtureGETTransport(response(data={"state": "active"}))
+                result = client(transport).get_endpoint(
+                    "bypass-memberships", target
+                )
+                self.assertEqual(result.data["state"], "active")
+
     def test_statuses_map_without_leaking_body_or_credential(self):
         cases = (
             (401, {}, ObservationOutcome.AUTH_ERROR),
@@ -164,6 +268,238 @@ class GitHubGETClientTests(unittest.TestCase):
                 self.assertEqual(caught.exception.outcome, outcome)
                 self.assertNotIn(TOKEN, str(caught.exception))
                 self.assertNotIn("body contains", str(caught.exception))
+
+    def test_plan_feature_absence_requires_exact_response_and_permission_header(self):
+        target = "/repos/owner/repo/branches/main/protection"
+        permission = {"X-Accepted-GitHub-Permissions": "administration=read"}
+        transport = FixtureGETTransport(response(
+            data={"required_status_checks": None}, headers=permission,
+        ))
+        observed = client(transport).get_qualified_feature(
+            "classic-protection", target, feature="classic-protection"
+        )
+        self.assertEqual(observed.status, 200)
+        self.assertEqual(observed.audit.target, target)
+        self.assertTrue(observed.audit.permission_qualified)
+
+        nested_target = "/repos/owner/repo/branches/release/v1/protection"
+        transport = FixtureGETTransport(response(
+            data={"required_status_checks": None}, headers=permission,
+        ))
+        observed = client(transport).get_qualified_feature(
+            "classic-protection", nested_target, feature="classic-protection"
+        )
+        self.assertEqual(observed.audit.target, nested_target)
+
+        absent = {
+            "message": (
+                "Upgrade to GitHub Pro or make this repository public to enable "
+                "this feature."
+            ),
+            "documentation_url": (
+                "https://docs.github.com/rest/branches/branch-protection"
+                "#get-branch-protection"
+            ),
+            "status": "403",
+        }
+        transport = FixtureGETTransport(response(
+            403, data=absent, headers=permission,
+        ))
+        observed = client(transport).get_qualified_feature(
+            "classic-protection", target, feature="classic-protection"
+        )
+        self.assertEqual(observed.status, 403)
+        self.assertIsNone(observed.data)
+
+        for data, headers in (
+            (absent, {}),
+            ({**absent, "message": "Forbidden"}, permission),
+            ({**absent, "extra": True}, permission),
+        ):
+            with self.subTest(data=data, headers=headers):
+                transport = FixtureGETTransport(response(
+                    403, data=data, headers=headers,
+                ))
+                with self.assertRaises(GitHubObservationError) as caught:
+                    client(transport).get_qualified_feature(
+                        "classic-protection", target,
+                        feature="classic-protection",
+                    )
+                self.assertEqual(
+                    caught.exception.outcome,
+                    ObservationOutcome.PERMISSION_MISSING,
+                )
+
+        with self.assertRaises(ValueError):
+            client(FixtureGETTransport()).get_qualified_feature(
+                "classic-protection", "/repos/owner/repo/rulesets",
+                feature="classic-protection",
+            )
+
+    def test_membership_absence_requires_exact_endpoint_and_members_permission(self):
+        target = (
+            "/orgs/owner/teams/release-engineering/memberships/"
+            "pathfinder-merge%5Bbot%5D"
+        )
+        permission = {"X-Accepted-GitHub-Permissions": "members=read"}
+        absent = {
+            "message": "Not Found",
+            "documentation_url": (
+                "https://docs.github.com/rest/teams/members"
+                "#get-team-membership-for-a-user"
+            ),
+            "status": "404",
+        }
+        transport = FixtureGETTransport(response(
+            404, data=absent, headers=permission,
+        ))
+        observed = GitHubBypassMembershipReader(
+            client(transport)
+        ).read_qualified_membership(
+            target, membership="team"
+        )
+        self.assertEqual(observed.status, 404)
+        self.assertIsNone(observed.data)
+        self.assertEqual(observed.audit.target, target)
+        self.assertTrue(observed.audit.permission_qualified)
+
+        organization_target = (
+            "/orgs/owner/memberships/pathfinder-merge%5Bbot%5D"
+        )
+        transport = FixtureGETTransport(response(
+            data={"state": "active", "role": "member"},
+            headers=permission,
+        ))
+        observed = GitHubBypassMembershipReader(
+            client(transport)
+        ).read_qualified_membership(
+            organization_target, membership="organization"
+        )
+        self.assertEqual(observed.data["role"], "member")
+        self.assertEqual(observed.status, 200)
+
+        for data, headers, outcome in (
+            (absent, {}, ObservationOutcome.PERMISSION_MISSING),
+            ({**absent, "extra": True}, permission,
+             ObservationOutcome.MALFORMED_RESPONSE),
+        ):
+            with self.subTest(data=data, headers=headers):
+                transport = FixtureGETTransport(response(
+                    404, data=data, headers=headers,
+                ))
+                with self.assertRaises(GitHubObservationError) as caught:
+                    GitHubBypassMembershipReader(
+                        client(transport)
+                    ).read_qualified_membership(
+                        target, membership="team"
+                    )
+                self.assertEqual(caught.exception.outcome, outcome)
+
+        with self.assertRaises(ValueError):
+            GitHubBypassMembershipReader(
+                client(FixtureGETTransport())
+            ).read_qualified_membership(
+                organization_target, membership="team"
+            )
+
+    def test_check_collection_walks_every_suite_and_binds_the_exact_sha(self):
+        sha = "c" * 40
+        suites = [
+            {"id": 11, "head_sha": sha},
+            {"id": 12, "head_sha": sha},
+        ]
+        runs = [
+            {"id": 101, "head_sha": sha, "check_suite": {"id": 11}},
+            {"id": 102, "head_sha": sha, "check_suite": {"id": 12}},
+        ]
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 2, "check_suites": suites},
+                headers={"X-GitHub-Request-Id": "suite-page-1"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [runs[0]]},
+                headers={"X-GitHub-Request-Id": "suite-11-runs-1"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [runs[1]]},
+                headers={"X-GitHub-Request-Id": "suite-12-runs-1"},
+            ),
+        )
+        observed = GitHubCheckRunReader(client(transport)).read_all(
+            owner="owner", name="repo", sha=sha
+        )
+        self.assertTrue(observed.complete)
+        self.assertEqual([item["id"] for item in observed.items], [101, 102])
+        self.assertEqual(observed.pages, 3)
+        self.assertEqual(len(observed.audits), 3)
+        self.assertEqual(
+            [call["path"] for call in transport.calls],
+            [
+                f"/repos/owner/repo/commits/{sha}/check-suites?per_page=100",
+                "/repos/owner/repo/check-suites/11/check-runs?per_page=100",
+                "/repos/owner/repo/check-suites/12/check-runs?per_page=100",
+            ],
+        )
+
+        changed = dict(runs[0], head_sha="d" * 40)
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 1, "check_suites": [suites[0]]},
+                headers={"X-GitHub-Request-Id": "suite-page-2"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [changed]},
+                headers={"X-GitHub-Request-Id": "suite-11-runs-2"},
+            ),
+        )
+        with self.assertRaises(GitHubObservationError) as caught:
+            GitHubCheckRunReader(client(transport)).read_all(
+                owner="owner", name="repo", sha=sha
+            )
+        self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
+
+    def test_check_collection_global_page_budget_and_request_ids_fail_closed(self):
+        sha = "c" * 40
+        suites = [
+            {"id": 11, "head_sha": sha},
+            {"id": 12, "head_sha": sha},
+        ]
+        run = {"id": 101, "head_sha": sha, "check_suite": {"id": 11}}
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 2, "check_suites": suites},
+                headers={"X-GitHub-Request-Id": "suite-page-budget"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [run]},
+                headers={"X-GitHub-Request-Id": "suite-11-budget"},
+            ),
+        )
+        observed = GitHubCheckRunReader(
+            client(transport, max_pages=2)
+        ).read_all(
+            owner="owner", name="repo", sha=sha
+        )
+        self.assertFalse(observed.complete)
+        self.assertTrue(observed.truncated)
+        self.assertEqual(len(transport.calls), 2)
+
+        transport = FixtureGETTransport(
+            response(
+                data={"total_count": 1, "check_suites": [suites[0]]},
+                headers={"X-GitHub-Request-Id": "reused-check-request"},
+            ),
+            response(
+                data={"total_count": 1, "check_runs": [run]},
+                headers={"X-GitHub-Request-Id": "reused-check-request"},
+            ),
+        )
+        with self.assertRaises(GitHubObservationError) as caught:
+            GitHubCheckRunReader(client(transport)).read_all(
+                owner="owner", name="repo", sha=sha
+            )
+        self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
 
     def test_safe_transient_reads_retry_once_but_rate_limits_do_not(self):
         transport = FixtureGETTransport(
@@ -297,17 +633,208 @@ class GitHubGETClientTests(unittest.TestCase):
                 continue
             if "github_get" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(consumers, [])
+        self.assertEqual(sorted(consumers), [
+            "pathfinder_core/adapters/github_branch_ownership_reader.py",
+            "pathfinder_core/adapters/github_candidate_rest.py",
+            "pathfinder_core/adapters/github_check_policy.py",
+            "pathfinder_core/adapters/github_checks.py",
+            "pathfinder_core/adapters/github_evidence_collector.py",
+            "pathfinder_core/adapters/github_evidence_composer.py",
+            "pathfinder_core/adapters/github_identity.py",
+            "pathfinder_core/adapters/github_memberships.py",
+            "pathfinder_core/adapters/github_policy_rest.py",
+            "pathfinder_core/adapters/github_reviews.py",
+        ])
+        identity_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_identity.py":
+                continue
+            if "GitHubIdentityVerifier(" in path.read_text():
+                identity_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(identity_consumers, [])
+        membership_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_memberships.py":
+                continue
+            if "GitHubBypassMembershipReader(" in path.read_text():
+                membership_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(membership_consumers, [
+            "pathfinder_core/adapters/github_policy_rest.py"
+        ])
+        check_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_checks.py":
+                continue
+            if "GitHubCheckRunReader(" in path.read_text():
+                check_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(check_consumers, [])
+        check_evidence_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_checks.py":
+                continue
+            if "GitHubCheckEvidenceReader(" in path.read_text():
+                check_evidence_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(check_evidence_consumers, [])
+        policy_projector_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_check_policy.py":
+                continue
+            if "GitHubRequiredCheckProjector(" in path.read_text():
+                policy_projector_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(policy_projector_consumers, [])
+        review_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_reviews.py":
+                continue
+            if "GitHubReviewReader(" in path.read_text():
+                review_consumers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(review_consumers, [])
+        review_reconciler_consumers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "github_review_reconciliation.py":
+                continue
+            if "GitHubReviewReconciler." in path.read_text():
+                review_reconciler_consumers.append(
+                    path.relative_to(ROOT).as_posix()
+                )
+        self.assertEqual(review_reconciler_consumers, [
+            "pathfinder_core/adapters/github_evidence_composer.py",
+        ])
         sources = "\n".join(
             (ROOT / "pathfinder_core" / "adapters" / name).read_text()
             for name in (
                 "github_evidence_credentials.py", "github_get.py",
                 "github_get_policy.py", "github_get_transport.py",
+                "github_branch_ownership_reader.py",
+                "github_candidate_rest.py",
+                "github_check_policy.py", "github_checks.py",
+                "github_memberships.py", "github_policy_rest.py",
+                "github_reviews.py",
+                "github_review_reconciliation.py",
             )
         )
         self.assertNotIn("os.environ", sources)
         self.assertNotIn("getenv(", sources)
 
+    def test_branch_ownership_reads_are_exact_permission_qualified_and_paged(self):
+        ruleset_target = "/repos/owner/repo/rulesets/7002"
+        effective_target = "/repos/owner/repo/rules/branches/pathfinder/auto/example1"
+        ref_target = "/repos/owner/repo/git/ref/heads/pathfinder/auto/example1"
+        transport = FixtureGETTransport(
+            response(
+                data={"id": 7002},
+                headers={
+                    "X-GitHub-Request-Id": "ownership-ruleset-1",
+                    "X-Accepted-GitHub-Permissions": "metadata=read",
+                },
+            ),
+            response(
+                data=[{"type": "creation"}],
+                headers={
+                    "X-GitHub-Request-Id": "ownership-effective-1",
+                    "X-Accepted-GitHub-Permissions": "metadata=read",
+                },
+            ),
+            response(
+                data={"ref": "refs/heads/pathfinder/auto/example1"},
+                headers={
+                    "X-GitHub-Request-Id": "ownership-ref-1",
+                    "X-Accepted-GitHub-Permissions": "contents=read",
+                },
+            ),
+        )
+        value = client(transport)
+        ruleset = value.get_qualified_branch_ownership_endpoint(
+            "branch-ownership.ruleset", ruleset_target
+        )
+        effective = value.get_qualified_branch_ownership_pages(
+            "branch-ownership.effective-rules", effective_target
+        )
+        branch_ref = value.get_qualified_branch_ownership_endpoint(
+            "branch-ownership.ref", ref_target
+        )
+
+        self.assertEqual(ruleset.audit.target, ruleset_target)
+        self.assertEqual(effective.audits[0].target, effective_target)
+        self.assertEqual(branch_ref.audit.target, ref_target)
+        self.assertTrue(all(
+            audit.permission_qualified
+            for audit in (ruleset.audit, *effective.audits, branch_ref.audit)
+        ))
+        self.assertEqual(
+            [call["path"] for call in transport.calls],
+            [ruleset_target, f"{effective_target}?per_page=100", ref_target],
+        )
+
+        missing_permission = FixtureGETTransport(response(data={"id": 7002}))
+        with self.assertRaises(GitHubObservationError) as caught:
+            client(missing_permission).get_qualified_branch_ownership_endpoint(
+                "branch-ownership.ruleset", ruleset_target
+            )
+        self.assertEqual(
+            caught.exception.outcome, ObservationOutcome.PERMISSION_MISSING
+        )
+
+        for surface, target, paged in (
+            ("branch-ownership.ruleset", effective_target, False),
+            ("branch-ownership.effective-rules", ruleset_target, True),
+            ("branch-ownership.ref", ruleset_target, False),
+        ):
+            with self.subTest(surface=surface, target=target), self.assertRaises(
+                ValueError
+            ):
+                if paged:
+                    value.get_qualified_branch_ownership_pages(surface, target)
+                else:
+                    value.get_qualified_branch_ownership_endpoint(surface, target)
+
+    def test_plan_feature_pages_are_fully_paginated_and_permission_qualified(self):
+        target = "/repos/owner/repo/rules/branches/release/v1"
+        permission = {
+            "X-Accepted-GitHub-Permissions": "metadata=read",
+        }
+        next_target = (
+            "/repos/owner/repo/rules/branches/release/v1"
+            "?page=2&per_page=100"
+        )
+        transport = FixtureGETTransport(
+            response(
+                data=[{"type": "pull_request"}],
+                headers={
+                    **permission,
+                    "X-GitHub-Request-Id": "active-page-1",
+                    "Link": (
+                        f"<https://api.github.com{next_target}>; rel=\"next\""
+                    ),
+                },
+            ),
+            response(
+                data=[{"type": "required_status_checks"}],
+                headers={
+                    **permission,
+                    "X-GitHub-Request-Id": "active-page-2",
+                },
+            ),
+        )
+        observed = client(transport).get_qualified_feature_pages(
+            "active-rules", target, feature="active-rules"
+        )
+        self.assertEqual(observed.pages, 2)
+        self.assertEqual(observed.total_count, 2)
+        self.assertTrue(observed.complete)
+        self.assertTrue(all(
+            audit.target == target and audit.permission_qualified is True
+            for audit in observed.audits
+        ))
+
+        transport = FixtureGETTransport(response(data=[]))
+        with self.assertRaises(GitHubObservationError) as caught:
+            client(transport).get_qualified_feature_pages(
+                "active-rules", target, feature="active-rules"
+            )
+        self.assertEqual(
+            caught.exception.outcome, ObservationOutcome.PERMISSION_MISSING
+        )
 
 if __name__ == "__main__":
     unittest.main()

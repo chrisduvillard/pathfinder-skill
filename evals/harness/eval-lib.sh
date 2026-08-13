@@ -315,6 +315,72 @@ assert_publication_safety() {
     || add_error "07-run-log.md missing stale-doctrine auto-escalation block"
 }
 
+assert_merge_evidence_contract() {
+  local file validation_output
+  require_artifact "merge-evidence-contract.json" || return
+  file="$(artifact_file "merge-evidence-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-merge-evidence-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "merge evidence contract invalid: $validation_output"
+}
+
+assert_merge_writer_contract() {
+  local file validation_output
+  require_artifact "merge-writer-contract.json" || return
+  file="$(artifact_file "merge-writer-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-merge-writer-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "merge writer contract invalid: $validation_output"
+}
+
+assert_merge_status_contract() {
+  local file validation_output
+  require_artifact "merge-status-contract.json" || return
+  file="$(artifact_file "merge-status-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-merge-status-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "merge status contract invalid: $validation_output"
+}
+
+assert_publication_controller_contract() {
+  local file validation_output
+  require_artifact "publication-controller-contract.json" || return
+  file="$(artifact_file "publication-controller-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-publication-controller-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "publication controller contract invalid: $validation_output"
+}
+
+assert_host_artifact_store_contract() {
+  local file validation_output
+  require_artifact "host-artifact-store-contract.json" || return
+  file="$(artifact_file "host-artifact-store-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-host-artifact-store-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "host artifact store contract invalid: $validation_output"
+}
+
+assert_trusted_host_publication_contract() {
+  local file validation_output
+  require_artifact "trusted-host-publication-contract.json" || return
+  file="$(artifact_file "trusted-host-publication-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-trusted-host-publication-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "trusted host publication contract invalid: $validation_output"
+}
+
 run_assertion() {
   case "$1" in
     goal-contract) assert_goal_contract ;;
@@ -333,6 +399,12 @@ run_assertion() {
     codex-fallback) assert_codex_fallback ;;
     manual-handoff-review) assert_manual_handoff_review ;;
     publication-safety) assert_publication_safety ;;
+    merge-evidence-contract) assert_merge_evidence_contract ;;
+    merge-writer-contract) assert_merge_writer_contract ;;
+    merge-status-contract) assert_merge_status_contract ;;
+    publication-controller-contract) assert_publication_controller_contract ;;
+    host-artifact-store-contract) assert_host_artifact_store_contract ;;
+    trusted-host-publication-contract) assert_trusted_host_publication_contract ;;
     replay-contract) assert_replay_contract ;;
     injection-surface-fixtures) assert_injection_surface_fixtures ;;
     mission-view-repair) assert_mission_view_repair ;;

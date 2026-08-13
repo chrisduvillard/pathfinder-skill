@@ -1,0 +1,39 @@
+{
+  "input_schema_version": 1,
+  "input_source": "authenticated-host-collection-input",
+  "input_document_names": [
+    "authorization",
+    "merge_credential_receipt",
+    "object_evidence",
+    "observer_credential_receipt",
+    "policy",
+    "policy_read",
+    "protected_policy",
+    "publication_credential_receipt",
+    "publication_dispatch",
+    "publication_receipt",
+    "publication_request"
+  ],
+  "schema_version": 3,
+  "source": "authenticated-host-artifact-store",
+  "store_id": "host_artifact_store_contract1",
+  "document_names": [
+    "authorization",
+    "branch_ownership",
+    "evidence",
+    "merge_credential_receipt",
+    "observer_credential_receipt",
+    "policy",
+    "protected_policy",
+    "provenance",
+    "publication_credential_receipt",
+    "publication_dispatch",
+    "publication_receipt",
+    "publication_request"
+  ],
+  "packaged_callers": 0,
+  "packaged_readers": [
+    "pathfinder_core/adapters/github_evidence_collector.py",
+    "pathfinder_core/merge_status.py"
+  ]
+}

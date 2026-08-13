@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "evaluate",
+  "source": "installed-host-read-only-composition",
+  "state": "awaiting-review",
+  "outcome": "eligible",
+  "eligible": true,
+  "intent_ready": false,
+  "execution_available": false,
+  "writer_credential_loaded": false,
+  "merge_intent_created": false,
+  "publication_request_id": "publication_request_example1",
+  "publication_receipt_id": "publication_receipt_example1"
+}

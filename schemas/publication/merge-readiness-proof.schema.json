@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/merge-readiness-proof.schema.json",
+  "title": "Pathfinder Intent-Ready Merge Proof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "outcome", "policy", "authorization", "protected_policy_sha256", "initial_snapshot", "reread_snapshot", "proof_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "outcome": {"const": "intent-ready"},
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["policy_id", "policy_sha256"],
+      "properties": {
+        "policy_id": {"type": "string", "pattern": "^merge_policy_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "policy_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "authorization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["merge_authorization_id", "authorization_sha256"],
+      "properties": {
+        "merge_authorization_id": {"type": "string", "pattern": "^merge_authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "authorization_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "protected_policy_sha256": {"$ref": "#/$defs/sha256"},
+    "initial_snapshot": {"$ref": "#/$defs/snapshot"},
+    "reread_snapshot": {"$ref": "#/$defs/snapshot"},
+    "proof_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "evidence_sha256", "policy_read_receipt_id", "request_ids_sha256", "observed_at", "completed_at", "expires_at"],
+      "properties": {
+        "evidence_id": {"type": "string", "pattern": "^merge_evidence_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "policy_read_receipt_id": {"type": "string", "pattern": "^policy_read_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "request_ids_sha256": {"$ref": "#/$defs/sha256"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/host-artifact-collection.schema.json",
+  "title": "Pathfinder Authenticated Host Artifact Collection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "payload", "attestation", "envelope_sha256"],
+  "properties": {
+    "schema_version": {"const": 3},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection_id",
+        "store_id",
+        "source",
+        "publication_request_id",
+        "evidence_id",
+        "repository",
+        "stored_at",
+        "documents"
+      ],
+      "properties": {
+        "collection_id": {"type": "string", "pattern": "^host_artifact_collection_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "store_id": {"type": "string", "pattern": "^host_artifact_store_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "source": {"const": "authenticated-host-artifact-store"},
+        "publication_request_id": {"type": "string", "pattern": "^publication_request_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "evidence_id": {"type": "string", "pattern": "^merge_evidence_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "repository": {"$ref": "#/$defs/repository"},
+        "stored_at": {"type": "string", "format": "date-time"},
+        "documents": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "publication_request",
+            "publication_dispatch",
+            "publication_receipt",
+            "publication_credential_receipt",
+            "observer_credential_receipt",
+            "merge_credential_receipt",
+            "policy",
+            "authorization",
+            "protected_policy",
+            "branch_ownership",
+            "evidence",
+            "provenance"
+          ],
+          "properties": {
+            "publication_request": {"type": "object"},
+            "publication_dispatch": {"type": "object"},
+            "publication_receipt": {"type": "object"},
+            "publication_credential_receipt": {"type": "object"},
+            "observer_credential_receipt": {"type": "object"},
+            "merge_credential_receipt": {"type": "object"},
+            "policy": {"type": "object"},
+            "authorization": {"type": "object"},
+            "protected_policy": {"type": "object"},
+            "branch_ownership": {"type": "object"},
+            "evidence": {"type": "object"},
+            "provenance": {"type": "object"}
+          }
+        }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "authenticator_id",
+        "key_id",
+        "method",
+        "authenticated_at",
+        "payload_sha256",
+        "proof"
+      ],
+      "properties": {
+        "source": {"const": "external-host-authenticator"},
+        "authenticator_id": {"type": "string", "pattern": "^host_authenticator_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "key_id": {"type": "string", "pattern": "^host_key_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "method": {"const": "external-host-authenticator-v1"},
+        "authenticated_at": {"type": "string", "format": "date-time"},
+        "payload_sha256": {"$ref": "#/$defs/sha256"},
+        "proof": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43,2048}={0,2}$"}
+      }
+    },
+    "envelope_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node_id", "owner", "name"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+        "owner": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"}
+      }
+    }
+  }
+}

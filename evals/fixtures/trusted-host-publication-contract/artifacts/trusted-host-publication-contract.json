@@ -1,0 +1,15 @@
+{
+  "source": "zero-merge-trusted-host-composition",
+  "terminal_state": "awaiting-review",
+  "replay_effect_counts": {
+    "push": 1,
+    "create": 1
+  },
+  "replay_collection_calls": 2,
+  "lost_response_effect_counts": {
+    "push": 1,
+    "create": 1
+  },
+  "lost_response_collection_calls": 1,
+  "production_orchestrator_callers": 0
+}

@@ -4,7 +4,7 @@
   "title": "Pathfinder Current-Run Merge Authorization",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "merge_authorization_id", "authority", "explicit_request", "mission", "policy", "repository", "budget", "merge_method", "issued_at", "expires_at", "authorization_sha256"],
+  "required": ["schema_version", "merge_authorization_id", "authority", "explicit_request", "mission", "goal_risk", "policy", "repository", "candidate", "implementation_actor_ids", "budget", "merge_method", "issued_at", "expires_at", "authorization_sha256"],
   "properties": {
     "schema_version": {"const": 1},
     "merge_authorization_id": {"type": "string", "pattern": "^merge_authorization_[a-z0-9][a-z0-9_-]{7,63}$"},
@@ -29,6 +29,18 @@
         "goal_scope": {"const": "single-goal"}
       }
     },
+    "goal_risk": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "risk_class", "release", "deployment", "data_mutation", "real_world_side_effect"],
+      "properties": {
+        "source": {"const": "authenticated-controller-goal-binding"},
+        "risk_class": {"const": "low-risk-code-change"},
+        "release": {"const": false},
+        "deployment": {"const": false},
+        "data_mutation": {"const": false},
+        "real_world_side_effect": {"const": false}
+      }
+    },
     "policy": {
       "type": "object", "additionalProperties": false,
       "required": ["policy_id", "policy_sha256"],
@@ -48,6 +60,41 @@
         "base_branch": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"}
       }
     },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "mission_state_sha256", "publication_receipt_id", "pull_request", "diff"],
+      "properties": {
+        "source": {"const": "authenticated-controller-publication"},
+        "mission_state_sha256": {"$ref": "#/$defs/sha256"},
+        "publication_receipt_id": {"type": "string", "pattern": "^publication_receipt_[a-z0-9][a-z0-9_-]{7,63}$"},
+        "pull_request": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "node_id", "number", "head_ref", "head_sha", "base_ref", "base_sha"],
+          "properties": {
+            "id": {"type": "integer", "minimum": 1},
+            "node_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{4,128}={0,2}$"},
+            "number": {"type": "integer", "minimum": 1},
+            "head_ref": {"$ref": "#/$defs/ref"},
+            "head_sha": {"$ref": "#/$defs/commit"},
+            "base_ref": {"$ref": "#/$defs/ref"},
+            "base_sha": {"$ref": "#/$defs/commit"}
+          }
+        },
+        "diff": {
+          "type": "object", "additionalProperties": false,
+          "required": ["diff_sha256", "changed_files_sha256", "object_evidence_sha256"],
+          "properties": {
+            "diff_sha256": {"$ref": "#/$defs/sha256"},
+            "changed_files_sha256": {"$ref": "#/$defs/sha256"},
+            "object_evidence_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      }
+    },
+    "implementation_actor_ids": {
+      "type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 1}
+    },
     "budget": {
       "type": "object", "additionalProperties": false,
       "required": ["max_goals", "max_parallel_goals", "max_pull_requests", "max_merge_intents", "remaining_merge_intents", "same_repository_pull_request"],
@@ -66,6 +113,8 @@
     "authorization_sha256": {"$ref": "#/$defs/sha256"}
   },
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "ref": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$"}
   }
 }

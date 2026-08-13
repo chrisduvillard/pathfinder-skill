@@ -12,6 +12,7 @@ from .github_evidence_credentials import (
     EVIDENCE_BOUNDARY,
     REQUIRED_READ_PERMISSIONS,
     GitHubEvidenceCredential,
+    GitHubEvidenceCredentialReceipt,
 )
 from .github_get_transport import (
     API_HOST,
@@ -38,6 +39,28 @@ ACCEPT = "application/vnd.github+json"
 USER_AGENT = "pathfinder-github-get/3"
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,256}$")
+_UPGRADE_REQUIRED = (
+    "Upgrade to GitHub Pro or make this repository public to enable this feature."
+)
+_FEATURE_PERMISSIONS = {
+    "classic-protection": "administration=read",
+    "active-rules": "metadata=read",
+    "source-rulesets": "metadata=read",
+}
+_BRANCH_OWNERSHIP_PERMISSIONS = {
+    "branch-ownership.ruleset": (
+        re.compile(r"/repos/[^/]+/[^/]+/rulesets/[1-9][0-9]*"),
+        "metadata=read",
+    ),
+    "branch-ownership.effective-rules": (
+        re.compile(r"/repos/[^/]+/[^/]+/rules/branches/[A-Za-z0-9_.~/-]+"),
+        "metadata=read",
+    ),
+    "branch-ownership.ref": (
+        re.compile(r"/repos/[^/]+/[^/]+/git/ref/heads/[A-Za-z0-9_.~/-]+"),
+        "contents=read",
+    ),
+}
 
 
 def _utc_now() -> str:
@@ -58,6 +81,14 @@ class JSONGETResponse:
     data: object = field(repr=False)
     audit: RequestAudit
     headers: Mapping[str, str]
+    status: int
+
+
+@dataclass(frozen=True)
+class QualifiedFeatureResponse:
+    data: object = field(repr=False)
+    status: int
+    audit: RequestAudit
 
 
 class GitHubGETClient:
@@ -104,7 +135,13 @@ class GitHubGETClient:
     def _headers_lower(headers: Mapping[str, str]) -> dict[str, str]:
         return {str(key).lower(): str(value) for key, value in headers.items()}
 
-    def _response(self, surface: str, target: str) -> RawGETResponse:
+    def _response(
+        self,
+        surface: str,
+        target: str,
+        *,
+        allowed_statuses: frozenset[int] = frozenset(),
+    ) -> RawGETResponse:
         retries = redirects = 0
         current = validate_evidence_target(target)
         while True:
@@ -160,7 +197,8 @@ class GitHubGETClient:
                 retries += 1
                 self.sleeper(0.25)
                 continue
-            self._raise_status(surface, response.status, headers)
+            if response.status not in allowed_statuses:
+                self._raise_status(surface, response.status, headers)
             return RawGETResponse(response.status, headers, response.body)
 
     @staticmethod
@@ -189,6 +227,18 @@ class GitHubGETClient:
 
     def get_json(self, surface: str, target: str) -> JSONGETResponse:
         response = self._response(surface, target)
+        decoded = self._decode_json(surface, response)
+        if decoded.status != 200:
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub GET returned an unexpected success status",
+            )
+        return decoded
+
+    def _decode_json(
+        self, surface: str, response: RawGETResponse
+    ) -> JSONGETResponse:
         headers = self._headers_lower(response.headers)
         request_id = headers.get("x-github-request-id")
         if not request_id or not _REQUEST_ID.fullmatch(request_id):
@@ -207,6 +257,174 @@ class GitHubGETClient:
             data,
             RequestAudit(request_id, self.clock(), headers.get("etag")),
             headers,
+            response.status,
+        )
+
+    def get_qualified_feature(
+        self,
+        surface: str,
+        target: str,
+        *,
+        feature: str,
+    ) -> QualifiedFeatureResponse:
+        """Read one plan-gated feature, accepting only a qualified upgrade 403."""
+        required_permission = self._feature_permission(surface, target, feature)
+        response = self._response(surface, target, allowed_statuses=frozenset({403}))
+        decoded = self._decode_json(surface, response)
+        audit = self._qualified_audit(
+            decoded,
+            surface=surface,
+            target=target,
+            required_permission=required_permission,
+            require_permission=False,
+        )
+        if response.status not in {200, 403}:
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub feature response returned an unexpected status",
+            )
+        if response.status == 200:
+            if audit.permission_qualified is not True:
+                raise GitHubObservationError(
+                    ObservationOutcome.PERMISSION_MISSING,
+                    surface,
+                    "GitHub feature response did not qualify the required permission",
+                )
+            return QualifiedFeatureResponse(decoded.data, response.status, audit)
+        error = decoded.data
+        if (
+            audit.permission_qualified is not True
+            or not isinstance(error, Mapping)
+            or set(error) != {"message", "documentation_url", "status"}
+            or error["message"] != _UPGRADE_REQUIRED
+            or error["status"] != "403"
+            or not isinstance(error["documentation_url"], str)
+            or not error["documentation_url"].startswith(
+                "https://docs.github.com/rest/"
+            )
+        ):
+            raise GitHubObservationError(
+                ObservationOutcome.PERMISSION_MISSING,
+                surface,
+                "GitHub feature access was denied without qualified absence proof",
+            )
+        return QualifiedFeatureResponse(None, response.status, audit)
+
+    @staticmethod
+    def _feature_permission(surface: str, target: str, feature: str) -> str:
+        required_permission = _FEATURE_PERMISSIONS.get(feature)
+        if surface != feature or required_permission is None:
+            raise ValueError("GitHub feature absence surface is unsupported")
+        patterns = {
+            "classic-protection": (
+                r"/repos/[^/]+/[^/]+/branches/[A-Za-z0-9_.%~/-]+/protection"
+            ),
+            "active-rules": (
+                r"/repos/[^/]+/[^/]+/rules/branches/[A-Za-z0-9_.%~/-]+"
+            ),
+            "source-rulesets": (
+                r"/repos/[^/]+/[^/]+/rulesets(?:\?includes_parents=true)?"
+            ),
+        }
+        if re.fullmatch(patterns[feature], target) is None:
+            raise ValueError(
+                "GitHub feature absence target does not match its surface"
+            )
+        return required_permission
+
+    def get_qualified_feature_pages(
+        self,
+        surface: str,
+        target: str,
+        *,
+        feature: str,
+    ) -> PageResponse:
+        """Fully read a plan-gated list, or preserve one qualified absence."""
+        if feature == "classic-protection":
+            raise ValueError("classic protection is not a paged GitHub feature")
+        required_permission = self._feature_permission(surface, target, feature)
+        return self._get_pages(
+            surface,
+            target,
+            required_permission=required_permission,
+            qualified_target=target,
+            allow_upgrade_absence=True,
+        )
+
+    def get_qualified_source_ruleset(
+        self, surface: str, target: str
+    ) -> EndpointResponse:
+        """Read one referenced ruleset detail with positive Metadata scope."""
+        if surface != "source-rulesets" or re.fullmatch(
+            r"/repos/[^/]+/[^/]+/rulesets/[1-9][0-9]*"
+            r"(?:\?includes_parents=true)?",
+            target,
+        ) is None:
+            raise ValueError("GitHub source ruleset target is unsupported")
+        response = self.get_json(surface, target)
+        if not isinstance(response.data, Mapping):
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub source ruleset response is not an object",
+            )
+        return EndpointResponse(
+            response.data,
+            self._qualified_audit(
+                response,
+                surface=surface,
+                target=target,
+                required_permission=_FEATURE_PERMISSIONS["source-rulesets"],
+            ),
+        )
+
+    def get_qualified_repository_permission(
+        self, surface: str, target: str
+    ) -> QualifiedFeatureResponse:
+        """Read one exact collaborator permission with positive scope evidence."""
+        if surface not in {"bypass-memberships", "reviews"} or re.fullmatch(
+            r"/repos/[^/]+/[^/]+/collaborators/[^/]+/permission", target
+        ) is None:
+            raise ValueError("GitHub repository permission target is unsupported")
+        response = self._response(surface, target)
+        decoded = self._decode_json(surface, response)
+        if response.status != 200:
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub repository permission returned an unexpected status",
+            )
+        accepted = {
+            item.strip().lower()
+            for item in decoded.headers.get(
+                "x-accepted-github-permissions", ""
+            ).split(";")
+            if item.strip()
+        }
+        if "metadata=read" not in accepted:
+            raise GitHubObservationError(
+                ObservationOutcome.PERMISSION_MISSING,
+                surface,
+                "GitHub repository permission response did not qualify Metadata read",
+            )
+        if not isinstance(decoded.data, Mapping):
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub repository permission response is not an object",
+            )
+        return QualifiedFeatureResponse(
+            decoded.data,
+            response.status,
+            RequestAudit(
+                decoded.audit.request_id,
+                decoded.audit.observed_at,
+                decoded.audit.etag,
+                target,
+                response.status,
+                True,
+            ),
         )
 
     def get_endpoint(self, surface: str, target: str) -> EndpointResponse:
@@ -218,6 +436,93 @@ class GitHubGETClient:
             )
         return EndpointResponse(response.data, response.audit)
 
+    @staticmethod
+    def _qualified_audit(
+        response: JSONGETResponse,
+        *,
+        surface: str,
+        target: str,
+        required_permission: str,
+        require_permission: bool = True,
+    ) -> RequestAudit:
+        accepted = {
+            item.strip().lower()
+            for item in response.headers.get(
+                "x-accepted-github-permissions", ""
+            ).split(";")
+            if item.strip()
+        }
+        qualified = required_permission in accepted
+        if require_permission and not qualified:
+            raise GitHubObservationError(
+                ObservationOutcome.PERMISSION_MISSING,
+                surface,
+                "GitHub GET did not qualify its required permission",
+            )
+        return RequestAudit(
+            response.audit.request_id,
+            response.audit.observed_at,
+            response.audit.etag,
+            target,
+            response.status,
+            qualified,
+        )
+
+    @staticmethod
+    def _branch_ownership_permission(
+        surface: str,
+        target: str,
+        *,
+        paged: bool,
+    ) -> str:
+        configured = _BRANCH_OWNERSHIP_PERMISSIONS.get(surface)
+        expected_surface = "branch-ownership.effective-rules"
+        if (
+            configured is None
+            or configured[0].fullmatch(target) is None
+            or (surface == expected_surface) != paged
+        ):
+            raise ValueError("GitHub branch ownership target is unsupported")
+        return configured[1]
+
+    def get_qualified_branch_ownership_endpoint(
+        self, surface: str, target: str
+    ) -> EndpointResponse:
+        """Read one exact ownership endpoint with positive permission evidence."""
+        required_permission = self._branch_ownership_permission(
+            surface, target, paged=False
+        )
+        response = self.get_json(surface, target)
+        if not isinstance(response.data, Mapping):
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub branch ownership endpoint did not return an object",
+            )
+        return EndpointResponse(
+            response.data,
+            self._qualified_audit(
+                response,
+                surface=surface,
+                target=target,
+                required_permission=required_permission,
+            ),
+        )
+
+    def get_qualified_branch_ownership_pages(
+        self, surface: str, target: str
+    ) -> PageResponse:
+        """Fully paginate the exact effective-rule view with qualified audits."""
+        required_permission = self._branch_ownership_permission(
+            surface, target, paged=True
+        )
+        return self._get_pages(
+            surface,
+            target,
+            required_permission=required_permission,
+            qualified_target=target,
+        )
+
     def get_pages(
         self,
         surface: str,
@@ -225,16 +530,93 @@ class GitHubGETClient:
         *,
         item_key: str | None = None,
         total_key: str | None = None,
+        page_limit: int | None = None,
     ) -> PageResponse:
+        return self._get_pages(
+            surface,
+            target,
+            item_key=item_key,
+            total_key=total_key,
+            page_limit=page_limit,
+        )
+
+    def _get_pages(
+        self,
+        surface: str,
+        target: str,
+        *,
+        item_key: str | None = None,
+        total_key: str | None = None,
+        page_limit: int | None = None,
+        required_permission: str | None = None,
+        qualified_target: str | None = None,
+        allow_upgrade_absence: bool = False,
+    ) -> PageResponse:
+        limit = self.max_pages if page_limit is None else page_limit
+        if not 1 <= limit <= self.max_pages:
+            raise ValueError("GitHub GET page limit is out of bounds")
         separator = "&" if "?" in target else "?"
         current = f"{target}{separator}per_page=100"
         items: list[Mapping[str, object]] = []
         audits = []
         expected_total = None
         last_cursor = None
-        for page_number in range(1, self.max_pages + 1):
-            response = self.get_json(surface, current)
-            audits.append(response.audit)
+        for page_number in range(1, limit + 1):
+            if allow_upgrade_absence:
+                raw = self._response(
+                    surface,
+                    current,
+                    allowed_statuses=(
+                        frozenset({403})
+                        if page_number == 1
+                        else frozenset()
+                    ),
+                )
+                response = self._decode_json(surface, raw)
+            else:
+                response = self.get_json(surface, current)
+            audit = (
+                response.audit
+                if required_permission is None
+                else self._qualified_audit(
+                    response,
+                    surface=surface,
+                    target=str(qualified_target),
+                    required_permission=required_permission,
+                    require_permission=not (
+                        allow_upgrade_absence and response.status == 403
+                    ),
+                )
+            )
+            if response.status == 403:
+                error = response.data
+                if (
+                    audit.permission_qualified is not True
+                    or not isinstance(error, Mapping)
+                    or set(error)
+                    != {"message", "documentation_url", "status"}
+                    or error["message"] != _UPGRADE_REQUIRED
+                    or error["status"] != "403"
+                    or not isinstance(error["documentation_url"], str)
+                    or not error["documentation_url"].startswith(
+                        "https://docs.github.com/rest/"
+                    )
+                ):
+                    raise GitHubObservationError(
+                        ObservationOutcome.PERMISSION_MISSING,
+                        surface,
+                        "GitHub feature access was denied without qualified absence proof",
+                    )
+                return PageResponse(
+                    (), 1, 0, True, False, None, (audit,)
+                )
+            if any(value.request_id == audit.request_id for value in audits):
+                raise GitHubObservationError(
+                    ObservationOutcome.FIELD_UNKNOWN,
+                    surface,
+                    "GitHub GET request id was reused during pagination",
+                )
+            audits.append(audit)
             payload = response.data
             if item_key is not None:
                 if not isinstance(payload, Mapping) or not isinstance(payload.get(item_key), list):
@@ -245,6 +627,16 @@ class GitHubGETClient:
                 page_items = payload[item_key]
                 if total_key and page_number == 1:
                     expected_total = payload.get(total_key)
+                    if (
+                        not isinstance(expected_total, int)
+                        or isinstance(expected_total, bool)
+                        or expected_total < 0
+                    ):
+                        raise GitHubObservationError(
+                            ObservationOutcome.MALFORMED_RESPONSE,
+                            surface,
+                            "GitHub GET page total is malformed",
+                        )
             else:
                 page_items = payload
             if not isinstance(page_items, list) or any(not isinstance(item, Mapping) for item in page_items):
@@ -279,7 +671,7 @@ class GitHubGETClient:
             last_cursor = next_target
         total = expected_total if isinstance(expected_total, int) else len(items)
         return PageResponse(
-            tuple(items), self.max_pages, total, False, True, last_cursor, tuple(audits)
+            tuple(items), limit, total, False, True, last_cursor, tuple(audits)
         )
 
     @classmethod

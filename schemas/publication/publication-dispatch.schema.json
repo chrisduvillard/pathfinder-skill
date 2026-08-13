@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathfinder.local/schemas/publication/publication-dispatch.schema.json",
+  "title": "Pathfinder Publication Dispatch Boundary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "publication_request_id", "request_sha256", "started_at", "dispatch_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "publication_request_id": {"type": "string", "pattern": "^publication_request_[a-z0-9][a-z0-9_-]{7,63}$"},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "dispatch_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

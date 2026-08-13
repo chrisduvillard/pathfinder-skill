@@ -1,6 +1,8 @@
 # Conditional self-merge policy and authorization schemas
 
-> Status: closed data contracts only. No reader, credential, network client, eligibility route, or merge writer is enabled.
+> Status: closed data contracts with uninstalled read-only collection, pure evaluation helpers, an
+> inert two-snapshot readiness-proof contract, and an unreachable K4 journal/writer primitive. No
+> credential loader, installed eligibility route, merge command, or writer composition is enabled.
 
 The Draft 2020-12 schemas under `schemas/publication/` represent the two independent keys required
 by the [conditional self-merge security contract](conditional-self-merge-contract.md). They are
@@ -16,6 +18,30 @@ The `source`, `authenticated`, and `issuer` fields are bindings to host evidence
 claims. A consumer must authenticate the storage envelope before parsing the document. Copying a
 valid document into repository content, output, a PR, or a Goal never makes it trusted.
 
+`host-artifact-collection-input.schema.json` closes the collector's pre-read input shape. Its signed
+v1 payload contains exactly the publication journal triplet, publication, observer, and merge
+credential receipts, operator authority, protected-surface policy, policy-read receipt, and full
+Git-object evidence. The collector accepts no loose document arguments: at its trusted-clock start
+it requires the injected external host authenticator to verify the exact canonical envelope before
+it parses any nested document or performs any GitHub read. Unsigned, re-hashed, stale, wrong-store,
+or malformed envelopes block as unknown input. A valid signature is not sufficient by itself: the
+store first validates every nested authority/credential schema and canonical hash, requires exact
+publication/repository/mission/candidate/protected-policy/actor bindings across the documents, and
+proves policy and authorization are current at that trusted instant.
+
+`host-artifact-collection.schema.json` closes the source-only durable output shape. Its signed v3
+payload contains exactly the publication journal triplet, publication, observer, and merge
+credential receipts, operator policy, current-run authorization, protected-surface policy,
+controller-branch ownership proof, complete merge evidence, and provenance. The merge receipt is
+non-secret metadata; the envelope contains no token. The store
+derives the collection id from the exact evidence id, binds an operator-provided store id and
+repository identity, validates every nested schema/canonical hash and cross-document identity, and
+accepts the envelope only when the injected external host authenticator verifies the exact canonical
+payload. Its two packaged consumers are the unconstructed single-snapshot collector and an
+unconstructed read-only adapter that requires two explicit evidence ids and identical
+publication/authority plus authenticator/key bindings across the pair. The package deliberately
+supplies neither an authenticator/key implementation nor a route that constructs either boundary.
+
 ## Policy invariants
 
 The policy binds:
@@ -25,9 +51,10 @@ The policy binds:
 - the effective protected-surface policy hash and a protected-category match ceiling of zero;
 - ceilings of 25 changed files, 1,000 total line changes, 500 changes in one file, and a 256 KiB
   patch; a policy may select lower positive values only;
+- a host-selected snapshot lifetime from 1 to the shipped 60-second ceiling;
 - one or more exact required check contexts, each paired with a numeric GitHub App id;
-- one or more independent human approvals, same-repository PRs, one PR, one merge intent, one
-  sequential Goal, and synchronous squash only; and
+- one or more host-attested human reviewer actor ids and independent approvals, same-repository
+  PRs, one PR, one merge intent, one sequential Goal, and synchronous squash only; and
 - explicit acknowledgement of ordinary merge-triggered workflows and notifications.
 
 Path patterns may contain glob syntax because they describe file scope. Repository, branch, check,
@@ -36,10 +63,14 @@ issuer, and stable-id fields reject glob identities.
 ## Run-authorization invariants
 
 The authorization binds `conditional-merge` authority to one mission id, Goal Binding id, existing
-mission-authorization id, policy id/hash, repository identity, base branch, and squash method. Its
-closed budget is one Goal, one concurrent Goal, one same-repository PR, one merge intent, and one
-remaining merge intent. It has no pack id, queue, parallel, fork, stack, or publication-target
-field.
+mission-authorization id, policy id/hash, repository identity, base branch, and squash method. It
+also binds the authenticated controller publication receipt and mission-state hash; the exact PR
+id/node/number, head/base refs and SHAs; canonical diff, file-list, and Git-object evidence hashes;
+and every implementation actor id. A closed controller Goal-risk binding must classify the work as
+a low-risk code change and explicitly attest `false` for release, deployment, data mutation, and
+real-world side effects. Its closed budget is one Goal, one concurrent Goal, one
+same-repository PR, one merge intent, and one remaining merge intent. It has no pack id, queue,
+parallel, fork, stack, or publication-target field.
 
 Both `issued_at` and `expires_at` are mandatory. Consumers must prove `issued_at <= now < expires_at`
 and reject clock, parse, or freshness ambiguity.
@@ -60,7 +91,81 @@ block. Schema validity alone is never an eligibility verdict or authority to loa
 
 ## Current executable boundary
 
-These schemas have no production caller. The v1 mission authorization enum remains `none`,
-`local-branch`, or `github-awaiting-review`; enabled host transition maps still contain no remote
-publication or merge action. Later phases may add read-only observation and dry-run evaluation, but
-remote mutation requires the separate security and enablement gates in the security contract.
+These schemas and the pure evaluator are consumed only by the uncomposed K4 journal/executor. A
+single-snapshot verdict is advisory and always has `intent_ready = false`. The evaluator applies the
+earlier of host expiry, host policy age, and the 60-second shipped ceiling. Only its pure reread path can produce the closed,
+canonical `merge-readiness-proof` binding two disjoint evidence hashes, request-audit hashes,
+policy-read receipts, and observation windows. The v2 merge-intent/result schemas require that proof
+hash instead of accepting a lone evidence hash. The K4 journal persists both complete evidence
+documents—not only their summary fields—and replays the pure two-snapshot evaluator at the intent
+timestamp. The intent also directly binds the controller diff, changed-file, and Git-object evidence
+hashes plus the authenticated merge-credential receipt id/hash. The closed receipt records exact
+repository selection, permissions, App/installation/account/bot identity, suspension, and issuance,
+expiry, and host verification times. Each document hash, generated readiness proof, and intent binding must match exactly;
+fabricated initial metadata or a proof outside either effective freshness window blocks. The
+uncomposed K1 preview used schema version 1; K4 replaces those preview shapes with version 2 before
+any production caller or durable production record exists. Consumers reject v1 merge intents and
+results rather than guessing a migration.
+
+The protected-policy input is either the byte-equivalent shipped baseline or a schema-valid
+additive override anchored to that shipped baseline. A caller-supplied replacement baseline is
+invalid even when its hash is internally consistent. The policy and evidence bind the resulting
+effective registry hash.
+
+The readiness document remains content-addressed data, not a self-authenticating cross-process
+attestation. The K4 executor accepts it only through an injected authenticated host-envelope reader
+whose contract requires a newly collected, host-authenticated envelope for the exact execution
+instant; the executor rejects an older authentication timestamp and replays both snapshots. No
+repository, CLI, or live reader implements that trust boundary. The v1 mission authorization enum
+remains `none`, `local-branch`, or
+`github-awaiting-review`; enabled host transition maps still contain no remote publication or merge
+action. Terminal results carry a closed reason and exact squash proof: repository/PR/head/base,
+single pre-merge base parent, post-merge base/commit, actor, merged and observed times, merge-status
+observation, and unique request ids. The separate dispatch record distinguishes a durable intent
+that never reached dispatch from an
+ambiguous dispatched operation; only the atomic intent creator may write it, and reconciliation
+never sends a second mutation. Because a durable local marker cannot be atomic with the remote
+request, restarted reconciliation never credits a pending dispatched operation as merged even when
+observation finds matching merged state. The fixture observer can supply a complete dry-run
+snapshot. A pure uncalled composer now requires the verified observer receipt/identity audits, a
+separately verified merge receipt and live App/installation/bot audits,
+authenticated publication receipt, fixed-query GraphQL projection, reconciled REST reviews,
+policy-derived required checks, exact check/status pages, and the remaining normalized REST
+families plus a canonical controller-branch ownership proof before it emits evidence and an
+evidence-hash-bound provenance receipt. The ownership proof binds an authenticated publication-App
+receipt to an active repository ruleset with restricted create/update/delete operations, that App
+as the sole always-bypass actor, the complete effective-rule view for the exact head branch, and a
+final exact ref/SHA reread after the evidence instant. It owns no client, token, storage, or
+installed caller, so it is not a live collector. K5 composition still requires the separate
+trusted-host, security, and enablement gates in the security contract.
+
+The separate host-artifact store can now persist that source output and its exact operator policy,
+current-run authorization, protected-surface policy, and three credential receipts as one immutable
+envelope. Policy/authorization/candidate/evidence bindings and validity windows are reproduced;
+an additive protected policy is combined with the shipped baseline before its effective hash is
+checked. App/installation/bot/repository/time bindings are independently reproduced. POSIX storage is
+descriptor-pinned, owner-only, non-symlink, outside repository trust, size-bounded, atomically
+write-once, and directory-fsynced. Reads do not create state; exact repeats reuse the existing
+authenticated envelope; Windows fails closed until equivalent ACL proof exists. This source
+contract does not install the external authenticator, collect live evidence, or create a route.
+
+The source-only publication prerequisite now produces the candidate input shape rather than relying
+on a URL or branch discovery heuristic. Its closed request is authenticated outside repository
+trust and embeds the full explicit GitHub-awaiting-review authorization. Its canonical hash binds
+that authorization, one-PR ceiling, committed mission, repository, controller branch, exact
+head/base SHAs, diff hashes, required check context/App identities, and authenticated publication
+bot database/node/login identity. The backend must return the
+identical target from read-only preflight before mutation, and the controller exposes no
+caller-selected time override for authorization or envelope freshness. After successful required-check
+observation, the write-once receipt adds the exact PR database id, node id, number, GitHub URL, and
+one context/App/head-SHA tuple for every required check, plus a repository/ref/head-SHA push
+attestation carrying the same bot identity. A pure uncalled reconciler validates the canonical
+request/receipt pair and projects that actor only after a later fixed-query GraphQL snapshot matches
+the exact repository, PR, head/base repositories, refs, and SHAs. The evidence schema pins the
+compiled query hash and requires one actual `graphql-pull-request` request audit rather than
+invented per-connection provenance. A pure uncalled projector requires complete latest-review,
+review-request, and review-thread connections plus exact request/rate-limit audit coverage before
+emitting normalized review/thread, mergeability, queue, and pagination inputs. The merge authorization candidate is a
+direct projection of that receipt. Pending recovery is read-only and process death cannot leave the
+journal lock around a remote callback; no CLI, enabled mission, or live backend currently produces
+the receipt.

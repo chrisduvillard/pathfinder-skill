@@ -2,6 +2,165 @@
 
 This guide covers local controller state. The enabled mission bridge creates no remote side effects and has no publication action.
 
+The package contains an internal K4 merge primitive for deterministic security and crash-recovery
+testing. It has no command, route, configured host-envelope reader, credential loader, or normal
+caller. Do not instantiate it manually or place a merge token in repository files or environment
+variables. Conditional merge remains unavailable until the separately reviewed K5 composition and
+operator-owned enablement gate exist.
+
+Its source contract requires two host-owned, fresh authenticated readers: one that collects and
+attests the complete two-snapshot evidence envelope at the execution instant, and one that returns a
+GitHub App token with a closed scope/identity/issuance receipt. The journal atomically spends the
+authorization/readiness proof once, persists that receipt, and records dispatch at the final
+pre-transport boundary before the sole possible request. An intent without dispatch cannot be
+credited as merged; after restart, a dispatched intent without a terminal result also remains
+reconciliation-required because a local marker cannot prove the remote request began. These interfaces have no
+live implementation in this package; fixture success is not operator enablement.
+
+The package now also contains a source-only GraphQL evidence primitive. It can send exactly one
+compiled pull-request query to GitHub's fixed GraphQL endpoint and has no arbitrary query, mutation,
+URL, secret loader, command, or caller. It binds the exact query hash and completely paginates the
+latest effective reviews, code-owner review requests, and review threads while rechecking stable PR
+identity on every page. This does not make live observation available: a later pure composer binds
+the REST and GraphQL outputs, but no installed trusted-host credential reader calls either. A separate
+source-only verifier now accepts a hash-bound, fresh, one-repository observer issuance receipt and
+cross-checks the observer App/installation/bot/repository plus the future merge
+App/installation/bot through exact live reads. The source collector requires both verified
+identities at the same trusted instant and uses only the merge bot for policy-membership and
+evidence-actor decisions; its authenticated artifact stores the non-secret receipt, never the merge
+token. A dedicated feature read treats the private-plan
+upgrade response as absence only when GitHub also identifies the exact required read permission;
+ordinary 403 remains a permission error. A pure source-only composer now requires distinct verified
+observer and merge receipts and all seven identity audits, authenticated publication receipt, fixed-query GraphQL
+projection, reconciled REST reviews, policy-derived required checks, exact check/status pages, and
+the remaining normalized REST families and a canonical controller-branch ownership proof. It
+emits one schema-valid evidence document plus a
+separately hashed provenance receipt bound to the evidence, observer/merge/publication receipts,
+reviews, checks, request identities, and collection window. The ownership proof requires restricted
+create/update/delete rules, the authenticated publication App as the sole always-bypass actor, the
+complete effective-rule view for the exact head branch, and a final exact ref/SHA reread after
+evidence collection. It still does not install a collector, load a credential from the host, or add
+a caller. Before any GitHub read, the source collector now accepts only one closed input envelope
+whose exact canonical bytes, store/repository/evidence identity, and trusted-clock start are verified
+by the injected external host authenticator; it no longer accepts loose policy, authorization,
+receipt, or object-evidence arguments. Unsigned, altered, stale, malformed, or wrong-store input
+stops without a network read. A correctly signed but internally split or expired bundle also stops
+before network: the store rechecks nested hashes and the exact publication, authority, repository,
+mission, candidate, protected-policy, credential, actor, and time bindings. After collection, the same source-only store can place the
+validated publication journal, exact operator policy/current-run authorization/protected policy,
+all three non-secret credential receipts, ownership proof, evidence, and provenance into one immutable
+externally authenticated v3 envelope. It ships no authenticator/key implementation. Its packaged
+consumers are the unconstructed collector and an unconstructed read-only adapter that requires two explicit evidence ids,
+identical publication/authority documents, and the same authenticator/key identity. On POSIX the
+store pins an owner-only non-symlink directory
+outside repository trust and uses one size-bounded, fsynced, write-once file; Windows fails closed
+until equivalent ACL ownership proof exists. This is a storage contract for a future trusted host,
+not an installed collector or runnable publication route. The existing `merge status` CLI remains
+the separately reviewed owner-only file reader; it does not silently instantiate this stronger
+adapter without a real host authenticator. A
+source-only membership reader now qualifies exact team and
+organization absence and exact repository-role permissions, while the check reader walks suites
+before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader
+fully paginates the REST review audit and reads one exact repository permission for every unique
+review actor, requiring positive `Metadata=read` evidence and cross-checking the returned actor.
+The check reader also reads the combined status envelope, fully paginates the creator-bearing status
+history, derives the latest item per context, cross-checks count/state for the exact repository/SHA,
+classifies checks only against a closed supplied context/App union, and requires every required run
+to name the supplied candidate's exact PR/head/base identity. Suites, runs, and both status reads
+share one request budget. These readers retain distinct request audits and fail on identity,
+permission, pagination, request budget, PR binding, or SHA drift; none is an installed collector,
+and only the uncalled pure composer binds the supplied union/candidate to their outputs. An
+uncalled pure projector can now form that union from the host floor, qualified classic protection,
+and all completely paginated active rules; it rejects any unpinned or contradictory check identity.
+An uncalled pure review reconciler also requires the GraphQL latest-opinionated record for every
+actor to match the exact record selected from the complete chronological, permission-qualified REST
+history. A second pure reconciler validates the canonical publication request and receipt, requires
+a later fixed-query GraphQL view of the identical repository, PR, refs, and commits, and projects the
+authenticated controller bot id carried through publication preflight and the exact push receipt.
+It does not authenticate storage or prove that an installed host prevented a different actor from
+pushing the same commit later. A pure GraphQL projector then requires that same pusher-bound
+snapshot, the exact schema-pinned compiled query hash, complete review/reviewer/thread connections,
+and one-to-one request/rate-limit audit coverage before emitting mergeability, queue, requested-
+reviewer, thread, pagination, and `graphql-pull-request` audit inputs. These source pieces and their
+pure composer still are not an installed collector or an
+installed runtime route.
+
+The package also contains an uncomposed awaiting-review publication prerequisite. Its explicit
+controller accepts one fresh authenticated host request containing the canonically bound full
+explicit GitHub-awaiting-review authorization, one-PR ceiling, and publication bot database/node/
+login identity. Before mutation, its injected
+publication-only backend must read-only preflight the exact repository, refs, commits, diff hashes,
+required check context/App pairs, and bot identity. Publication and reconciliation accept no caller-selected
+timestamp; only the injected trusted host clock can establish freshness and receipt time. The
+controller writes a closed receipt only after the backend returns
+the exact repository and pull-request database/node/number identities, controller head/base refs
+and SHAs, mission-state/authorization binding, diff hashes, GitHub URL, and successful check
+context/App/head-SHA observations. The same receipt attests the exact bot id/node/login against the
+repository, controller ref, and head SHA. Dispatch is persisted before the remote callback without holding
+the journal lock across that callback, so process death leaves a recoverable pending record instead
+of a stale lock. A pending request is never published again; explicit reconciliation performs only
+exact PR lookup and check observation. The source includes no command, live backend, credential
+loader, ordinary mission caller, or installed route. Do not instantiate it manually or interpret
+its fixture receipt as a real published PR.
+
+Independent publication source review is complete, but that is not execution readiness. A bounded external-host
+rehearsal has now exercised the source publication controller and two complete live evidence
+snapshots with zero merge capability; its sanitized record is in
+[`docs/rehearsals/2026-08-12-zero-merge-publication.md`](rehearsals/2026-08-12-zero-merge-publication.md).
+That one-off host adapter is not a packaged or installed route, and its deliberately non-authorizing
+dry-run binding is not an operator merge policy or current-run merge authorization. A trusted
+installed host, supported live backend, and operator-owned schema-valid policy boundary therefore
+remain absent. This is separate from the later composed merge rehearsal. The shipped CLI therefore intentionally has no
+publication or merge-execution command. It now has only the K5.1 `merge status` and `merge evaluate`
+inspection commands described below. Packaged routes construct neither the publication controller nor
+the merge executor. They also cannot bypass the controller by constructing the lower-level GitHub publisher;
+the package guard rejects that caller and any concrete generic or exact GitHub backend. The
+canonical checked/unchecked gate is in
+[`PLAN.md`](../PLAN.md#phase-k5--compose-an-explicit-default-off-conditional-merge-path).
+
+## Inspect conditional merge readiness
+
+K5.1 is an observation-only installed-host boundary. It reads one exact, persisted
+`awaiting-review` publication receipt and optional operator-supplied policy and evidence documents.
+It never contacts GitHub, discovers a pull request, loads a merge credential, persists or exposes a
+readiness proof, creates a merge intent, or calls the K4 writer. Even an `eligible` report remains
+`state: awaiting-review` with `intent_ready`, `execution_available`,
+`writer_credential_loaded`, and `merge_intent_created` all fixed to `false`.
+
+On POSIX, the host directory must be an existing current-user-owned, owner-only, non-symlink
+directory outside the repository. The reader pins that directory descriptor once and opens every
+journal/input descendant relative to the pinned descriptor with symlink following disabled, so a
+path swap after validation cannot redirect reads into repository trust. K5.1 fails closed on
+Windows until an equivalent current-user and owner-only ACL proof is implemented; the rest of the
+Pathfinder controller remains supported there. The fixed host layout is:
+
+```text
+<host-dir>/
+  journal/publication-operations/<publication-request-id>.{request,dispatch,receipt}.json
+  merge-policy.json                 # optional; missing is typed
+  merge-authorization.json          # optional; missing is typed
+  merge-evidence-initial.json       # optional; missing is typed
+  merge-evidence-reread.json        # optional; missing is typed
+  protected-policy.json             # optional additive policy; shipped baseline otherwise
+```
+
+Run either view explicitly:
+
+```bash
+bash scripts/pathfinder-controller.sh merge status --repo-root <repository> --host-dir <host-dir> --publication-request-id <id> --json
+bash scripts/pathfinder-controller.sh merge evaluate --repo-root <repository> --host-dir <host-dir> --publication-request-id <id>
+```
+
+`--json` emits the closed canonical report. The default Markdown is only a rendering of that report.
+Each input entry binds its state, canonical document hash, declared identity, and declared hash
+where applicable, so the report hash identifies the exact policy, authorization, and both evidence
+documents that were evaluated. Block codes are closed to the evaluator's typed deny-code domain.
+The two commands use the same pure two-snapshot evaluator; `operation` records which view the
+operator requested. Missing, expired, malformed, unsupported, drifted, or incomplete inputs produce
+typed blocks without widening authority. A missing exact publication receipt is a hard error.
+Supplying these files does not authorize execution, and no repository file, environment variable,
+or ordinary `/goal`, mission, Goal-pack, publication, or resume route can escalate into it.
+
 ## Inspect capabilities
 
 ```bash

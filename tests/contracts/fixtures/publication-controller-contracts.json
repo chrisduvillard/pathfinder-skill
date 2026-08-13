@@ -1,0 +1,138 @@
+{
+  "request": {
+    "schema_version": 1,
+    "publication_request_id": "publication_request_example1",
+    "source": "authenticated-controller-publication-request",
+    "mission": {
+      "mission_id": "mission_example1",
+      "binding_id": "binding_example1",
+      "mission_authorization_id": "authorization_example1",
+      "authorization_snapshot_sha256": "aaba7d2aa7e6991253ab0017e5fd7376b08a4a579220a835f2771302123756ad",
+      "mission_state": "committed",
+      "mission_state_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "commit_sha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "authorization": {
+      "schema_version": 1,
+      "authorization_id": "authorization_example1",
+      "mission_id": "mission_example1",
+      "binding_id": "binding_example1",
+      "explicit_request": true,
+      "trusted_source": "current-user-turn",
+      "authorized_at": "2026-08-11T11:55:00+00:00",
+      "base_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "intent_hashes": {
+        "charter": "1111111111111111111111111111111111111111111111111111111111111111",
+        "roadmap": "2222222222222222222222222222222222222222222222222222222222222222",
+        "doctrine": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "limits": {
+        "max_goals": 1,
+        "max_attempts": 2,
+        "max_wall_seconds": 3600,
+        "max_total_prs": 1
+      },
+      "publication_target": "github-awaiting-review",
+      "snapshot_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "repository": {
+      "id": 123456789,
+      "node_id": "R_kgDOExample1",
+      "owner": "example-owner",
+      "name": "example-repo"
+    },
+    "publication_actor": {
+      "source": "authenticated-host-publication-credential",
+      "actor_id": 97531,
+      "actor_node_id": "U_kgDOBot1234",
+      "login": "pathfinder-publication[bot]"
+    },
+    "candidate": {
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "base_ref": "main",
+      "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "diff": {
+        "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb",
+        "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
+        "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
+      }
+    },
+    "required_checks": [
+      {"context": "ci/pathfinder", "app_id": 24680}
+    ],
+    "title": "Pathfinder fixture publication",
+    "body": "Authenticated mission mission_example1 publication fixture.",
+    "max_check_polls": 3,
+    "credential_boundary": "publication-only",
+    "issued_at": "2026-08-11T12:00:00+00:00",
+    "expires_at": "2026-08-11T12:10:00+00:00",
+    "request_sha256": "8c31dde4edb24c39950bf4147c3fce8f1009541902ae05c8789ea16a47d12f86"
+  },
+  "dispatch": {
+    "schema_version": 1,
+    "publication_request_id": "publication_request_example1",
+    "request_sha256": "8c31dde4edb24c39950bf4147c3fce8f1009541902ae05c8789ea16a47d12f86",
+    "started_at": "2026-08-11T12:05:00+00:00",
+    "dispatch_sha256": "20cf0e1c9223ac8965e6784f4b93992d0e515a4c781c818b3a60e3426fbe3e58"
+  },
+  "receipt": {
+    "schema_version": 1,
+    "publication_receipt_id": "publication_receipt_example1",
+    "publication_request_id": "publication_request_example1",
+    "request_sha256": "8c31dde4edb24c39950bf4147c3fce8f1009541902ae05c8789ea16a47d12f86",
+    "source": "authenticated-controller-publication",
+    "state": "awaiting-review",
+    "mission": {
+      "mission_id": "mission_example1",
+      "binding_id": "binding_example1",
+      "mission_authorization_id": "authorization_example1",
+      "authorization_snapshot_sha256": "aaba7d2aa7e6991253ab0017e5fd7376b08a4a579220a835f2771302123756ad",
+      "mission_state_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    "repository": {
+      "id": 123456789,
+      "node_id": "R_kgDOExample1",
+      "owner": "example-owner",
+      "name": "example-repo"
+    },
+    "head_push": {
+      "source": "authenticated-controller-publication",
+      "actor_id": 97531,
+      "actor_node_id": "U_kgDOBot1234",
+      "login": "pathfinder-publication[bot]",
+      "repository_id": 123456789,
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "pull_request": {
+      "id": 987654321,
+      "node_id": "PR_kwDOExample1",
+      "number": 72,
+      "url": "https://github.com/example-owner/example-repo/pull/72",
+      "head_ref": "pathfinder/auto/example1",
+      "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "base_ref": "main",
+      "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "diff": {
+      "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb",
+      "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89",
+      "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12"
+    },
+    "checks": {
+      "state": "success",
+      "polls": 1,
+      "observations": [
+        {
+          "context": "ci/pathfinder",
+          "app_id": 24680,
+          "sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ]
+    },
+    "reused": false,
+    "observed_at": "2026-08-11T12:06:00+00:00",
+    "receipt_sha256": "5ea86ffc28933057705c39b4da0db3215d4e169910b3b29974e2b2fa1fddab87"
+  }
+}

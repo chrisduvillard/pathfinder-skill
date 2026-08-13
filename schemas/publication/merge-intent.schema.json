@@ -5,15 +5,19 @@
   "type": "object", "additionalProperties": false,
   "required": ["schema_version", "operation_id", "bindings", "repository", "pull_request", "actor", "merge_method", "endpoint_class", "started_at", "intent_sha256"],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {"const": 2},
     "operation_id": {"type": "string", "pattern": "^merge_operation_[a-z0-9][a-z0-9_-]{7,63}$"},
     "bindings": {
       "type": "object", "additionalProperties": false,
-      "required": ["evidence_id", "evidence_sha256", "policy_id", "policy_sha256", "merge_authorization_id", "authorization_sha256", "mission_id", "binding_id", "mission_authorization_id"],
+      "required": ["readiness_proof_sha256", "initial_evidence_id", "initial_evidence_sha256", "reread_evidence_id", "reread_evidence_sha256", "diff_sha256", "changed_files_sha256", "object_evidence_sha256", "policy_id", "policy_sha256", "merge_authorization_id", "authorization_sha256", "credential_receipt_id", "credential_receipt_sha256", "mission_id", "binding_id", "mission_authorization_id"],
       "properties": {
-        "evidence_id": {"type": "string", "pattern": "^merge_evidence_[a-z0-9][a-z0-9_-]{7,63}$"}, "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "readiness_proof_sha256": {"$ref": "#/$defs/sha256"},
+        "initial_evidence_id": {"type": "string", "pattern": "^merge_evidence_[a-z0-9][a-z0-9_-]{7,63}$"}, "initial_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "reread_evidence_id": {"type": "string", "pattern": "^merge_evidence_[a-z0-9][a-z0-9_-]{7,63}$"}, "reread_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "diff_sha256": {"$ref": "#/$defs/sha256"}, "changed_files_sha256": {"$ref": "#/$defs/sha256"}, "object_evidence_sha256": {"$ref": "#/$defs/sha256"},
         "policy_id": {"type": "string", "pattern": "^merge_policy_[a-z0-9][a-z0-9_-]{7,63}$"}, "policy_sha256": {"$ref": "#/$defs/sha256"},
         "merge_authorization_id": {"type": "string", "pattern": "^merge_authorization_[a-z0-9][a-z0-9_-]{7,63}$"}, "authorization_sha256": {"$ref": "#/$defs/sha256"},
+        "credential_receipt_id": {"type": "string", "pattern": "^merge_credential_receipt_[a-z0-9][a-z0-9_-]{7,63}$"}, "credential_receipt_sha256": {"$ref": "#/$defs/sha256"},
         "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
         "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
         "mission_authorization_id": {"type": "string", "pattern": "^authorization_[a-z0-9][a-z0-9_-]{7,63}$"}

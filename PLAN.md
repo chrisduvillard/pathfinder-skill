@@ -1253,7 +1253,7 @@ Plan size: **Large** — a merge is an irreversible remote write whose safety de
 7. GitHub states that rulesets layer with classic branch protection and with one another; all matching rules aggregate and the most restrictive version wins. By contrast, only one classic branch-protection rule applies to a branch. See [About rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) and [Managing a branch protection rule](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule).
 8. GitHub's `GET /repos/{owner}/{repo}/rules/branches/{branch}` endpoint returns every active repository- and organization-level ruleset rule that applies to an exact branch, excluding disabled and evaluate-only rules. This aggregate endpoint should be authoritative for applicability; complete source rulesets are still needed for bypass visibility. See [REST API endpoints for rules](https://docs.github.com/en/rest/repos/rules).
 9. Classic branch protection exposes required checks, administrator enforcement, review counts, stale-review dismissal, code-owner review, last-push approval, PR bypass allowances, linear history, and conversation resolution. Reading it requires repository Administration read permission. See [REST API endpoints for protected branches](https://docs.github.com/en/rest/branches/branch-protection).
-10. Rulesets may name users, teams, repository roles, organization administrators, deploy keys, or integrations as `always`, `pull_request`, or `exempt` bypass actors. GitHub may omit `bypass_actors` unless the caller has write access to the ruleset. Missing bypass visibility is therefore `unknown`, never proof that the merge credential cannot bypass.
+10. Rulesets may name users, teams, repository roles, organization administrators, deploy keys, or integrations as `always`, `pull_request`, or `exempt` bypass actors. GitHub may omit `bypass_actors` unless the caller has write access to the ruleset. Missing bypass visibility is therefore `unknown`, never proof that the merge credential cannot bypass. Team membership requires the exact team-membership endpoint; organization-admin membership requires active organization membership with the admin role; repository-role membership requires the ruleset role id/name and the exact repository-permission `role_name`. Organization-admin and deploy-key actors are idless/null in GitHub's contract and must not be normalized to fabricated numeric ids.
 11. Required check evidence is more subtle than one combined green status. Checks and commit statuses with the same required name must both pass; required checks apply to the latest head or GitHub's test merge commit, and a requirement may pin the expected GitHub App. See [Troubleshooting required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks).
 12. GitHub exposes PR mergeability, review decision, merge-state status, merge queue, latest reviews, and review-thread resolution through GraphQL. A complete observer must paginate reviews and threads rather than trust a truncated first page. See [GraphQL pull request objects](https://docs.github.com/en/enterprise-cloud@latest/graphql/reference/pulls).
 13. A ruleset can require a merge queue. That is a different asynchronous protocol whose checks run against merge groups; a direct merge implementation must stop and hand off when any applicable rule requires the queue.
@@ -1294,7 +1294,7 @@ Observable completion means:
 - [x] **M-04 — One PR:** first release allows one Goal, one PR, and at most one merge intent. Goal packs and dependent/stacked PRs are ineligible.
 - [x] **M-05 — Human floor:** require at least one current effective approval from an eligible human who is not the PR author, implementation agent, last pusher, merge credential actor, or check credential actor. Repository policy may require more, never fewer.
 - [x] **M-06 — Check floor:** require at least one GitHub-enforced status check pinned by context and expected app id, plus success for every other applicable required check/status on the exact GitHub-required commit. Policy may add checks, never remove them.
-- [x] **M-07 — No bypass:** require complete classic PR-bypass and ruleset-bypass evidence and prove the exact merge actor matches none of it. Hidden bypass data, administrator ambiguity, repository-role ambiguity, or an exempt actor blocks.
+- [x] **M-07 — No bypass:** require complete classic PR-bypass and ruleset-bypass evidence and prove the exact merge actor matches none of it. Membership-based actors require exact-coverage typed team/repository-role/organization-admin facts bound to source-projected actor metadata, the merge bot, one qualified exact-endpoint request audit, and the policy source; missing, shared, duplicate, pending, extra, or identity-drifted facts block.
 - [x] **M-08 — Layer all controls:** combine the one applicable classic protection response with the aggregate active ruleset response. Fetch every source ruleset, including organization parents, to validate enforcement, version, conditions, and bypass actors.
 - [x] **M-09 — Supported-rule allowlist:** recognize only explicitly implemented rule types and parameters. An unknown type, new enum, omitted field, incomplete page, evaluate/disabled contradiction, or unsupported requirement blocks rather than being ignored.
 - [x] **M-10 — Low-risk changes only:** any baseline or additive protected-surface match blocks conditional merge even if declared. Policy must also define allowed path patterns and strict file/line/size ceilings; it may only narrow the shipped baseline.
@@ -1322,30 +1322,35 @@ Observable completion means:
 | Rulesets | Fully paginated aggregate active rules plus every source ruleset including parents, enforcement and bypass visibility | Hidden actor, page truncation, source mismatch, unknown rule, queue, or unsupported rule blocks |
 | Reviews | GitHub review decision plus fully paginated effective reviews and threads bound to the current diff/head | No independent human approval, changes requested, stale approval, unresolved thread, or unknown eligibility blocks |
 | Checks | Required contexts and app ids from classic/rulesets plus check-runs and commit statuses on the required SHA/test merge commit | Missing, pending, duplicate-source ambiguity, unexpected app, stale SHA, or non-success blocks |
-| Merge actor | Exact user/app/installation identity and scoped permission inventory, compared with all bypass actors | Actor identity unknown, admin/role ambiguity, or any possible bypass blocks |
+| Merge actor | Exact user/app/installation identity and scoped permission inventory, compared with all bypass actors plus exact-coverage typed team/repository-role/organization-admin resolutions | Actor identity drift, incomplete/duplicate/pending membership, admin/role ambiguity, or any positive bypass match blocks |
 | Freshness | API version, observed timestamps, response/request ids, ETags where available, base/head reread immediately before intent | Snapshot expiry, control-plane drift, or inconsistent reread blocks |
 | Merge result | Synchronous response or later exact observation of merged PR, method-compatible merge commit, actor, head/base, and timestamp | Lost or contradictory evidence returns `reconcile-required`; no retry or fabricated `merged` state |
 
 ### Fail-closed acceptance matrix
 
-- [ ] Protected branch with classic checks/reviews, an active additive ruleset, complete non-bypass actor evidence, independent approval, and exact green checks can produce `eligible`; the observer still performs zero merge calls.
-- [ ] Classic protection absent and no active rulesets returns `policy-unenforced`, even when the host-owned policy says enabled.
-- [ ] Classic protection present but required review count is zero returns `independent-review-not-enforced`.
-- [ ] Active rulesets present but one source ruleset or organization parent cannot be read returns `ruleset-evidence-incomplete`.
-- [ ] The aggregate branch-rules endpoint and fetched source ruleset disagree on ids, enforcement, or rule parameters returns `ruleset-drift`.
-- [ ] Missing `bypass_actors`, classic PR bypass allowances, merge actor identity, or actor-role resolution returns `bypass-visibility-unknown`.
-- [ ] Merge actor is an admin, repository-role bypass member, named user/team/app, or exempt integration returns `merge-actor-can-bypass`.
-- [ ] A new/unknown active GitHub rule type or enum returns `unsupported-active-rule`.
-- [ ] A `merge_queue` rule or queue entry returns `merge-queue-required`; no enqueue or merge call occurs.
-- [ ] Required deployments, signed commits, code-scanning/quality gates, or another initially unsupported rule returns its typed unsupported reason rather than a generic success.
-- [ ] A required check with the correct name but wrong app id, stale SHA, pending duplicate status, or conflicting check-run/status returns `required-check-unproven`.
-- [ ] Review approval from the author, agent, last pusher, merge actor, bot, dismissed reviewer, stale commit, or ineligible association does not count.
-- [ ] A current `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, requested code-owner review, or unresolved non-outdated thread blocks.
-- [ ] Any protected path, workflow, CODEOWNERS/policy surface, schema/migration, dependency-policy exception, submodule, symlink, binary, or diff-limit excess blocks.
-- [ ] Base advancement, head force-push, PR retarget, changed diff hash, policy expiry, ruleset update, review dismissal, or evidence timeout between observation and intent blocks.
-- [ ] A `409` head mismatch, `405` unmergeable response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success.
-- [ ] A lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT.
-- [ ] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential.
+K3 closes all 17 observer/evaluator and inert-composition cases below with direct executable
+evidence. K4 closes the two writer cases with the unreachable executor and deterministic crash
+fixtures; no normal route can call it.
+
+- [x] Protected branch with classic checks/reviews, an active additive ruleset, complete non-bypass actor evidence, independent approval, and exact green checks can produce `eligible`; the observer still performs zero merge calls. (`test_complete_layered_fixture_is_deterministically_eligible`, `test_backend_protocol_exposes_read_methods_only`)
+- [x] Classic protection absent and no active rulesets returns `policy-unenforced`, even when the host-owned policy says enabled. (`test_policy_layers_take_the_most_restrictive_review_floor`)
+- [x] Classic protection present but required review count is zero returns `independent-review-not-enforced`. (`test_policy_layers_take_the_most_restrictive_review_floor`)
+- [x] Active rulesets present but a source ruleset cannot be positively attributed returns `ruleset-evidence-incomplete`; source/parent permission, transport, or timeout failure retains its more specific typed outcome and yields no partial evidence. (`test_unattributed_ruleset_and_ambiguous_actor_stop_without_evidence`, `test_source_ruleset_read_failures_never_yield_partial_evidence`)
+- [x] The aggregate branch-rules endpoint and fetched source ruleset disagree on ids, enforcement, or rule parameters returns `ruleset-drift`. (`test_ruleset_source_parameters_and_bypass_evidence_fail_closed`)
+- [x] Missing ruleset/classic bypass visibility, an unknown bypass mode, or unresolved actor-role membership returns `bypass-visibility-unknown`; an omitted required bypass mode returns `malformed-response`, and an unprovable actor identity returns `actor-identity-unknown`. (`test_missing_bypass_visibility_is_a_typed_unknown`, `test_rule_parameter_cross_checks_fail_closed`, `test_actor_bypass_matrix_distinguishes_exact_matches_from_ambiguity`, `test_unattributed_ruleset_and_ambiguous_actor_stop_without_evidence`)
+- [x] An exact named user/App/integration bypass match in any recorded mode or any administration permission returns `merge-actor-can-bypass`. (`test_actor_bypass_matrix_distinguishes_exact_matches_from_ambiguity`, `test_fixture_driven_candidate_matrix_returns_exact_codes`, `merge-evidence-contract` eval)
+- [x] Positively resolved team, repository-role, or organization-admin membership returns `merge-actor-can-bypass`; exact no-match evidence remains eligible, while missing source metadata, missing/shared/unqualified endpoint audits, duplicate, pending, extra, identity-drifted, reread-drifted, or fabricated summary assertions return `bypass-visibility-unknown` or a stronger typed identity failure. (`test_typed_bypass_memberships_resolve_each_supported_actor_class`, `test_membership_resolution_coverage_and_state_fail_closed`, `test_each_membership_requires_its_own_qualified_request_audit`, `test_typed_membership_matches_block_each_supported_bypass_class`, `test_membership_no_match_and_fabricated_assessment_are_recomputed`, `merge-evidence-contract` eval)
+- [x] A new/unknown active GitHub rule type or enum returns `unsupported-active-rule` or a stronger `field-unknown` when the payload itself is outside the closed projection. (`test_bypass_actor_match_and_unsupported_rule_are_explicit`, `test_malformed_and_future_fields_never_look_complete`, `test_unsupported_rule_types_are_typed_and_never_generic_success`)
+- [x] A `merge_queue` rule or queue entry returns `merge-queue-required`; no enqueue or merge call occurs. (`test_unsupported_rule_types_are_typed_and_never_generic_success`, `test_fixture_driven_candidate_matrix_returns_exact_codes`, `test_evaluator_has_zero_network_mutation_credentials_or_production_callers`)
+- [x] Required deployments, signed commits, code-scanning/quality gates, or another initially unsupported rule returns its typed unsupported reason rather than a generic success. (`test_unsupported_rule_types_are_typed_and_never_generic_success`, `test_classic_protection_semantics_are_explicit_and_fail_closed`)
+- [x] A required check with the correct name but wrong App id, stale SHA, pending/duplicate/conflicting sources, failed conclusion, missing enforcement, or incomplete timestamps returns its exact typed check denial rather than generic success. (`test_required_check_matrix_proves_app_sha_status_and_conclusion`)
+- [x] Review approval from the author, implementation agent, last pusher, merge actor, bot, dismissed reviewer, stale commit, check creator, or ineligible association does not count. (`test_latest_effective_independent_human_review_only`)
+- [x] A current `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, requested code-owner review, or unresolved non-outdated thread blocks. (`test_review_changes_code_owner_and_threads_are_independent_blocks`, `test_fixture_driven_candidate_matrix_returns_exact_codes`)
+- [x] Any protected path, workflow, CODEOWNERS/policy surface, schema/migration, dependency-policy exception surface, submodule, symlink, binary, or diff-limit excess blocks. (`test_protected_and_special_surface_matrix_is_independently_derived`, `test_diff_hash_paths_protected_surfaces_and_effective_limits`, `test_authenticated_git_object_evidence_drives_special_file_blocking`)
+- [x] Base advancement, head force-push, PR retarget, changed diff hash, policy expiry, ruleset update, review dismissal, or evidence timeout between observation and intent blocks. (`test_reread_drift_matrix_forces_a_new_complete_snapshot_cycle`, `test_authority_and_evidence_windows_are_independently_current`, `test_complete_disjoint_reread_is_required_and_stays_pure`)
+- [x] A `409` head mismatch, `405` unmergeable/already-merged response, auth/rate/permission failure, timeout, malformed response, or response loss never becomes success without the exact allowed proof. (`test_definitive_http_failures_are_typed_and_never_retried`, `test_405_uses_exact_state_to_distinguish_already_merged`, `test_malformed_or_server_response_never_becomes_success`)
+- [x] A lost response followed by exact merged-state proof records one merged result; any other state is `reconcile-required` and sends no second PUT. (`test_response_loss_can_merge_only_with_exact_reconciliation_proof`, `test_pending_intent_is_not_replayed_and_explicit_reconcile_sends_no_put`, crash-boundary regressions in `test_merge_executor.py`)
+- [x] Ordinary publication, local bridge, Goal pack, install smoke, and replay paths retain zero merge calls and require no merge credential. (`test_forge_policy_and_mergeability_fixtures_never_trigger_merge`, `test_k4_writer_is_isolated_and_has_no_enabled_caller`, `test_evaluator_stays_pure_with_only_the_isolated_k4_consumers`, full `scripts/check-all.sh`)
 
 ### Phase K0 — ratify a standalone security contract
 
@@ -1398,7 +1403,7 @@ Observable completion means:
 
 - [x] `[writes code]` Add only closed merge-evidence, merge-intent, and merge-result schemas plus focused fixtures/tests; present the identity-binding and replay invariants before editing.
 - [x] Evidence must carry completeness/pagination markers, API version, observation window, repository/actor/PR identities, exact head/base SHAs, diff and policy hashes, classic protection, aggregate active rules, source rulesets, bypass visibility, effective reviews/threads, required checks/statuses, mergeability, and typed unsupported/unknown fields.
-- [x] Intent must bind the evidence hash, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
+- [x] Intent must bind an intent-ready two-snapshot proof, both evidence ids/hashes, policy and authorization hashes, exact PR/head/base, selected method, actor, endpoint class, start time, and one-use operation id before a mutation.
 - [x] Result must distinguish `merged`, `not-merged`, `reconcile-required`, `policy-blocked`, `auth-error`, `rate-limited`, `permission-missing`, and `api-unavailable`; `merged` requires exact result evidence rather than a message string.
 - [x] Imitate `OperationJournal` write-once binding, but do not widen its existing action enums yet. A dedicated merge journal keeps an unreachable future writer separate from the local host action machine.
 - [x] Existing contract tests must pass unmodified. Add result-without-intent, changed-head, changed-policy, changed-actor, expired-evidence, missing-page, unknown-enum, and fabricated-merged negatives.
@@ -1439,7 +1444,7 @@ Observable completion means:
 - [x] `[writes code]` Add only the minimal versioned GitHub HTTP client/backend, credential-boundary policy, redaction tests, and operator configuration needed by K2.1; present the exact hostname, methods, endpoints, headers, and permission scopes before editing.
 - [x] Enforce `api.github.com`, TLS, GET-only requests, fixed API version/Accept headers, bounded response sizes, bounded pagination, timeouts, retry limits for safe reads only, and redaction of authorization headers and response bodies from logs.
 - [x] Keep the elevated evidence token in a process that cannot issue POST/PATCH/PUT/DELETE. Never pass it to implementation, tests, repository commands, publisher callbacks, or the later merge writer.
-- [ ] Positively record token/actor identity and whether bypass lists were visible. Elevated permission is not positive evidence by itself.
+- [x] Positively record token/actor identity and whether bypass lists were visible. Elevated permission is not positive evidence by itself.
 - [x] Imitate existing structured command/network boundary reporting and capability degradation; do not add a general-purpose GitHub client or shell out to repository-provided code.
 - [x] Existing tests must pass unmodified. Use a local fake HTTP server or transport fixture; required CI must not contact GitHub.
 - [x] No deletion is expected. Show zero callers before replacing a backend seam.
@@ -1447,7 +1452,75 @@ Observable completion means:
 - [x] Append a `PROGRESS.md` line recording zero mutating HTTP methods and credential non-guarantees.
 - [x] Stop if bypass visibility requires granting the observer mutation capability that the runtime cannot mechanically constrain to GET; keep merge unsupported for that host.
 
-**Implementation note (2026-08-11):** implemented an uncomposed standard-library REST boundary split into a 48-line read-only credential policy, 42-line fixed-host TLS transport, 80-line endpoint/query policy, and 311-line client. It fixes `api.github.com:443`, `GET`, media type, REST `2026-03-10`, user agent, 8 MiB responses, 30 pages, 10-second timeouts, one safe transient retry, two same-host redirects, duplicate-safe JSON, request-id/ETag audits, and typed auth/permission/404/rate/timeout/availability/malformed outcomes. Eleven fake-transport tests prove endpoint/query/redirect/size/page/retry bounds, response and credential redaction, exact version probing, zero mutating transport methods, no secret loader, and zero enabled production caller; full preflight passes with 258 tests. The operator contract requires direct secret injection into this dedicated process, an App JWT with no repository permissions, and an installation token declaring only the seven required read permissions; declarations do not prove actual token scope or identity. Official GitHub documentation confirms ordinary GraphQL queries require `POST`, so the GET-only runtime rejects `/graphql` and returns typed `api-unavailable` for review-thread/queue/cross-check evidence. Positive token/actor identity and complete bypass visibility therefore remain unchecked above, the K2.1 fixture observer remains the only complete backend, and live eligibility/merge stays unsupported.
+**Implementation note (2026-08-11):** implemented an uncomposed standard-library REST boundary split into a 48-line read-only credential policy, 42-line fixed-host TLS transport, 80-line endpoint/query policy, and 311-line client. It fixes `api.github.com:443`, `GET`, media type, REST `2026-03-10`, user agent, 8 MiB responses, 30 pages, 10-second timeouts, one safe transient retry, two same-host redirects, duplicate-safe JSON, request-id/ETag audits, and typed auth/permission/404/rate/timeout/availability/malformed outcomes. Eleven fake-transport tests prove endpoint/query/redirect/size/page/retry bounds, response and credential redaction, exact version probing, zero mutating transport methods, no secret loader, and zero enabled production caller; full preflight passes with 258 tests. The operator contract requires direct secret injection into this dedicated process, an App JWT with no repository permissions, and an installation token declaring only the seven required read permissions; declarations do not prove actual token scope or identity. Official GitHub documentation confirms ordinary GraphQL queries require `POST`, so the GET-only runtime rejects `/graphql` and returns typed `api-unavailable` for review-thread/queue/cross-check evidence. At this original REST slice, positive token/actor identity and complete bypass visibility remained unchecked; later receipt/identity readers and the pure composed provenance boundary close that source-contract item without installing a live collector. Live eligibility/merge stays unsupported.
+
+**Fixed-query GraphQL follow-up (2026-08-12):** added a separate uncomposed TLS transport that
+can POST only one compiled `PathfinderPullRequestEvidence` query to `api.github.com/graphql`.
+Callers cannot supply operation text or a URL; variables are closed to exact owner/repository/PR
+identity, three independent cursors, and include flags. The canonical query hash binds exact
+PR/repository/ref/mergeability/review-decision/queue facts and independently paginated latest
+opinionated reviews, code-owner review requests, and review threads. Twelve fake-transport tests
+cover fixed operation/body/host/method, connection completion, independent pagination, retry and
+byte/page ceilings, response/request-id/identity/count/cursor drift, partial GraphQL errors,
+unknown actors/enums/fields, credential redaction, no secret loader, and zero enabled callers. The
+REST process remains mechanically GET-only. This source primitive is not a production collector,
+and a later source-only identity slice still does not compose it. That slice adds a closed,
+canonical host issuance receipt for the one-repository observer token; independently cross-checks
+the observer App/installation/bot/repository and future merge App/installation/bot against exact
+live responses; and accepts a plan-level protection/rules 403 only when the exact endpoint,
+GitHub's `X-Accepted-GitHub-Permissions` header, and the closed upgrade-required response all
+qualify absence. Ordinary 403 remains `permission-missing`. The identity verifier has no caller,
+does not load either token, and does not yet record its receipt/audits in a complete normalized
+snapshot. Later source-only readers now resolve exact permission-qualified membership absence,
+walk every check suite/run under a global ceiling without using GitHub's 1,000-suite shortcut,
+and fully paginate REST reviews before reading one exact `Metadata=read`-qualified repository
+permission per unique reviewer identity. Reviewer permission responses are cross-checked against
+the requested actor and retain distinct target-bound audits. Check evidence now also projects the
+complete suite/run set and the latest creator-bearing `/statuses` item per context into the observer
+contract, cross-checking the result against the combined `/status` envelope, deriving `required`
+only from a closed context/App union, requiring every required run to name the exact candidate PR
+database/number/head/base identity, and sharing one global request budget. A new pure, uncalled
+projector unions host-policy, qualified classic-protection, and every completely paginated active
+ruleset check, rejecting unpinned App ids, duplicate/contradictory identities, or incomplete rule
+pages. These readers still have no caller and do not read/compose those policy inputs or the
+candidate from live sources or compose the review/check/PR projections into a snapshot. A pure
+uncalled review reconciler now proves that GraphQL's complete latest-opinionated
+review per actor is the exact node/database/actor/state/commit/time/association record selected from
+the complete chronological permission-qualified REST audit; split actor sets, identity drift,
+nonchronological history, incomplete pagination, or reused request ids block. Review requests,
+threads, mergeability, and queue state now pass through a second pure projector that requires the
+exact compiled query hash, one real GraphQL audit family, complete independent connections, exact
+repository/PR/ref/SHA identity, rate-limit/audit coverage, and the reconciled publication-pusher
+proof. A pure, uncalled composer now requires those projections plus distinct verified observer and
+merge receipts, all seven App/installation/bot/repository identity audits, complete REST review history, the policy-
+derived required-check union, exact check pages, and every remaining normalized REST family. It
+emits schema-valid evidence plus a separate canonical provenance receipt bound to the evidence,
+observer/merge/publication receipts, query, reviews, checks, request ids, and collection window. The
+publication request now also binds the
+authenticated publication credential's bot database/node/login identity through exact preflight and
+the durable repository/ref/SHA push receipt. An uncalled pure reconciler validates both canonical
+publication documents, requires a later fixed-query GraphQL observation of the identical
+repository/PR/head/base identity, and projects that bot database id as the controller pusher. This
+does not prove that an installed host prevented a later same-SHA push by a different actor; that
+branch-ownership fact remains mandatory. The positive-identity/bypass checkbox is now closed by
+the composed provenance receipt, while both K5 installed-host readiness items remain unchecked:
+the composer owns no client, credential, durable host store, or installed caller.
+
+**Branch-ownership follow-up (2026-08-12):** a pure, uncalled proof now requires one active,
+repository-scoped ruleset whose only rules restrict controller-branch creation, update, and
+deletion and whose sole always-bypass actor is the authenticated publication App. It then requires
+the complete effective-rule view for the exact controller branch and a final qualified ref read at
+the published SHA, all ordered after the evidence instant with unique request ids. The complete
+evidence composer binds the resulting canonical proof and rejects request-id or identity reuse.
+This closes the source proof shape, not the installed-host gate: no packaged route collects,
+authenticates, or durably persists these inputs, and K5.2 remains closed.
+
+**Composer follow-up (2026-08-12):** the 462-line production adapter exceeds the per-slice estimate
+because it owns the closed backend projection for every observer method, global request/time checks,
+and the separately schema-validated provenance receipt in one auditable boundary. Five focused
+tests cover deterministic composition, malformed and drifted identities, review/policy/check drift,
+cross-surface request reuse, collection-window violations, input immutability, and zero source
+callers. It adds no network client or installed route.
 
 **Phase verification:** deterministic fixtures prove complete normalized evidence and every incomplete/permission path, while a structural test proves the observer has zero remote mutation method.
 
@@ -1461,29 +1534,91 @@ Observable completion means:
 
 #### Sub-prompt K3.1 — policy lattice and hard floors
 
-- [ ] `[writes code]` Add only `pathfinder_core/merge_policy.py`, focused unit/property-style fixtures, and typed verdict documentation; present precedence and every deny code before editing.
-- [ ] Evaluate shipped hard floors, then host policy, then the most restrictive classic/ruleset combination. Repository settings may narrow but can never cancel a shipped floor or host-policy restriction.
-- [ ] Require exact identity/hash/time bindings, fully complete evidence, same-repository PR, open/non-draft/current branch, zero protected matches, diff ceilings, supported squash method, independent current human review, clean review decision/threads, required pinned checks, non-bypass actor, clean/up-to-date merge state, and an unexpired observation window.
-- [ ] Count the latest effective review per human only. Exclude author, implementation agent, last pusher, merge/check actors, bots, dismissed/stale reviews, and unknown associations. Require the greater of shipped, host-policy, classic, and ruleset approval counts.
-- [ ] Union required check identities across classic protection, all rulesets, and host policy. Require both a status and check run when GitHub reports both under a required name; validate expected app id and the exact GitHub-required SHA.
-- [ ] Block all unknown or initially unsupported active rule types, including merge queue, required deployments, required signatures, code scanning/quality/coverage, file restrictions, and metadata rules until dedicated semantics and fixtures are added.
-- [ ] Imitate `ExecutionPolicy` and `ProtectedSurfaceRegistry`: closed inputs, explicit errors, additive restrictions, no prose inference, and deterministic results.
-- [ ] Existing tests must pass unmodified. Add an adversarial matrix covering every fail-closed acceptance item above and pairwise classic/ruleset conflicts.
-- [ ] No deletion is expected. Show zero-caller evidence before consolidating existing publication states.
-- [ ] Expected diff: 300-450 lines, with data fixtures separate from decision logic. Split checks/reviews from rule layering if larger.
-- [ ] Append a `PROGRESS.md` line recording supported rules, all typed blockers, and zero merge capability.
-- [ ] Stop if eligibility needs a UI-only GitHub fact, repository prose, model judgment, or a permission/bypass inference; return an explicit unsupported/unknown verdict.
+- [x] `[writes code]` Add an unused `pathfinder_core/merge_policy.py`, focused unit/property-style fixtures, and typed verdict documentation; split typed results and check/review proofs when the decision module crosses the review threshold; present precedence and every deny code before editing.
+- [x] Evaluate shipped hard floors, then host policy, then the most restrictive classic/ruleset combination. Repository settings may narrow but can never cancel a shipped floor or host-policy restriction.
+- [x] Require exact identity/hash/time bindings, fully complete evidence, same-repository PR, open/non-draft/current branch, zero protected matches, diff ceilings, supported squash method, independent current human review, clean review decision/threads, required pinned checks, non-bypass actor, clean/up-to-date merge state, and an unexpired observation window.
+- [x] Count the latest effective review per human only. Exclude author, implementation agent/other bots, last pusher, merge/check actors, dismissed/stale reviews, and unknown associations. Require the greater of shipped, host-policy, classic, and ruleset approval counts.
+- [x] Union required check identities across classic protection, all rulesets, and host policy. Require both a status and check run when GitHub reports both under a required name; validate expected app id and the exact GitHub-required SHA.
+- [x] Block all unknown or initially unsupported active rule types, including merge queue, required deployments, required signatures, code scanning/quality/coverage, file restrictions, and metadata rules until dedicated semantics and fixtures are added.
+- [x] Imitate `ExecutionPolicy` and `ProtectedSurfaceRegistry`: closed inputs, explicit errors, additive restrictions, no prose inference, and deterministic results.
+- [x] Existing behavioral tests pass. Add an adversarial matrix covering every evaluator-relevant fail-closed acceptance item above and pairwise classic/ruleset conflicts; change the K2 evidence schema/fixture/observer only where semantic proof was missing.
+- [x] No deletion is expected. Show zero-caller evidence before consolidating existing publication states.
+- [x] Expected diff: 300-450 lines, with data fixtures separate from decision logic. Split checks/reviews from rule layering if larger.
+- [x] Append a `PROGRESS.md` line recording supported rules, all typed blockers, and zero merge capability.
+- [x] Stop if eligibility needs a UI-only GitHub fact, repository prose, model judgment, or a permission/bypass inference; return an explicit unsupported/unknown verdict.
+
+**Implementation note (2026-08-11):** added an unused pure evaluator split into policy/rule layering, review/check proofs, and immutable typed verdicts after the production decision exceeded the review threshold. The AND-only lattice validates closed schemas, canonical hashes, authority and repository bindings, validity windows, request audits and pagination, diff hashes/classifications/ceilings, same-repository controller PR state, classic plus all active rules, bypass actors, latest permission-qualified independent reviews, review decision/threads, and exact required check App/SHA/status evidence. Outcome precedence is `unknown > unsupported > policy-blocked > eligible`; the approval maximum and check union are deterministic and no input is mutated. A minimal K2 evidence correction now carries allowed merge methods, a source/aggregate rule-parameter semantic hash, the closed GitHub review decision, and exact reviewer write/admin permission instead of asking K3 to infer them from association. Thirty-five focused contract/observer/evaluator tests and all 277 repository tests pass. Repository search proves the evaluator has zero production callers, credentials, network primitives, mutation methods, or merge capability; GraphQL-only live facts remained unavailable in that slice. The later fixed-query GraphQL primitive is still uncomposed, so live eligibility and merge stay unsupported.
 
 #### Sub-prompt K3.2 — freshness and drift re-evaluation
 
-- [ ] `[writes code]` Change only the pure evaluator, evidence snapshot helpers, and focused tests; present the time/reread algorithm before editing.
-- [ ] Bind the snapshot to observed start/end times and a hard maximum age of 60 seconds; allow host policy to shorten but not lengthen it.
-- [ ] Require immediate rereads of repository, actor, PR head/base, policy/ruleset version identifiers, review decision, and check rollup before a future intent can be issued. Any mismatch requires a complete new snapshot, not selective patching.
-- [ ] Record that GitHub offers no atomic policy-snapshot precondition on the merge call. Treat a concurrent trusted-admin control-plane mutation after the final reread as a documented residual risk, not as something the client has solved.
-- [ ] Existing tests must pass unmodified. Use a fake clock and fixtures for expiry at the boundary, base advance, force-push, ruleset update, review dismissal, check rerun, actor rotation, and policy hash drift.
-- [ ] No deletion is expected. Expected diff: 100-180 lines.
-- [ ] Append a `PROGRESS.md` line recording the residual TOCTOU non-guarantee.
-- [ ] Stop if implementation attempts to cache or selectively reuse earlier green evidence after any identity/control-plane drift.
+- [x] `[writes code]` Change only the pure evaluator, evidence snapshot helpers, and focused tests; present the time/reread algorithm before editing.
+- [x] Bind the snapshot to observed start/end times and a hard maximum age of 60 seconds; allow host policy to shorten but not lengthen it.
+- [x] Require immediate rereads of repository, actor, PR head/base, policy/ruleset version identifiers, review decision, and check rollup before a future intent can be issued. Any mismatch requires a complete new snapshot, not selective patching.
+- [x] Record that GitHub offers no atomic policy-snapshot precondition on the merge call. Treat a concurrent trusted-admin control-plane mutation after the final reread as a documented residual risk, not as something the client has solved.
+- [x] Existing tests must pass unmodified. Use a fake clock and fixtures for expiry at the boundary, base advance, force-push, ruleset update, review dismissal, check rerun, actor rotation, and policy hash drift.
+- [x] No deletion is expected. Expected diff: 100-180 lines.
+- [x] Append a `PROGRESS.md` line recording the residual TOCTOU non-guarantee.
+- [x] Stop if implementation attempts to cache or selectively reuse earlier green evidence after any identity/control-plane drift.
+
+**Implementation note (2026-08-11):** the pure evaluator now applies the earlier of the
+host-provided expiry and `observed_at + 60 seconds`, with the exact boundary expired. Its separate
+`evaluate_reread` path independently evaluates two complete snapshots, requires the reread to start
+after the first collection, and rejects reused evidence identities, hashes, or request ids. Whole
+normalized authority, repository, actor, PR/merge-state, diff, protection/ruleset, review/decision,
+check, and completeness domains must remain equal; a mismatch returns typed unknown and requires a
+brand-new complete snapshot cycle. The fake-clock/drift matrix and all 280 repository tests pass.
+The evaluator remains unused and unable to read, cache, issue an intent, access a credential, call a
+network, or merge. GitHub still offers no atomic precondition over the base, policy, protection,
+rules, reviews, and checks after that final reread, so trusted-admin control-plane mutation remains a
+documented residual race.
+
+#### Sub-prompt K3.3 — independent-review remediation and intent-ready proof
+
+- [x] `[writes code]` Bind authorization to the exact authenticated controller publication,
+  mission-state hash, PR id/node/number, head/base refs and SHAs, and canonical diff/file/object
+  evidence hashes; a controller-shaped branch alone cannot pass.
+- [x] Anchor protected surfaces to the shipped baseline: accept only that exact baseline or a
+  schema-valid additive override naming it, then independently recompute every current/previous
+  path classification. Derive special-file labels from an authenticated controller Git-diff
+  receipt; forge-supplied labels cannot erase a protected, symlink, submodule, binary, workflow,
+  CODEOWNERS, or policy match.
+- [x] Allow host policy to shorten the 60-second ceiling, require a fresh host-policy-store receipt
+  in each snapshot, use strict non-touching reread ordering, and reject receipt reuse or policy hash
+  drift.
+- [x] Count only host-attested human reviewer ids and exclude PR author, last pusher, merge actor,
+  all implementation actors, and every observed check creator. Normalize commit-status creator
+  identity explicitly.
+- [x] Keep a single-snapshot verdict advisory with `intent_ready = false`; emit a distinct immutable
+  readiness proof only after two complete ordered/disjoint green snapshots. Bind inert intent and
+  result contracts to that proof and both evidence hashes.
+- [x] Persist both complete evidence documents in the inert journal, validate their canonical
+  hashes, and replay the actual two-snapshot evaluator at intent time; summary-only or stale proof
+  metadata cannot satisfy the readiness contract.
+- [x] Make the low-risk Goal boundary and classic protection semantics machine-readable. Reject
+  release, deployment, data mutation, and real-world-side-effect Goal bindings; normalize and
+  cross-check stale-review, code-owner, linear-history, signature, and restriction settings, with
+  unsupported semantics typed fail-closed.
+- [x] Add adversarial regressions for rehashed different PRs, erased protected/special labels,
+  changed registry hashes, unallowlisted service users, implementation/check actors, policy receipt
+  reuse, and freshness shortening. Add the required deterministic merge-evidence eval fixture.
+- [x] Preserve zero production callers, credentials, network/mutation primitives, routes, and merge
+  methods. K4 remains closed until a fresh independent security review is clean and exact PR
+  identity is durably persisted by runnable awaiting-review publication.
+
+**Implementation note (2026-08-12):** the K3 review-remediation slice now authenticates the exact
+controller candidate, anchors protected policy to the shipped baseline, recomputes protected and
+special surfaces, normalizes controller Git-object/policy-read/check-creator receipts, narrows
+reviewer identity to a host human allowlist, and separates advisory verdicts from closed
+two-snapshot readiness proofs. The K1 journal persists both full evidence documents and accepts a
+proof only when the actual evaluator reproduces it at intent time. Closed Goal-risk fields exclude
+release/deployment/data/real-world work, while explicit classic-protection semantics reject opaque
+or unsupported settings, including ruleset code-owner requirements. Malformed protected-policy
+objects return typed denials, and journals replay the exact baseline or additive policy document.
+Focused contract, observer, evaluator, adversarial journal, and actual-code eval suites cover each
+reproduced bypass, and all 287 repository tests pass. The implementation
+remains inert: repository search finds no production caller, credential, remote mutation, merge
+method, or enabled route. A proof crossing a process boundary will still require a trusted
+host-owned envelope in any future K4 composition.
 
 **Phase verification:** a pure process can explain exactly why a PR is eligible or blocked, and exhaustive negative fixtures prove it cannot merge or perform network access.
 
@@ -1493,33 +1628,39 @@ Observable completion means:
 
 **Goal:** implement one exact synchronous merge operation behind a dedicated boundary without routing any normal user flow to it.
 
-**Preconditions:** K0-K3 independently security-reviewed; runnable awaiting-review publication exists separately; exact PR identity is persisted; no merge queue or unsupported active rule.
+**Preconditions:** K0-K3 independently security-reviewed; runnable awaiting-review publication exists separately; exact PR identity is persisted; no merge queue or unsupported active rule. The isolated primitive may be built and tested before publication is composed, but it must retain zero callers until every precondition is satisfied.
 
 #### Sub-prompt K4.1 — dedicated merge credential and journal
 
-- [ ] `[writes code]` Add only a separate merge executor module/process, dedicated journal implementation using K1 schemas, focused fixtures, and credential policy; present the state machine and credential scopes before editing.
-- [ ] The executor accepts only schema-valid policy, authorization, fresh eligible evidence, and merge intent inputs. It cannot discover work, update a Goal, push, open/edit/comment on a PR, change protection/rulesets, delete a branch, release, deploy, or invoke repository code.
-- [ ] Restrict the merge token to the one repository and permissions needed for reading the exact PR and writing contents through the merge endpoint. Bind and compare its exact actor/app/installation identity with observer evidence and every bypass list.
-- [ ] Persist the write-once intent before network mutation. An intent with no terminal result is `reconcile-required`; it is never automatically replayed.
-- [ ] Imitate `OperationJournal` atomic write-once behavior and binding checks, but keep its namespace/action enums separate from the local mission journal until composition is explicitly approved.
-- [ ] Existing operation/publication tests must pass unmodified and retain zero merge calls.
-- [ ] No deletion is expected. Show zero callers for the new executor before and after this phase.
-- [ ] Expected diff: 220-340 lines. Split credential policy from journaling if larger.
-- [ ] Append a `PROGRESS.md` line recording that the primitive is unreachable/default-off.
-- [ ] Stop if the merge token is also available to implementation, observer, repository commands, or ordinary publication, or if its actor may bypass a rule.
+- [x] `[writes code]` Add only a separate merge executor module/process, dedicated journal implementation using K1 schemas, focused fixtures, and credential policy; present the state machine and credential scopes before editing.
+- [x] The executor accepts only schema-valid policy, authorization, exact protected policy, an
+  intent-ready two-snapshot proof, both bound evidence records, and merge intent inputs. It rejects
+  a single advisory verdict. It cannot discover work, update a Goal, push, open/edit/comment on a
+  PR, change protection/rulesets, delete a branch, release, deploy, or invoke repository code.
+- [x] Restrict the merge token to the one repository and permissions needed for reading the exact PR and writing contents through the merge endpoint. Bind and compare its exact actor/app/installation identity with observer evidence and every bypass list.
+- [x] Persist the write-once intent before network mutation. An intent with no terminal result is `reconcile-required`; it is never automatically replayed.
+- [x] Atomically claim the authorization/readiness proof once across operation ids, persist a closed authenticated credential receipt, and allow only the intent creator to record dispatch and send.
+- [x] Imitate `OperationJournal` atomic write-once behavior and binding checks, but keep its namespace/action enums separate from the local mission journal until composition is explicitly approved.
+- [x] Existing operation/publication behavior remains green and retains zero merge calls. The two deliberate K3 absence guards now assert exact K4 isolation instead of asserting that no writer source exists.
+- [x] No deletion is expected. Show zero callers for the new executor before and after this phase.
+- [x] Split credential policy, journaling, execution, and the fixed-host backend. The implementation exceeds the estimate because the closed result reasons, exact squash proof, host-envelope boundary, and full crash matrix are explicit rather than implicit.
+- [x] Append a `PROGRESS.md` line recording that the primitive is unreachable/default-off.
+- [x] Stop if the merge token is also available to implementation, observer, repository commands, or ordinary publication, or if its actor may bypass a rule.
 
 #### Sub-prompt K4.2 — exact synchronous request and reconciliation
 
-- [ ] `[writes code]` Change only the unreachable executor/backend protocol and fixture tests; present the request, response, crash points, and reconciliation table before editing.
-- [ ] Permit one `PUT /repos/{owner}/{repo}/pulls/{number}/merge` with exact `sha` and `merge_method: squash` only. Reject missing SHA, default method, rebase, merge commit, async, stacked, auto-merge, or queue endpoints.
-- [ ] Re-read and re-evaluate fresh evidence immediately before issuing the intent; after intent persistence, send at most one request.
-- [ ] Record success only when the response says merged and exact follow-up observation confirms repository/PR/head/base, method-compatible merge commit, merging actor, and time. Do not trust the response message string.
-- [ ] On timeout/connection loss, read the exact PR/merged endpoint once through the read-only boundary. Exact proof records the result; non-merged, closed-without-merge, changed identity, or unavailable evidence returns `reconcile-required` and sends no second PUT.
-- [ ] Map 401/403/404/405/409/422, rate limits, malformed success, and already-merged responses to typed results without retrying mutation.
-- [ ] Existing tests must pass unmodified. Add crashes before intent, after intent, before send, after remote side effect/before response, after response/before result, and after result; assert one or zero merge calls as appropriate.
-- [ ] No deletion is expected. Expected diff: 180-280 lines.
-- [ ] Append a `PROGRESS.md` line recording fixture call counts and the absence of a normal caller.
-- [ ] Stop if response-loss reconciliation cannot attribute the exact merge or if any path retries a pending intent.
+- [x] `[writes code]` Change only the unreachable executor/backend protocol and fixture tests; present the request, response, crash points, and reconciliation table before editing.
+- [x] Permit one `PUT /repos/{owner}/{repo}/pulls/{number}/merge` with exact `sha` and `merge_method: squash` only. Reject missing SHA, default method, rebase, merge commit, async, stacked, auto-merge, or queue endpoints.
+- [x] Re-read and re-evaluate fresh evidence immediately before issuing the intent; after intent persistence, send at most one request.
+- [x] Record success only when the response says merged and exact follow-up observation confirms repository/PR/head/base, method-compatible merge commit, merging actor, and time. Do not trust the response message string.
+- [x] On timeout/connection loss, read the exact PR/merged endpoint once through the read-only boundary. Exact proof records the result; non-merged, closed-without-merge, changed identity, or unavailable evidence returns `reconcile-required` and sends no second PUT.
+- [x] Map 401/403/404/405/409/422, rate limits, malformed success, and already-merged responses to typed results without retrying mutation.
+- [x] Existing functional tests remain green. Add crashes before intent, after intent, before send, after remote side effect/before response, after response/before result, and after result; assert one or zero merge calls as appropriate.
+- [x] Distinguish a pre-dispatch crash from an ambiguous dispatched operation so reconciliation cannot credit known-zero-send state; prove concurrent callers and repackaged operation ids cannot create a second send.
+- [x] Version the strengthened intent/result shapes as v2, explicitly reject the uncomposed K1 preview v1, and cover the actual writer plus artifacts with a deterministic offline eval.
+- [x] No deletion is expected. The explicit transport, proof normalization, and crash fixtures exceed the estimate without adding an enabled caller.
+- [x] Append a `PROGRESS.md` line recording fixture call counts and the absence of a normal caller.
+- [x] Stop if response-loss reconciliation cannot attribute the exact merge or if any path retries a pending intent.
 
 **Phase verification:** the primitive is internally crash-safe and adversarially tested, but repository search proves no CLI, route, publisher, mission, or host bridge can call it.
 
@@ -1529,24 +1670,215 @@ Observable completion means:
 
 **Goal:** expose the primitive only through a separately approved post-publication controller whose default remains observation-only.
 
-**Preconditions:** K4 green and independently reviewed; awaiting-review GitHub publication is itself runnable, idempotent, and isolated; operator has installed trusted policy and credential boundaries; disposable-repository live rehearsal complete.
+**Preconditions:** K4 green and independently reviewed; awaiting-review GitHub publication is
+itself runnable, idempotent, and isolated; the operator has installed trusted policy and credential
+boundaries; and a disposable-repository rehearsal has exercised publication plus complete
+read-only evidence collection with zero merge calls. This is distinct from the later, separately
+approved composed merge rehearsal in K6.2.
+
+**Current readiness gate (2026-08-13):**
+
+- [x] K4 source primitive is green and independently reviewed.
+- [x] The source-only publication prerequisite is crash-tested and independently reviewed.
+- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, all three non-secret credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumers are an unconstructed single-snapshot collector and the unconstructed two-snapshot read-only adapter.
+- [x] The single-snapshot collector accepts one closed host-authenticated input envelope and verifies its exact canonical payload, store/repository/evidence identity, and trusted collection-start time before parsing nested authority or making any GitHub read.
+- [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
+- [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
+- [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
+- [x] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
+- [x] K5.1 read-only composition is implemented and independently reviewed.
+- [ ] K5.2 is deferred. The user withdrew no-human merge authorization on 2026-08-13 in favor of manual merging; a future implementation would require a new explicit authorization plus a separate specialized-agent security quorum over its exact design/diff. Repeated implementation approval does not satisfy this gate.
+
+Until the remaining operational prerequisites and separate K5.2 approval are checked, the safe
+next work is trusted-host/read-only-collector closure, contract clarification, and default-off
+regression coverage only. Fixture success cannot be relabeled as runnable publication,
+trusted-host installation, live evidence, or merge authority.
+
+**Bounded operational rehearsal (2026-08-12):** an external operator-hosted adapter used two
+repository-scoped GitHub Apps against the private disposable
+`Chris-Archive-Archive/pathfinder-merge-rehearsal` repository. The real source controller persisted
+one exact awaiting-review receipt for PR 1 and replayed without another remote effect. A separate
+read-only App collected two complete 16-request REST/GraphQL snapshots with disjoint request ids,
+matching receipt diff hashes, no unknown/unsupported fields, and no security-domain drift. The PR
+remained open and unmerged; deployments and releases stayed at zero; no merge App, credential,
+intent, or request existed. GitHub's qualified upgrade-required response proved classic protection
+and rulesets unavailable on this private Free-plan target, so it cannot be eligible. See
+[`docs/rehearsals/2026-08-12-zero-merge-publication.md`](docs/rehearsals/2026-08-12-zero-merge-publication.md).
+This closes only the bounded rehearsal checkbox: the adapter is not an installed package route, the
+package still has no live backend/credential loader, and the host binding deliberately was not a
+schema-valid merge policy or authorization. The first two readiness items remain unchecked. K5.1's
+explicitly approved observation-only source implementation and independent review are now complete;
+that does not close either installed-host prerequisite or authorize K5.2.
+
+**Authenticated host-artifact implementation note (2026-08-13):** added one source-only,
+uncalled immutable collection store for the completed publication/evidence boundary. It accepts an
+injected external host authenticator but ships no authenticator implementation or key loader. One
+closed envelope atomically contains the validated publication request/dispatch/receipt, publication,
+observer, and non-secret merge credential receipts, controller-branch ownership proof, complete evidence, and
+provenance. The store independently rechecks every canonical hash plus repository, mission, PR,
+ref/SHA, diff, App/installation/bot, review/check, request, and observation-time binding. POSIX
+storage is current-user-owned, owner-only, non-symlink, outside repository trust, descriptor-pinned,
+size-bounded, and write-once via a durable hard-link publication; Windows fails closed pending
+equivalent ACL proof. Reads never create state, exact repeats do not re-attest, concurrent writers
+converge on one envelope, and renamed, re-hashed, wrong-store, split-identity, or externally
+unauthenticated records block. The composer now also rejects a publication/evidence diff or mission
+binding mismatch that this integration exposed. A deterministic actual-code eval and 460 controller
+tests are green. A follow-up v2 envelope added the exact operator policy, current-run
+authorization, and shipped-baseline or additive protected policy. It independently binds their
+canonical/effective hashes, repository, mission, publication candidate, evidence policy-read, and
+validity windows. One source-only read adapter accepts only two explicit, distinct evidence ids,
+re-verifies both external attestations, and requires identical publication and authority documents
+plus one authenticator/key identity across the pair before passing them to K5.1. Additive policies
+are hashed only after recomposition with the shipped baseline. No package route constructs this
+adapter or supplies its authenticator. This closes a stronger source storage/composition contract
+only: no trusted authenticator/key, installed collector, live credential injector, publication
+route, or merge path was added, so both installed-host readiness items and K5.2 remain unchecked.
+
+**Source collector implementation note (2026-08-13):** added one unconstructed orchestration
+boundary around the already fixed observer identity, GraphQL, permission-qualified REST review, and
+exact check/status readers. Every reader must share the same injected observer installation
+credential; the observer verifier no longer requires or constructs a merge App credential. The
+collector derives the exact candidate and required-check union, eagerly materializes every supplied
+normalized base surface, closes the trusted evidence window using only its injected clock, then
+obtains the post-window controller-branch proof, composes canonical evidence/provenance, and sends
+the exact documents to the immutable external-authentication store. Stale receipt time, mixed
+credentials, backwards/expired completion, post-window lazy reads, and persistence drift fail
+closed; a real-store integration attests and reloads the exact snapshot. A follow-up source slice
+now supplies the exact candidate/diff/deployment reader and the concrete post-window ownership
+reader. The collector consumes candidate reads only after authenticated REST/GraphQL publication
+reconciliation, and it requires both readers plus the policy backend to share the exact
+observer installation credential. Changed-file patches are byte-counted directly; an omitted patch
+is accepted only for controller-attested binary content. Ownership reads are fixed to the configured
+repository ruleset, complete effective rules, and final branch ref; every response must carry the
+documented Metadata- or Contents-read qualification, and omitted bypass actors remain a hard
+unknown rather than an empty list. The collector still requires an injected policy backend,
+external authenticator, store, and already-created credentials. A follow-up now also consumes a
+non-secret current merge receipt plus a separate merge App JWT solely to verify the App,
+installation, and bot at the same trusted observation instant; the merge installation token never
+enters this process. Nothing constructs it from a command,
+mission, pack, publication controller, environment, or installed host route. It therefore narrows
+but does not close the two installed-host readiness items, and it adds no merge token, writer,
+intent, request, or K5.2 authority. A package-wide polarity regression now rejects construction of
+the top-level collector outside its source module, matching the existing zero-constructor guards on
+its concrete candidate, ownership, and normalized-policy readers.
+
+**Collector input-authentication note (2026-08-13):** replaced the collector's loose trusted
+document parameters with one closed v1 collection-input envelope. The existing injected external
+host authenticator must verify its canonical journal, publication/observer/merge credential
+receipts, policy, authorization, protected policy, policy-read receipt, full Git-object evidence,
+store/repository/evidence identity, and exact trusted-clock start before the collector parses a
+nested document or performs any GitHub read. Re-hashed tamper, stale authentication, wrong-store
+replay, malformed shape, and signature failure block at the input boundary. A follow-up also rejects
+correctly signed inputs before network when nested publication, authority, protected-policy,
+credential, repository, mission, candidate, or actor bindings split, or when policy/authorization
+is already expired; the output remains the same immutable v3 envelope. This adds no authenticator/key implementation, credential loader,
+constructor route, publication mutation, merge token, intent, request, writer, or K5.2 authority,
+so both installed-host readiness items remain unchecked.
+
+**Normalized policy REST implementation note (2026-08-13):** added one source-only concrete
+reader for the remaining classic-protection, aggregate active-rule, source-ruleset, bypass-actor,
+and exact membership surfaces. One immutable snapshot owns both normalized evidence and the
+classic/ruleset required-check views, so a caller cannot mix policy reads with different request
+audits. Active rules and the `includes_parents=true` source index are permission-qualified and fully
+paginated; every referenced ruleset is fetched once, source/index/detail identities and semantic
+parameters are cross-checked, and all physical request ids are globally unique. Bypass actors are a
+zero-request derived projection of those details rather than a duplicate synthetic read. Qualified
+private-plan absence remains explicit, while an ordinary 403, omitted ruleset `bypass_actors`,
+unknown field/parameter, source drift, request/page ceiling, or unsupported source blocks. Classic
+team and ruleset organization-admin memberships use the existing exact qualified endpoints;
+ruleset Team/RepositoryRole ids remain unresolved and ineligible because REST does not provide the
+source-owned slug/role name required to prove them safely. The reader accepts the exact merge actor
+only on each snapshot read and is still unconstructed. A follow-up now requires the collector to
+verify a current one-repository merge receipt against the live merge App/installation/bot before
+deriving that subject. The same verified identity becomes the evidence actor, while the observer
+remains only the read boundary. Provenance and the upgraded v3 host artifact bind the non-secret
+merge receipt, and all three credential identities must be distinct. Supplying the observer
+credential, merge App JWT, receipt source, external authenticator/key, and installed trusted-host
+route remain open. No credential loader, command, publication mutation, merge token, intent,
+request, or K5.2 path was added.
+
+**Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
+controller and separate write-once journal. A fresh authenticated host envelope embeds and
+canonically binds the full explicit GitHub-awaiting-review authorization, its one-PR ceiling, the
+committed mission, repository, controller branch, exact head/base SHAs, all three diff hashes,
+bounded title/body, pinned check context/App identities, and publication-only credential boundary.
+Before push or create, the injected backend must read-only preflight and return that exact target.
+The entry points take no caller-selected time; the injected host clock alone proves envelope and
+authorization freshness.
+Success persists a closed authenticated receipt containing repository id/node, PR database
+id/node/number, GitHub URL, exact refs/SHAs, mission-state and authorization hashes, diff, and each
+successful check's exact context, App id, and head SHA. The dispatch record is durable before the
+remote callback, but the journal lock is released before that callback so process death cannot
+strand recovery; a pending operation can only use read-only exact lookup/check observation and
+never pushes or creates again. Deterministic tests, a process-death probe, and an actual-code eval
+prove terminal replay, exact merge-authorization projection, one-use claims, pre-effect target
+rejection, check-identity rejection, and zero production callers. The package guard rejects both
+controller and lower-level publisher construction plus concrete generic or exact GitHub backends
+outside the source-only protocol owner. No CLI, mission host, Goal pack, installed route, live
+backend, credential loader, or merge path constructs the controller, so this prerequisite grants no
+publication or K5 execution authority. Its independent source review is now complete. The later
+K5.1 observation-only implementation does not make publication runnable, install a live evidence
+collector, or supply operator authorization, policy, or credentials.
+
+**Zero-merge trusted-host composition note (2026-08-13):** added one explicit source API that
+connects the already isolated awaiting-review publication controller to the authenticated
+single-snapshot collector. `publish_and_collect` may collect only after publication returns one
+terminal receipt and that exact validated request/dispatch/receipt is reloaded from the journal.
+`reconcile_and_collect` uses only the publisher's read-only recovery path. At the collector boundary,
+the injected host must create a freshly authenticated input for those exact records at the
+collector-owned clock instant; the store verifies the attestation and nested contracts before the
+collector compares all three validated canonical journal documents for exact equality before any
+GitHub evidence read.
+Nonterminal publication, host-input failure, or journal/input drift performs no evidence read.
+The source API constructs none of its dependencies and ships no command, live publication backend,
+credential or receipt loader, authenticator/key, environment-token access, merge token, writer,
+intent, request, or merge method. It therefore gives an external trusted host a narrow call graph
+without making either installed-host readiness claim true; both readiness items and K5.2 remain
+unchecked pending a concrete reviewed host integration. Direct integration regressions exercise
+terminal replay and lost-response recovery through the real publication controller, journal, and
+backend fixture. The fixed-target specialized-agent review record is
+[`docs/reviews/2026-08-13-zero-merge-trusted-host-security-review.md`](docs/reviews/2026-08-13-zero-merge-trusted-host-security-review.md);
+it approves only this zero-merge source composition and leaves installed-host and K5.2 gates open.
 
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 
-- [ ] `[writes code]` Add only a `merge status`/`merge evaluate` surface, composition state, operator docs, and focused tests; present the call graph before editing.
-- [ ] Default output is a typed eligibility/block report. It may collect evidence but cannot create an intent or load the merge token.
-- [ ] Keep normal `/goal`, `/pathfinder`, `/pathfinder auto`, mission host, Goal packs, publisher, and resume behavior unchanged. No automatic route escalation may call merge evaluation or execution.
-- [ ] Require exact persisted mission/PR metadata from the separately authorized publisher; never discover an arbitrary open PR by title, branch prefix alone, or latest timestamp.
-- [ ] Imitate concise controller status and structured `--json` output; rendered Markdown remains a view of canonical JSON.
-- [ ] Existing tests must pass unmodified. Add call-graph/behavior guards proving default routes and package installs load no merge credential and issue zero merge requests.
-- [ ] No deletion is expected. Show zero callers before adding the dry-run caller.
-- [ ] Expected diff: 180-280 lines.
-- [ ] Append a `PROGRESS.md` line recording dry-run-only composition.
-- [ ] Stop if awaiting-review publication lacks persisted exact PR identity or if reading merge status would implicitly authorize execution.
+- [x] `[writes code]` Add only a `merge status`/`merge evaluate` surface, composition state, operator docs, and focused tests; present the call graph before editing.
+- [x] Default output is a typed eligibility/block report. It may collect evidence but cannot create an intent or load the merge token.
+- [x] Keep normal `/goal`, `/pathfinder`, `/pathfinder auto`, mission host, Goal packs, publisher, and resume behavior unchanged. No automatic route escalation may call merge evaluation or execution.
+- [x] Require exact persisted mission/PR metadata from the separately authorized publisher; never discover an arbitrary open PR by title, branch prefix alone, or latest timestamp.
+- [x] Imitate concise controller status and structured `--json` output; rendered Markdown remains a view of canonical JSON.
+- [x] Existing behavior tests pass unchanged; three exact source-consumer allowlists were minimally updated for the sole read-only evaluator caller. Call-graph/behavior guards prove default routes and package installs load no merge credential and issue zero merge requests.
+- [x] No deletion occurred. Constructor scans showed zero publication, publisher, or merge-executor callers before and after; the new caller reaches only the pure evaluator.
+- [x] Scope remained K5.1-only. The additive diff exceeded the estimate because the closed report schema, exact receipt/evidence rebinding, installed-host ownership/symlink checks, and deterministic negative suite are explicit rather than implicit.
+- [x] Append a `PROGRESS.md` line recording dry-run-only composition.
+- [x] Stop if awaiting-review publication lacks persisted exact PR identity or if reading merge status would implicitly authorize execution.
 
-#### Sub-prompt K5.2 — separately approved execution gate
+**K5.1 implementation note (2026-08-12):** the explicitly selected command lazily loads one
+observation-only reader rooted in an owner-only, current-user-owned non-symlink host directory
+outside repository trust. On POSIX it pins that directory descriptor and reads only fixed
+journal/policy/authorization/two-snapshot evidence descendants relative to the descriptor with
+symlink following disabled; Windows fails closed until equivalent ACL ownership proof exists. It
+requires one exact validated publication request/dispatch/receipt, falls back only to the shipped
+protected-surface baseline, and rebinds both snapshots and authorization to the receipt's
+repository, mission, PR, refs, SHAs, and diff. Its closed hashed report binds each evaluated input's
+canonical identity/hash and uses only the closed evaluator deny-code domain. It always remains
+`awaiting-review` with execution, writer credential, intent readiness, and intent creation fixed to
+false; even an eligible evaluation discards the generated readiness proof. Missing or malformed
+inputs are typed, while a missing exact publication receipt stops. A deterministic actual-code
+artifact eval owns this structured runtime contract. The package scan forbids every writer,
+credential, environment-token, subprocess, and network primitive from the caller. Independent
+standards and adversarial security/spec reviews are clean after direct remediation probes for host
+path swaps, Windows ownership, journal identity, malformed JSON, exact input correlation, and
+closed report domains. The 382-test preflight and exact archive smoke are green. K5.2 remains
+closed and requires a separate specialized-agent security quorum plus explicit user authorization.
 
-- [ ] `[writes code; separately approved enablement]` Change only the explicit merge execution command/controller, authorization loader, package/docs mirrors, and focused tests; present the final call graph and human approval evidence before editing.
+#### Sub-prompt K5.2 — separately reviewed and approved execution gate
+
+**Deferred (2026-08-13):** no-human automatic merge is not being implemented. The current release
+keeps PR merging manual. Do not execute this sub-prompt unless the user later gives a new explicit
+authorization and the readiness prerequisites and exact-design quorum are independently satisfied.
+
+- [ ] `[writes code; separately approved enablement]` Change only the explicit merge execution command/controller, authorization loader, package/docs mirrors, and focused tests; present the final call graph, specialized-agent quorum record, and explicit user authorization before editing.
 - [ ] Require an authenticated host-owned policy, fresh merge-enabled run authorization, exact mission/PR binding, one remaining merge budget, fresh eligible evidence, and explicit execution command. Absence of any key returns awaiting-review without loading the writer credential.
 - [ ] Make the feature disabled in shipped defaults. Enabling it requires an operator-owned setting outside the repository plus the current run authorization; repository code and the PR diff cannot toggle it.
 - [ ] Advance canonical state to `merged` only after K4 result proof. Preserve `awaiting-review`, `blocked`, or `reconcile-required` otherwise; never report merged from a closed PR alone.
@@ -1555,7 +1887,7 @@ Observable completion means:
 - [ ] No deletion is expected. Show the exact new caller list; it must contain only the explicit controller path.
 - [ ] Expected diff: 220-340 lines. Split state projection/docs from execution if larger.
 - [ ] Append a `PROGRESS.md` line recording the enablement decision, call graph, and review reference.
-- [ ] Stop without implementation unless a human security review explicitly approves this sub-prompt after K0-K5.1 evidence. Approval to implement earlier phases does not authorize this gate.
+- [ ] Stop without implementation unless isolated standards, specification, and adversarial-security reviewers approve the exact sub-prompt under `docs/reviews/specialized-agent-review-protocol.md`, the coordinating agent reproduces their evidence, and the user explicitly authorizes K5.2 after K0-K5.1 evidence. Approval to implement earlier phases does not authorize this gate.
 
 **Phase verification:** default installs remain awaiting-review-only; an explicitly configured test host can execute exactly one eligible disposable PR merge; all ordinary and missing-evidence paths issue zero calls.
 
@@ -1580,6 +1912,9 @@ Observable completion means:
 - [ ] Stop if a fixture can reach the merge backend without first producing valid policy, authorization, evidence, intent, and one-use budget records.
 
 #### Sub-prompt K6.2 — optional disposable live rehearsal and recovery guide
+
+This is the later rehearsal of the composed writer path. It does not satisfy or replace K5's
+earlier zero-merge publication/evidence rehearsal.
 
 - [ ] `[external mutation; separately approved]` Use only a dedicated disposable GitHub repository with no deployment/release hooks, test credentials, and a test PR created for this rehearsal; present exact targets and cleanup before acting.
 - [ ] Exercise one blocked PR for each visible GitHub rule family and at most one eligible squash merge. Capture sanitized endpoint/status evidence, never tokens or private response bodies.
@@ -1632,4 +1967,11 @@ Observable completion means:
 
 ### Recommended first implementation slice
 
-**K0.1, K1.1, and K1.2 are complete.** Execute **K2.1 only** next: build a deterministic fixture-driven read-only observer/normalizer with no HTTP client or mutation method. Do not begin K4 or K5.2 without a new explicit security/enablement decision.
+**K0.1 through K4.2 are implemented locally.** The K4 primitive and source-only publication
+prerequisite have passed independent source review, but both remain unreachable and default-off:
+repository search proves no CLI, route, publisher, mission, Goal pack, or host bridge constructs the
+executor. K5 remains closed until runnable awaiting-review publication durably persists exact PR
+identity through an installed trusted host, live evidence collects every required fact, operator-owned
+policy and credential boundaries exist, the disposable rehearsal passes, and a separate
+execution-enable decision authorizes K5.2. Do not infer K5 authority from source presence, source
+review, or green fixture tests.
