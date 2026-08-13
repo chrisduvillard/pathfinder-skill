@@ -116,6 +116,11 @@ class GitHubMergeObserverTests(unittest.TestCase):
             evidence["source_rulesets"][0]["active_rules_sha256"],
             "23eb0b4836e84033625300b4750d459130d2d612ea3b4fd33d087125d8443365",
         )
+        self.assertEqual(
+            evidence["source_rulesets"][0]["node_id"],
+            "RRS_kgDORule1",
+        )
+        self.assertEqual(evidence["source_rulesets"][0]["target"], "branch")
         self.assertEqual(len(evidence["reviews"]), 1)
         self.assertEqual(len(evidence["checks"]), 2)
         self.assertEqual(evidence["checks"][1]["creator_actor_id"], 55555)

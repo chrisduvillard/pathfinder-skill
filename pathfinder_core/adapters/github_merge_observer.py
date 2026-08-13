@@ -765,7 +765,10 @@ class GitHubMergeObserver:
             })
 
         result = []
-        required = {"id", "source_type", "source_id", "enforcement", "conditions", "rules", "updated_at"}
+        required = {
+            "id", "node_id", "target", "source_type", "source_id",
+            "enforcement", "conditions", "rules", "updated_at",
+        }
         for index, value in enumerate(page.items):
             raw = _take(
                 value, required=required, optional={"bypass_visibility"},
@@ -778,7 +781,8 @@ class GitHubMergeObserver:
                 visibility = "unknown"
                 unknown_reasons.append("bypass-visibility-unknown")
             result.append({
-                "id": raw["id"], "source_type": raw["source_type"],
+                "id": raw["id"], "node_id": raw["node_id"],
+                "target": raw["target"], "source_type": raw["source_type"],
                 "source_id": raw["source_id"], "enforcement": raw["enforcement"],
                 "conditions_sha256": _sha256(raw["conditions"]),
                 "rules_sha256": _sha256(raw["rules"]),

@@ -1745,17 +1745,34 @@ credentials, backwards/expired completion, post-window lazy reads, and persisten
 closed; a real-store integration attests and reloads the exact snapshot. A follow-up source slice
 now supplies the exact candidate/diff/deployment reader and the concrete post-window ownership
 reader. The collector consumes candidate reads only after authenticated REST/GraphQL publication
-reconciliation, and it requires both readers plus the remaining policy backend to share the exact
+reconciliation, and it requires both readers plus the policy backend to share the exact
 observer installation credential. Changed-file patches are byte-counted directly; an omitted patch
 is accepted only for controller-attested binary content. Ownership reads are fixed to the configured
 repository ruleset, complete effective rules, and final branch ref; every response must carry the
 documented Metadata- or Contents-read qualification, and omitted bypass actors remain a hard
-unknown rather than an empty list. The collector still requires an injected normalized classic
-protection/ruleset/membership backend, external authenticator, store, and already-created
-credentials. Nothing constructs it from a command,
+unknown rather than an empty list. The collector still requires an injected policy backend,
+external authenticator, store, and already-created credentials. Nothing constructs it from a command,
 mission, pack, publication controller, environment, or installed host route. It therefore narrows
 but does not close the two installed-host readiness items, and it adds no merge credential, writer,
 intent, request, or K5.2 authority.
+
+**Normalized policy REST implementation note (2026-08-13):** added one source-only concrete
+reader for the remaining classic-protection, aggregate active-rule, source-ruleset, bypass-actor,
+and exact membership surfaces. One immutable snapshot owns both normalized evidence and the
+classic/ruleset required-check views, so a caller cannot mix policy reads with different request
+audits. Active rules and the `includes_parents=true` source index are permission-qualified and fully
+paginated; every referenced ruleset is fetched once, source/index/detail identities and semantic
+parameters are cross-checked, and all physical request ids are globally unique. Bypass actors are a
+zero-request derived projection of those details rather than a duplicate synthetic read. Qualified
+private-plan absence remains explicit, while an ordinary 403, omitted ruleset `bypass_actors`,
+unknown field/parameter, source drift, request/page ceiling, or unsupported source blocks. Classic
+team and ruleset organization-admin memberships use the existing exact qualified endpoints;
+ruleset Team/RepositoryRole ids remain unresolved and ineligible because REST does not provide the
+source-owned slug/role name required to prove them safely. The reader accepts only an injected exact
+merge-actor subject and is still unconstructed; binding that subject to a separately verified merge
+App receipt, supplying the observer credential and external authenticator/key, and installing a
+trusted host route remain open. No credential loader, command, publication mutation, merge
+credential, intent, request, or K5.2 path was added.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and

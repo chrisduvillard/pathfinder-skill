@@ -98,10 +98,20 @@ class NormalizedPolicyBackend(Protocol):
     @property
     def credential(self) -> object: ...
 
-    def read_classic_protection(self) -> EndpointResponse: ...
-    def read_active_rules(self) -> PageResponse: ...
-    def read_source_rulesets(self) -> tuple[PageResponse, PageResponse]: ...
-    def read_bypass_memberships(self) -> PageResponse: ...
+    def read_all(self) -> GitHubNormalizedPolicySnapshot: ...
+
+
+@dataclass(frozen=True)
+class GitHubNormalizedPolicySnapshot:
+    """One physical policy read projected for evidence and required checks."""
+
+    classic_protection: EndpointResponse
+    active_rules: PageResponse
+    source_rulesets: PageResponse
+    bypass_actors: PageResponse
+    bypass_memberships: PageResponse
+    classic_check_policy: QualifiedFeatureResponse
+    active_check_policy: PageResponse
 
 
 @dataclass(frozen=True)
@@ -224,23 +234,23 @@ class GitHubAuthenticatedEvidenceCollector:
     def _prepare(
         backend: NormalizedPolicyBackend,
         candidate: GitHubCandidateRESTSnapshot,
-    ) -> _PreparedObservationBackend:
-        classic = backend.read_classic_protection()
-        active = backend.read_active_rules()
-        source_rulesets, bypass_actors = backend.read_source_rulesets()
-        memberships = backend.read_bypass_memberships()
-        return _PreparedObservationBackend(
+    ) -> tuple[_PreparedObservationBackend, GitHubNormalizedPolicySnapshot]:
+        policy = backend.read_all()
+        if not isinstance(policy, GitHubNormalizedPolicySnapshot):
+            raise _fail("policy-backend", "normalized policy snapshot is malformed")
+        prepared = _PreparedObservationBackend(
             candidate.pull_request,
             candidate.refs,
             candidate.changed_files,
-            classic,
-            active,
-            source_rulesets,
-            bypass_actors,
-            memberships,
+            policy.classic_protection,
+            policy.active_rules,
+            policy.source_rulesets,
+            policy.bypass_actors,
+            policy.bypass_memberships,
             candidate.deployments,
             candidate.merged_state,
         )
+        return prepared, policy
 
     @staticmethod
     def _exact_candidate(
@@ -312,8 +322,6 @@ class GitHubAuthenticatedEvidenceCollector:
         policy: Mapping[str, object],
         authorization: Mapping[str, object],
         protected_policy: Mapping[str, object],
-        classic_check_policy: QualifiedFeatureResponse,
-        active_check_policy: PageResponse,
         policy_read: Mapping[str, object],
         object_evidence: Mapping[str, object],
         evidence_id: str,
@@ -395,7 +403,7 @@ class GitHubAuthenticatedEvidenceCollector:
             controller_pusher=pusher,
             object_evidence=documents["object_evidence"],
         )
-        prepared = self._prepare(policy_backend, candidate)
+        prepared, policy_snapshot = self._prepare(policy_backend, candidate)
         rest_reviews = self.reviews.read_all(
             repository={"owner": owner, "name": name},
             pull_number=number,
@@ -412,8 +420,8 @@ class GitHubAuthenticatedEvidenceCollector:
             )
         required_checks = GitHubRequiredCheckProjector.project(
             host_policy_checks=host_checks,
-            classic_protection=classic_check_policy,
-            active_rules=active_check_policy,
+            classic_protection=policy_snapshot.classic_check_policy,
+            active_rules=policy_snapshot.active_check_policy,
         )
         check_runs, commit_statuses = self.checks.read_all(
             owner=owner,
@@ -463,8 +471,8 @@ class GitHubAuthenticatedEvidenceCollector:
             graphql=graphql,
             rest_reviews=rest_reviews,
             host_policy_checks=host_checks,
-            classic_check_policy=classic_check_policy,
-            active_check_policy=active_check_policy,
+            classic_check_policy=policy_snapshot.classic_check_policy,
+            active_check_policy=policy_snapshot.active_check_policy,
             check_runs=check_runs,
             commit_statuses=commit_statuses,
             evidence_id=evidence_id,

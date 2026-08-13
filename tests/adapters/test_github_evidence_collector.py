@@ -11,6 +11,7 @@ from pathfinder_core.adapters.github_checks import GitHubCheckEvidenceReader
 from pathfinder_core.adapters.github_candidate_rest import GitHubCandidateRESTSnapshot
 from pathfinder_core.adapters.github_evidence_collector import (
     GitHubAuthenticatedEvidenceCollector,
+    GitHubNormalizedPolicySnapshot,
 )
 from pathfinder_core.adapters.github_evidence_credentials import (
     EVIDENCE_BOUNDARY,
@@ -105,11 +106,32 @@ class Store:
         return {"authenticated": True, "evidence_id": values["evidence"]["evidence_id"]}
 
 
-class RecordingBackend(FixtureObservationBackend):
-    def __init__(self, responses, events, credential):
+class PolicyBackend(FixtureObservationBackend):
+    def __init__(self, responses, credential, classic_policy, active_policy):
         super().__init__(responses)
-        self.events = events
         self.credential = credential
+        self.classic_policy = classic_policy
+        self.active_policy = active_policy
+
+    def read_all(self):
+        source, bypass = self.read_source_rulesets()
+        return GitHubNormalizedPolicySnapshot(
+            self.read_classic_protection(),
+            self.read_active_rules(),
+            source,
+            bypass,
+            self.read_bypass_memberships(),
+            self.classic_policy,
+            self.active_policy,
+        )
+
+
+class RecordingBackend(PolicyBackend):
+    def __init__(
+        self, responses, events, credential, classic_policy, active_policy
+    ):
+        super().__init__(responses, credential, classic_policy, active_policy)
+        self.events = events
 
     def _record(self, name, value):
         self.events.append(f"base:{name}")
@@ -201,10 +223,12 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
 
     def inputs(self, *, backend=None):
         if backend is None:
-            policy_backend = FixtureObservationBackend(
-                copy.deepcopy(self.helper.responses)
+            policy_backend = PolicyBackend(
+                copy.deepcopy(self.helper.responses),
+                self.installation,
+                self.helper.classic_policy,
+                self.helper.active_policy,
             )
-            policy_backend.credential = self.installation
         else:
             policy_backend = backend
         return {
@@ -217,8 +241,6 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             "policy": self.policy,
             "authorization": self.authorization,
             "protected_policy": ProtectedSurfaceRegistry.load().to_document(),
-            "classic_check_policy": self.helper.classic_policy,
-            "active_check_policy": self.helper.active_policy,
             "policy_read": self.helper.context["policy_read"],
             "object_evidence": self.helper.context["object_evidence"],
             "evidence_id": self.helper.context["evidence_id"],
@@ -248,7 +270,11 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
 
     def test_eagerly_materializes_every_remaining_base_surface_before_ownership(self):
         backend = RecordingBackend(
-            copy.deepcopy(self.helper.responses), self.events, self.installation
+            copy.deepcopy(self.helper.responses),
+            self.events,
+            self.installation,
+            self.helper.classic_policy,
+            self.helper.active_policy,
         )
         original_identity = self.identity.verify_observer
         original_graphql = self.graphql.read_pull_request
@@ -314,8 +340,12 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             self.collector()
 
     def test_rejects_policy_backend_with_a_different_credential_before_reads(self):
-        backend = FixtureObservationBackend(copy.deepcopy(self.helper.responses))
-        backend.credential = installation_credential("different")
+        backend = PolicyBackend(
+            copy.deepcopy(self.helper.responses),
+            installation_credential("different"),
+            self.helper.classic_policy,
+            self.helper.active_policy,
+        )
         with self.assertRaisesRegex(GitHubObservationError, "share the observer"):
             self.collector().collect_and_persist(**self.inputs(backend=backend))
         self.graphql.read_pull_request.assert_not_called()

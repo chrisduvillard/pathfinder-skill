@@ -360,6 +360,8 @@
     "source_rulesets": [
       {
         "id": 7001,
+        "node_id": "RRS_kgDORule1",
+        "target": "branch",
         "source_type": "Repository",
         "source_id": 123456789,
         "enforcement": "active",
@@ -432,7 +434,7 @@
     },
     "unsupported_reasons": [],
     "unknown_reasons": [],
-    "evidence_sha256": "32422125376f5868ec1557c7b778d5958e5755827930d95780491eb3fff20ada"
+    "evidence_sha256": "ff1e75d9dd02d13f6277c266b37a308dc55f8b12dd54fe3ed3ae8cc5fe3488d7"
   },
   "evidence": {
     "schema_version": 1,
@@ -459,7 +461,7 @@
       {"ruleset_id": 7001, "source_type": "Repository", "source_id": 123456789, "rule_type": "pull_request", "parameters_sha256": "5555555555555555555555555555555555555555555555555555555555555555", "approval_count": 1, "allowed_merge_methods": ["squash"], "code_owner_review_required": false, "required_checks": [], "strict": null},
       {"ruleset_id": 7001, "source_type": "Repository", "source_id": 123456789, "rule_type": "required_status_checks", "parameters_sha256": "6666666666666666666666666666666666666666666666666666666666666666", "approval_count": null, "allowed_merge_methods": [], "code_owner_review_required": null, "required_checks": [{"context": "preflight (ubuntu-latest)", "app_id": 15368}], "strict": true}
     ],
-    "source_rulesets": [{"id": 7001, "source_type": "Repository", "source_id": 123456789, "enforcement": "active", "conditions_sha256": "7777777777777777777777777777777777777777777777777777777777777777", "rules_sha256": "8888888888888888888888888888888888888888888888888888888888888888", "active_rules_sha256": "5c3bc2cde48539464ecff2378f77e2faf80c7cf55ee6d6483b2097e6e8e479ee", "updated_at": "2026-08-11T12:00:00+00:00", "bypass_visibility": "complete", "bypass_actor_keys": [], "bypass_actor_metadata": []}],
+    "source_rulesets": [{"id": 7001, "node_id": "RRS_kgDORule1", "target": "branch", "source_type": "Repository", "source_id": 123456789, "enforcement": "active", "conditions_sha256": "7777777777777777777777777777777777777777777777777777777777777777", "rules_sha256": "8888888888888888888888888888888888888888888888888888888888888888", "active_rules_sha256": "5c3bc2cde48539464ecff2378f77e2faf80c7cf55ee6d6483b2097e6e8e479ee", "updated_at": "2026-08-11T12:00:00+00:00", "bypass_visibility": "complete", "bypass_actor_keys": [], "bypass_actor_metadata": []}],
     "bypass_memberships": [],
     "reviews": [{"id": 9001, "actor_id": 44444, "actor_login": "reviewer", "actor_type": "User", "repository_permission": "write", "state": "APPROVED", "commit_sha": "cccccccccccccccccccccccccccccccccccccccc", "submitted_at": "2026-08-11T12:07:00+00:00", "author_association": "MEMBER", "dismissed": false}],
     "review_requests": [],
@@ -470,7 +472,7 @@
     ],
     "mergeability": {"mergeable": "MERGEABLE", "merge_state_status": "CLEAN", "review_decision": "APPROVED", "queue_entry": false, "required_sha": "cccccccccccccccccccccccccccccccccccccccc"},
     "unsupported_reasons": [], "unknown_reasons": [],
-    "evidence_sha256": "25a81ce096817526a8ce48eb338efba4f50d3207fd0b53476cbc3c012b5a15db"
+    "evidence_sha256": "c3193d6d2944de6da2bb868e38cef37c328d68ca2256c9a5b99ff938aac70e7b"
   },
   "readiness_proof": {
     "schema_version": 1,
@@ -478,25 +480,25 @@
     "policy": {"policy_id": "merge_policy_example1", "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176"},
     "authorization": {"merge_authorization_id": "merge_authorization_example1", "authorization_sha256": "75bc47841e92b2b670488d938c09b90d03005bdb132cf9002256b5ee042766bd"},
     "protected_policy_sha256": "a9d9fd4f4eb8f0813f9c6bbfdf6bd6e70d9048e8233e374644cc348dac958e7a",
-    "initial_snapshot": {"evidence_id": "merge_evidence_example1_initial", "evidence_sha256": "32422125376f5868ec1557c7b778d5958e5755827930d95780491eb3fff20ada", "policy_read_receipt_id": "policy_read_example1_initial", "request_ids_sha256": "c82157f29f86b06d1d668c0afffcac0cd7ce0d7747dfced986469d3ece9ffe8b", "observed_at": "2026-08-11T12:07:45+00:00", "completed_at": "2026-08-11T12:07:59+00:00", "expires_at": "2026-08-11T12:08:45+00:00"},
-    "reread_snapshot": {"evidence_id": "merge_evidence_example1", "evidence_sha256": "25a81ce096817526a8ce48eb338efba4f50d3207fd0b53476cbc3c012b5a15db", "policy_read_receipt_id": "policy_read_example1", "request_ids_sha256": "8362823ed36ce422d5af6787391010ba4c5cf0cb4a73c7b38514555698717e70", "observed_at": "2026-08-11T12:08:00+00:00", "completed_at": "2026-08-11T12:08:20+00:00", "expires_at": "2026-08-11T12:09:20+00:00"},
-    "proof_sha256": "6deafe75985c286d0ff17d4a2dbc7964914394d3c6636b2b66b0f87f42407fd5"
+    "initial_snapshot": {"evidence_id": "merge_evidence_example1_initial", "evidence_sha256": "ff1e75d9dd02d13f6277c266b37a308dc55f8b12dd54fe3ed3ae8cc5fe3488d7", "policy_read_receipt_id": "policy_read_example1_initial", "request_ids_sha256": "c82157f29f86b06d1d668c0afffcac0cd7ce0d7747dfced986469d3ece9ffe8b", "observed_at": "2026-08-11T12:07:45+00:00", "completed_at": "2026-08-11T12:07:59+00:00", "expires_at": "2026-08-11T12:08:45+00:00"},
+    "reread_snapshot": {"evidence_id": "merge_evidence_example1", "evidence_sha256": "c3193d6d2944de6da2bb868e38cef37c328d68ca2256c9a5b99ff938aac70e7b", "policy_read_receipt_id": "policy_read_example1", "request_ids_sha256": "8362823ed36ce422d5af6787391010ba4c5cf0cb4a73c7b38514555698717e70", "observed_at": "2026-08-11T12:08:00+00:00", "completed_at": "2026-08-11T12:08:20+00:00", "expires_at": "2026-08-11T12:09:20+00:00"},
+    "proof_sha256": "dcb82d6adbea0003f8ebac62ae0a1585c29cad4837e3ed8687c8ab94d896e3f7"
   },
   "credential_receipt": {"schema_version": 1, "credential_receipt_id": "merge_credential_receipt_example1", "source": "authenticated-host-credential-store", "credential_id": "merge_credential_example1", "kind": "installation-token", "boundary": "github-merge-executor", "permissions": {"contents": "write", "metadata": "read", "pull_requests": "read"}, "repository_selection": "selected", "repository_ids": [123456789], "app_id": 24680, "app_node_id": "A_kgDOApp1234", "installation_id": 13579, "installation_account_id": 123456789, "actor_id": 97531, "actor_node_id": "U_kgDOBot1234", "login": "pathfinder-merge[bot]", "issued_at": "2026-08-11T12:00:00+00:00", "expires_at": "2026-08-11T13:00:00+00:00", "verified_at": "2026-08-11T12:08:30+00:00", "suspended": false, "receipt_sha256": "ef85e884ca63fd1837712b70a554d544e596fbd865f0c2808d6f0d46adcff17a"},
   "intent": {
     "schema_version": 2, "operation_id": "merge_operation_example1",
-    "bindings": {"readiness_proof_sha256": "6deafe75985c286d0ff17d4a2dbc7964914394d3c6636b2b66b0f87f42407fd5", "initial_evidence_id": "merge_evidence_example1_initial", "initial_evidence_sha256": "32422125376f5868ec1557c7b778d5958e5755827930d95780491eb3fff20ada", "reread_evidence_id": "merge_evidence_example1", "reread_evidence_sha256": "25a81ce096817526a8ce48eb338efba4f50d3207fd0b53476cbc3c012b5a15db", "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb", "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89", "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12", "policy_id": "merge_policy_example1", "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176", "merge_authorization_id": "merge_authorization_example1", "authorization_sha256": "75bc47841e92b2b670488d938c09b90d03005bdb132cf9002256b5ee042766bd", "credential_receipt_id": "merge_credential_receipt_example1", "credential_receipt_sha256": "ef85e884ca63fd1837712b70a554d544e596fbd865f0c2808d6f0d46adcff17a", "mission_id": "mission_example1", "binding_id": "binding_example1", "mission_authorization_id": "authorization_example1"},
+    "bindings": {"readiness_proof_sha256": "dcb82d6adbea0003f8ebac62ae0a1585c29cad4837e3ed8687c8ab94d896e3f7", "initial_evidence_id": "merge_evidence_example1_initial", "initial_evidence_sha256": "ff1e75d9dd02d13f6277c266b37a308dc55f8b12dd54fe3ed3ae8cc5fe3488d7", "reread_evidence_id": "merge_evidence_example1", "reread_evidence_sha256": "c3193d6d2944de6da2bb868e38cef37c328d68ca2256c9a5b99ff938aac70e7b", "diff_sha256": "0aba8c4bdb47c7027e16acda8e14e1d47cb2dc602a5b8f4e9f10e7d846750abb", "changed_files_sha256": "2e74034dd0ef08ea1b39b339b7e703704f508a6b2959713372a3b701605fcf89", "object_evidence_sha256": "f58fb7eae58e0db570a7530f28d465848e33c38b9706654614a17a075e3eab12", "policy_id": "merge_policy_example1", "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176", "merge_authorization_id": "merge_authorization_example1", "authorization_sha256": "75bc47841e92b2b670488d938c09b90d03005bdb132cf9002256b5ee042766bd", "credential_receipt_id": "merge_credential_receipt_example1", "credential_receipt_sha256": "ef85e884ca63fd1837712b70a554d544e596fbd865f0c2808d6f0d46adcff17a", "mission_id": "mission_example1", "binding_id": "binding_example1", "mission_authorization_id": "authorization_example1"},
     "repository": {"id": 123456789, "node_id": "R_kgDOExample1", "owner": "example-owner", "name": "example-repo", "base_branch": "main"},
     "pull_request": {"id": 987654321, "node_id": "PR_kwDOExample1", "number": 72, "head_sha": "cccccccccccccccccccccccccccccccccccccccc", "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
     "actor": {"app_id": 24680, "installation_id": 13579, "actor_id": 97531, "actor_node_id": "U_kgDOBot1234", "login": "pathfinder-merge[bot]"},
-    "merge_method": "squash", "endpoint_class": "github-rest-synchronous-pull-merge", "started_at": "2026-08-11T12:08:30+00:00", "intent_sha256": "0a6904f16d9bd957bdc1e628f555dbec6c2af095cd00c0ff8707b30bc3fc0436"
+    "merge_method": "squash", "endpoint_class": "github-rest-synchronous-pull-merge", "started_at": "2026-08-11T12:08:30+00:00", "intent_sha256": "c1dedaba852b08476fc668c7169ce8e6aba4c89110c769f0959d08772c966132"
   },
-  "dispatch": {"schema_version": 1, "operation_id": "merge_operation_example1", "intent_sha256": "0a6904f16d9bd957bdc1e628f555dbec6c2af095cd00c0ff8707b30bc3fc0436", "dispatch_started_at": "2026-08-11T12:08:30+00:00", "dispatch_sha256": "2e3463c4a908350acc4bfa823e247bc2ab78490eb8490e7076e8757b04351367"},
+  "dispatch": {"schema_version": 1, "operation_id": "merge_operation_example1", "intent_sha256": "c1dedaba852b08476fc668c7169ce8e6aba4c89110c769f0959d08772c966132", "dispatch_started_at": "2026-08-11T12:08:30+00:00", "dispatch_sha256": "1952e6806bebd97acfa456315f8d41c326173eb2a02cf7286c780029248bc5b7"},
   "result": {
-    "schema_version": 2, "result_id": "merge_result_example1", "operation_id": "merge_operation_example1", "intent_sha256": "0a6904f16d9bd957bdc1e628f555dbec6c2af095cd00c0ff8707b30bc3fc0436", "outcome": "merged", "reason": "confirmed-merged",
-    "binding": {"readiness_proof_sha256": "6deafe75985c286d0ff17d4a2dbc7964914394d3c6636b2b66b0f87f42407fd5", "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176", "authorization_sha256": "75bc47841e92b2b670488d938c09b90d03005bdb132cf9002256b5ee042766bd", "repository": {"id": 123456789, "node_id": "R_kgDOExample1"}, "pull_request": {"id": 987654321, "node_id": "PR_kwDOExample1", "number": 72, "head_sha": "cccccccccccccccccccccccccccccccccccccccc", "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}, "actor": {"app_id": 24680, "installation_id": 13579, "actor_id": 97531, "actor_node_id": "U_kgDOBot1234", "login": "pathfinder-merge[bot]"}, "merge_method": "squash"},
+    "schema_version": 2, "result_id": "merge_result_example1", "operation_id": "merge_operation_example1", "intent_sha256": "c1dedaba852b08476fc668c7169ce8e6aba4c89110c769f0959d08772c966132", "outcome": "merged", "reason": "confirmed-merged",
+    "binding": {"readiness_proof_sha256": "dcb82d6adbea0003f8ebac62ae0a1585c29cad4837e3ed8687c8ab94d896e3f7", "policy_sha256": "e8798df87cd8b17187f21ff1d9e1a330268d91b02a89b1da2b994366dfc8d176", "authorization_sha256": "75bc47841e92b2b670488d938c09b90d03005bdb132cf9002256b5ee042766bd", "repository": {"id": 123456789, "node_id": "R_kgDOExample1"}, "pull_request": {"id": 987654321, "node_id": "PR_kwDOExample1", "number": 72, "head_sha": "cccccccccccccccccccccccccccccccccccccccc", "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}, "actor": {"app_id": 24680, "installation_id": 13579, "actor_id": 97531, "actor_node_id": "U_kgDOBot1234", "login": "pathfinder-merge[bot]"}, "merge_method": "squash"},
     "merge_proof": {"proof_source": "response-and-reread", "repository_id": 123456789, "pull_request_id": 987654321, "pull_request_node_id": "PR_kwDOExample1", "pull_request_number": 72, "head_sha": "cccccccccccccccccccccccccccccccccccccccc", "base_ref": "main", "base_sha_before": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "base_sha_after": "dddddddddddddddddddddddddddddddddddddddd", "merge_commit_sha": "dddddddddddddddddddddddddddddddddddddddd", "merge_commit_parent_shas": ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"], "merged_at": "2026-08-11T12:08:38+00:00", "merged_by": {"actor_id": 97531, "actor_node_id": "U_kgDOBot1234", "login": "pathfinder-merge[bot]"}, "merge_endpoint_status": 204, "request_ids": ["request_merge_response_example1", "request_pr_followup_example1", "request_merged_followup_example1", "request_base_followup_example1", "request_commit_followup_example1"], "observed_at": "2026-08-11T12:08:39+00:00"},
-    "completed_at": "2026-08-11T12:08:40+00:00", "result_sha256": "91c3494ede7a568719612df8f187e6c2c6eeb24fc2391038bfae6f5c879859cf"
+    "completed_at": "2026-08-11T12:08:40+00:00", "result_sha256": "16791110e4e3ab81c020af7e3e5d5d832d23eb95e5136a95d02d2ac147769f7d"
   },
   "negative_cases": [
     {"name": "result without intent", "document": "intent", "operation": "remove-document", "path": []},

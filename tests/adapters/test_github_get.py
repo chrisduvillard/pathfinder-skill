@@ -282,6 +282,15 @@ class GitHubGETClientTests(unittest.TestCase):
         self.assertEqual(observed.audit.target, target)
         self.assertTrue(observed.audit.permission_qualified)
 
+        nested_target = "/repos/owner/repo/branches/release/v1/protection"
+        transport = FixtureGETTransport(response(
+            data={"required_status_checks": None}, headers=permission,
+        ))
+        observed = client(transport).get_qualified_feature(
+            "classic-protection", nested_target, feature="classic-protection"
+        )
+        self.assertEqual(observed.audit.target, nested_target)
+
         absent = {
             "message": (
                 "Upgrade to GitHub Pro or make this repository public to enable "
@@ -633,6 +642,7 @@ class GitHubGETClientTests(unittest.TestCase):
             "pathfinder_core/adapters/github_evidence_composer.py",
             "pathfinder_core/adapters/github_identity.py",
             "pathfinder_core/adapters/github_memberships.py",
+            "pathfinder_core/adapters/github_policy_rest.py",
             "pathfinder_core/adapters/github_reviews.py",
         ])
         identity_consumers = []
@@ -648,7 +658,9 @@ class GitHubGETClientTests(unittest.TestCase):
                 continue
             if "GitHubBypassMembershipReader(" in path.read_text():
                 membership_consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(membership_consumers, [])
+        self.assertEqual(membership_consumers, [
+            "pathfinder_core/adapters/github_policy_rest.py"
+        ])
         check_consumers = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):
             if path.name == "github_checks.py":
@@ -696,7 +708,8 @@ class GitHubGETClientTests(unittest.TestCase):
                 "github_branch_ownership_reader.py",
                 "github_candidate_rest.py",
                 "github_check_policy.py", "github_checks.py",
-                "github_memberships.py", "github_reviews.py",
+                "github_memberships.py", "github_policy_rest.py",
+                "github_reviews.py",
                 "github_review_reconciliation.py",
             )
         )
@@ -775,6 +788,53 @@ class GitHubGETClientTests(unittest.TestCase):
                 else:
                     value.get_qualified_branch_ownership_endpoint(surface, target)
 
+    def test_plan_feature_pages_are_fully_paginated_and_permission_qualified(self):
+        target = "/repos/owner/repo/rules/branches/release/v1"
+        permission = {
+            "X-Accepted-GitHub-Permissions": "metadata=read",
+        }
+        next_target = (
+            "/repos/owner/repo/rules/branches/release/v1"
+            "?page=2&per_page=100"
+        )
+        transport = FixtureGETTransport(
+            response(
+                data=[{"type": "pull_request"}],
+                headers={
+                    **permission,
+                    "X-GitHub-Request-Id": "active-page-1",
+                    "Link": (
+                        f"<https://api.github.com{next_target}>; rel=\"next\""
+                    ),
+                },
+            ),
+            response(
+                data=[{"type": "required_status_checks"}],
+                headers={
+                    **permission,
+                    "X-GitHub-Request-Id": "active-page-2",
+                },
+            ),
+        )
+        observed = client(transport).get_qualified_feature_pages(
+            "active-rules", target, feature="active-rules"
+        )
+        self.assertEqual(observed.pages, 2)
+        self.assertEqual(observed.total_count, 2)
+        self.assertTrue(observed.complete)
+        self.assertTrue(all(
+            audit.target == target and audit.permission_qualified is True
+            for audit in observed.audits
+        ))
+
+        transport = FixtureGETTransport(response(data=[]))
+        with self.assertRaises(GitHubObservationError) as caught:
+            client(transport).get_qualified_feature_pages(
+                "active-rules", target, feature="active-rules"
+            )
+        self.assertEqual(
+            caught.exception.outcome, ObservationOutcome.PERMISSION_MISSING
+        )
 
 if __name__ == "__main__":
     unittest.main()

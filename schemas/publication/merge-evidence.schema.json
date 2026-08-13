@@ -122,9 +122,9 @@
       "type": "array", "uniqueItems": true,
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["id", "source_type", "source_id", "enforcement", "conditions_sha256", "rules_sha256", "active_rules_sha256", "updated_at", "bypass_visibility", "bypass_actor_keys", "bypass_actor_metadata"],
+        "required": ["id", "node_id", "target", "source_type", "source_id", "enforcement", "conditions_sha256", "rules_sha256", "active_rules_sha256", "updated_at", "bypass_visibility", "bypass_actor_keys", "bypass_actor_metadata"],
         "properties": {
-          "id": {"type": "integer", "minimum": 1}, "source_type": {"enum": ["Repository", "Organization", "Enterprise"]},
+          "id": {"type": "integer", "minimum": 1}, "node_id": {"$ref": "#/$defs/nodeId"}, "target": {"const": "branch"}, "source_type": {"enum": ["Repository", "Organization", "Enterprise"]},
           "source_id": {"type": "integer", "minimum": 1}, "enforcement": {"enum": ["active", "evaluate", "disabled"]},
           "conditions_sha256": {"$ref": "#/$defs/sha256"}, "rules_sha256": {"$ref": "#/$defs/sha256"}, "active_rules_sha256": {"$ref": "#/$defs/sha256"},
           "updated_at": {"type": "string", "format": "date-time"},
