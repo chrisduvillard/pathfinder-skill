@@ -274,8 +274,8 @@ One source-only zero-merge orchestrator now connects the publication and collect
 without constructing either dependency. It permits collection only after an exact terminal
 awaiting-review receipt is reloaded from the write-once journal. The collector asks an injected
 trusted-host provider for a newly authenticated input at the collector-owned clock instant,
-authenticates the envelope, and compares its request, dispatch, and receipt byte-for-byte with that
-terminal journal before any GitHub evidence read. Its separate recovery entry point invokes only
+authenticates the envelope, and compares its request, dispatch, and receipt for exact canonical
+document equality with that terminal journal before any GitHub evidence read. Its separate recovery entry point invokes only
 the publisher's read-only reconciliation. Nonterminal publication or any journal/input drift stops
 before collection. After collection, one
 immutable externally authenticated v3 envelope contains the exact publication journal, operator
@@ -292,9 +292,10 @@ host must still inject a concrete publication backend, authenticator, credential
 policy, and live collector and persist these facts rather than UI text. Conditional merge therefore
 remains unsupported for live use. Direct integration regressions cover completed-request replay and
 lost-response read-only recovery through the real publication controller and journal fixture. The
-independent reviewer must pin the final PR head and complete
+specialized-agent review quorum must pin the implementation target and complete
 [`../reviews/2026-08-13-zero-merge-trusted-host-security-review.md`](../reviews/2026-08-13-zero-merge-trusted-host-security-review.md);
-the existence of that pending handoff does not satisfy an installed-host or K5.2 gate.
+that zero-merge approval does not satisfy an installed-host or K5.2 gate. This development-review
+quorum does not replace the runtime GitHub-recorded independent-human approval floor.
 
 ## Typed block and result contract
 

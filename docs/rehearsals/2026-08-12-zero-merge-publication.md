@@ -74,8 +74,8 @@ hashes.
 - [x] Obtain a separate independent K5.1 review; independent standards and adversarial
   security/spec reviews are clean after remediation, with direct counterexample probes retained as
   regressions.
-- [ ] Keep K5.2 closed until its separate human security approval. Repeated implementation or
-  rehearsal approval is not merge approval.
+- [ ] Keep K5.2 closed until its separate specialized-agent security quorum and explicit user
+  authorization. Repeated implementation or rehearsal approval is not merge approval.
 - [ ] If a later composed merge rehearsal is approved, use a newly bounded authorization and fresh
   evidence cycle; never reuse these expired snapshots.
 - [ ] Decide whether to retain or manually remove the disposable PR, branch, Apps, and repository after

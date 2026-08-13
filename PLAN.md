@@ -1687,7 +1687,7 @@ approved composed merge rehearsal in K6.2.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
 - [x] The publication and complete read-only evidence boundaries have passed a bounded disposable-repository rehearsal with zero merge calls.
 - [x] K5.1 read-only composition is implemented and independently reviewed.
-- [ ] K5.2 has separate human security approval. Repeated implementation approval does not satisfy this gate.
+- [ ] K5.2 has a separate specialized-agent security quorum over its exact design/diff plus explicit user authorization. Repeated implementation approval does not satisfy this gate.
 
 Until the remaining operational prerequisites and separate K5.2 approval are checked, the safe
 next work is trusted-host/read-only-collector closure, contract clarification, and default-off
@@ -1827,7 +1827,8 @@ terminal receipt and that exact validated request/dispatch/receipt is reloaded f
 `reconcile_and_collect` uses only the publisher's read-only recovery path. At the collector boundary,
 the injected host must create a freshly authenticated input for those exact records at the
 collector-owned clock instant; the store verifies the attestation and nested contracts before the
-collector compares all three journal documents byte-for-byte and before any GitHub evidence read.
+collector compares all three validated canonical journal documents for exact equality before any
+GitHub evidence read.
 Nonterminal publication, host-input failure, or journal/input drift performs no evidence read.
 The source API constructs none of its dependencies and ships no command, live publication backend,
 credential or receipt loader, authenticator/key, environment-token access, merge token, writer,
@@ -1835,9 +1836,9 @@ intent, request, or merge method. It therefore gives an external trusted host a 
 without making either installed-host readiness claim true; both readiness items and K5.2 remain
 unchecked pending a concrete reviewed host integration. Direct integration regressions exercise
 terminal replay and lost-response recovery through the real publication controller, journal, and
-backend fixture. The exact-SHA independent-review handoff is
+backend fixture. The fixed-target specialized-agent review record is
 [`docs/reviews/2026-08-13-zero-merge-trusted-host-security-review.md`](docs/reviews/2026-08-13-zero-merge-trusted-host-security-review.md);
-its pending checklist is evidence of an open gate, not approval.
+it approves only this zero-merge source composition and leaves installed-host and K5.2 gates open.
 
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 
@@ -1869,11 +1870,11 @@ credential, environment-token, subprocess, and network primitive from the caller
 standards and adversarial security/spec reviews are clean after direct remediation probes for host
 path swaps, Windows ownership, journal identity, malformed JSON, exact input correlation, and
 closed report domains. The 382-test preflight and exact archive smoke are green. K5.2 remains
-closed and requires separate human security approval.
+closed and requires a separate specialized-agent security quorum plus explicit user authorization.
 
-#### Sub-prompt K5.2 — separately approved execution gate
+#### Sub-prompt K5.2 — separately reviewed and approved execution gate
 
-- [ ] `[writes code; separately approved enablement]` Change only the explicit merge execution command/controller, authorization loader, package/docs mirrors, and focused tests; present the final call graph and human approval evidence before editing.
+- [ ] `[writes code; separately approved enablement]` Change only the explicit merge execution command/controller, authorization loader, package/docs mirrors, and focused tests; present the final call graph, specialized-agent quorum record, and explicit user authorization before editing.
 - [ ] Require an authenticated host-owned policy, fresh merge-enabled run authorization, exact mission/PR binding, one remaining merge budget, fresh eligible evidence, and explicit execution command. Absence of any key returns awaiting-review without loading the writer credential.
 - [ ] Make the feature disabled in shipped defaults. Enabling it requires an operator-owned setting outside the repository plus the current run authorization; repository code and the PR diff cannot toggle it.
 - [ ] Advance canonical state to `merged` only after K4 result proof. Preserve `awaiting-review`, `blocked`, or `reconcile-required` otherwise; never report merged from a closed PR alone.
@@ -1882,7 +1883,7 @@ closed and requires separate human security approval.
 - [ ] No deletion is expected. Show the exact new caller list; it must contain only the explicit controller path.
 - [ ] Expected diff: 220-340 lines. Split state projection/docs from execution if larger.
 - [ ] Append a `PROGRESS.md` line recording the enablement decision, call graph, and review reference.
-- [ ] Stop without implementation unless a human security review explicitly approves this sub-prompt after K0-K5.1 evidence. Approval to implement earlier phases does not authorize this gate.
+- [ ] Stop without implementation unless isolated standards, specification, and adversarial-security reviewers approve the exact sub-prompt under `docs/reviews/specialized-agent-review-protocol.md`, the coordinating agent reproduces their evidence, and the user explicitly authorizes K5.2 after K0-K5.1 evidence. Approval to implement earlier phases does not authorize this gate.
 
 **Phase verification:** default installs remain awaiting-review-only; an explicitly configured test host can execute exactly one eligible disposable PR merge; all ordinary and missing-evidence paths issue zero calls.
 
