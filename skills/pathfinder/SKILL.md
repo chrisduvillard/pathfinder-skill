@@ -157,7 +157,7 @@ When generating a Claude Code `/goal`, follow these rules:
 
 At the start, determine the repository root with an equivalent of `git rev-parse --show-toplevel`. If that fails, use the current working directory and note that it is not a Git repository. In monorepos, use the Git root unless the user explicitly scoped the work to a subproject.
 
-Record baseline `git status --short` before creating artifacts. Then create a dedicated folder:
+For Git, record baseline `git status --short` before creating artifacts. Then create a dedicated folder:
 
 ```text
 .agent-work/pathfinder/YYYYMMDD-HHMM-<short-task-slug>/
@@ -180,6 +180,13 @@ Avoid dirtying the repository with process artifacts:
 3. If the metadata update is denied, fails, or still leaves the concrete path unignored, do not write under the repository. Ask before editing tracked `.gitignore`; otherwise use an outside work folder and record why. If neither location is writable, keep the proposed artifact content in the conversation and report the blocker.
 
 Never create the run directory or any repository-local artifact until the concrete artifact path is confirmed ignored. A failed or denied ignore update is a hard pre-write gate, not permission to continue with an untracked folder.
+
+For a non-Git source folder, do not create `.agent-work` inside it and do not fabricate Git ignore
+or commit evidence. On POSIX, use an explicit current-user-owned `0700` host work root outside the
+source folder and create `<host-work-root>/pathfinder/<run>` beneath it. The controller requires
+that exact outside-source boundary. Other platforms fail this write closed pending equivalent
+ownership proof. If no supported host root is available, keep the Goal in the conversation or
+native/manual handoff and say canonical artifact saving is unavailable.
 
 Never commit or push `.agent-work/`, `.agent-workspace/`, scout reports, run logs, or generated goal artifacts unless the user explicitly requests publication after reviewing them.
 
@@ -258,17 +265,30 @@ is allowed because it validates and writes only the already-ignored Pathfinder a
 **Full-plugin prompt controller gate (required even if a host under-loads route files):**
 never hand-author `06-goal-binding.json` or `08-final-summary.json`. Also never hand-author `06-goal-command.md` or `08-final-summary.md`: they are deterministic views of the validated canonical JSON. After loading
 `schemas/artifacts/prompt-goal-request.schema.json` from the plugin root, create
-`.prompt-goal-request.json` with the complete, approved, single-line Goal condition in
+`.prompt-goal-request.json` with `schema_version: 2` and the complete, approved, single-line Goal condition in
 `objective` (without the `/goal ` prefix). The objective itself must contain the proof,
-scope or constraints, bounded-stop, untrusted-data, `changed_files`, and
-`checks_run_with_exit_results` clauses required by the Goal contract. Then run the
-following command in Claude Code (other hosts must substitute the absolute plugin root
-surfaced with this skill). `${CLAUDE_PLUGIN_ROOT}` is the plugin installation, not the
-target repository; never search the target repository for this controller.
+scope or constraints, bounded-stop, untrusted-data, and all nine structured completion
+fields required by the Goal contract. First run `repository inspect --root <repo-root> --json`
+and copy its `goal_scope` unchanged into the request. On a dirty Git tree, default to blocked;
+use `--committed-base` only after the user explicitly accepts that the Goal binds to `HEAD` and
+excludes while preserving every uncommitted file. Then run the following command in Claude Code
+(other hosts must substitute the absolute plugin root surfaced with this skill).
+`${CLAUDE_PLUGIN_ROOT}` is the plugin installation, not the target repository; never search the
+target repository for this controller.
 
 ```text
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/pathfinder-controller.sh" artifacts goal-saved --repo-root <repo-root> --output-dir <run-dir> --request-file <run-dir>/.prompt-goal-request.json --consume-request --json
 ```
+
+When and only when the user explicitly chose committed-base after the disclosure, append
+`--acknowledge-committed-base`. Merely placing `dirty_policy: committed-base` in the request is not
+enough and the controller fails before canonical writes without the separate flag. Legacy v1
+requests remain retryable under their original validation contract, but all newly created requests
+and bindings use v2.
+
+For a non-Git source on POSIX, also pass `--host-work-root <owner-only-outside-source-root>` and use
+`<host-work-root>/pathfinder/<run>` for `<run-dir>`. A non-Git Goal remains Goal-only; never pass
+its binding to mission or pack start.
 
 This controller call is the final filesystem write. The prompt route is incomplete unless
 it exits 0, returns stable IDs and all four Goal/Binding/final-summary paths, consumes the

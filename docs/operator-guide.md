@@ -169,6 +169,24 @@ bash scripts/pathfinder-controller.sh doctor --json
 
 `controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` reports whether the local host-driven start/next/record/resume protocol is callable. `unattended_execution_eligible` remains false in the read-only doctor because it does not fabricate or probe host filesystem, process, network, or credential enforcement. A real host attestation is validated again by `mission start`.
 
+Before saving a prompt Goal, derive its exact scope rather than inventing repository identity or a
+fingerprint:
+
+```bash
+bash scripts/pathfinder-controller.sh repository inspect --root <repository-or-folder> --json
+# Only after explicit user acknowledgement on a dirty Git tree:
+bash scripts/pathfinder-controller.sh repository inspect --root <repository> --committed-base --json
+```
+
+Use the returned `goal_scope` unchanged. The default dirty result blocks artifact saving. The
+committed-base result binds the Goal to `HEAD`, excludes and preserves uncommitted work, and is not
+execution authority. The later save must also pass `--acknowledge-committed-base`; without both
+steps it fails before writing canonical artifacts. On POSIX, for non-Git input pass
+`--host-work-root <owner-only-0700-directory>` to
+`artifacts goal-saved` and place the output at `<host-work-root>/pathfinder/<run>`; that host root
+must be outside the source folder. Non-POSIX hosts fail this write closed pending equivalent ACL
+ownership proof. Non-Git bindings are Goal-only and mission/pack start rejects them.
+
 For a prompt-only Goal, a full plugin writes canonical saved-Goal outputs through `artifacts goal-saved`. The command consumes only a validated `.prompt-goal-request.json` inside an already ignored Pathfinder run directory, verifies the bound Git base and safe path, emits schema-valid `06-goal-binding.json` and `08-final-summary.json`, deterministically renders both Markdown views, seals all four final artifacts read-only, and is idempotent for the same request.
 
 ## Run the local host-driven protocol
@@ -183,7 +201,7 @@ bash scripts/pathfinder-controller.sh mission resume --state-dir <path> --json
 bash scripts/pathfinder-controller.sh artifacts mission-view --repo-root <repo-root> --state-dir <path> --output-dir <ignored-run-dir> --json
 ```
 
-`start` rejects an authorization whose Goal, attempt, wall-time, or PR limit widens the immutable Goal Binding. `next` journals one closed action before returning it, including the fixed mission deadline in the trusted action context. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, complete-goal, then local `awaiting-review`. The completion receipt must carry the same stable native Goal identity returned by activation. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
+`start` rejects an authorization whose Goal, attempt, wall-time, or PR limit widens the immutable Goal Binding. It validates closed documents; the trusted host remains responsible for proving that the named Git repository, exact `HEAD`, dirty policy, and runtime controls are real before calling it. `next` journals one closed action before returning it, including the fixed mission deadline in the trusted action context. Perform only that action, then return a receipt conforming to `schemas/mission/host-action-receipt.schema.json`. `record` persists the typed receipt and operation result before advancing state. `resume` recovers persisted receipt/result boundaries, but an intent with no trustworthy receipt returns `reconcile-required` and must not be replayed. The local sequence is prepare-worktree, activate-goal, implement, verify, commit, complete-goal, then local `awaiting-review`. The completion receipt must carry the same stable native Goal identity returned by activation. A manual/non-persistent Goal blocks; push, PR, CI, merge, and publication credentials are disabled.
 
 ## Sequential Goal packs
 

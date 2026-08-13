@@ -272,6 +272,24 @@ class OneGoalMissionTests(unittest.TestCase):
                 )
             self.assertFalse(controller.store.state_path.exists())
 
+    def test_host_mission_start_rejects_non_git_goal_binding(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binding = goal_binding()
+            binding["schema_version"] = 2
+            binding["scope"].update(
+                repository_kind="non-git",
+                base_commit=None,
+                dirty_policy="not-applicable",
+            )
+            controller = HostMissionController(Path(directory) / "mission")
+            with self.assertRaisesRegex(StateError, "require a Git Goal Binding"):
+                controller.start(
+                    binding=binding,
+                    authorization=local_authorization(),
+                    runtime_boundary=BOUNDARY,
+                )
+            self.assertFalse(controller.store.state_path.exists())
+
     def test_host_mission_start_rejects_intent_hash_drift(self):
         for name in ("charter", "roadmap", "doctrine"):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:

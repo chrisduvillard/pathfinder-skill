@@ -114,12 +114,17 @@ before deciding the next transition; it does not replay the last command blindly
 
 - A read-only probe identifies Git root, scoped root, current branch, exact base commit, dirty state,
   remote type, default branch, hooks configuration, and worktree support.
+- The same probe derives the opaque local repository id and cryptographic scope fingerprint used by
+  prompt Goal requests; caller-supplied alternatives are rejected.
 - Dirty repositories block autonomy by default. An explicit committed-base mode may ignore working
   changes only after clearly stating that the Goal is bound to the selected commit.
 - Controller-owned Git invocations disable repository hooks through one wrapper.
 - Worktree paths are resolved and checked for ownership and symlink escape before writes.
 - Cleanup is never automatic for dirty, unmerged, or mission-referenced worktrees.
-- Non-Git repositories stop at discovery and Goal generation.
+- Non-Git repositories stop at discovery and Goal generation. On POSIX, canonical Goal artifacts
+  may be written only below an explicit owner-only host work root outside the source folder; other
+  platforms fail closed until they can prove equivalent ownership. Their v2 binding uses
+  `base_commit: null` and can never enter mission or pack start.
 
 `WorktreeManager` is the controller-owned implementation of these Git rules. The enabled
 host-driven bridge does not call it directly: the attested host performs the one declared worktree

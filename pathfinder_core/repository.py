@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -147,7 +149,16 @@ def probe_repository(start: Path, *, committed_base: bool = False) -> Repository
         ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], check=False
     )
     default_branch = default_result.stdout.strip() if default_result.returncode == 0 else None
-    hooks = git.run(["config", "--get", "core.hooksPath"], check=False).returncode == 0
+    # Restrict these queries to persisted repository/worktree configuration. A
+    # normal unscoped query would report GitRunner's command-only /dev/null safety
+    # override as if the user configured it. Worktree config can override local
+    # config when extensions.worktreeConfig is enabled, so inspect both stores.
+    hooks = any(
+        git.run(
+            ["config", scope, "--get", "core.hooksPath"], check=False
+        ).returncode == 0
+        for scope in ("--local", "--worktree")
+    )
     kind = "git"
     if dirty and dirty_policy == "block":
         kind = "git-dirty-blocked"
@@ -155,6 +166,72 @@ def probe_repository(start: Path, *, committed_base: bool = False) -> Repository
         kind, str(root), str(start), branch, base_commit, dirty, remote_type,
         default_branch, hooks, True,
     )
+
+
+def _goal_scope_from_probe(
+    selected: Path,
+    capabilities: RepositoryCapabilities,
+    *,
+    committed_base: bool,
+) -> dict:
+    selected = Path(selected).resolve()
+    if capabilities.kind == "non-git":
+        repository_kind = "non-git"
+        root = selected
+        scoped_root = "."
+        base_commit = None
+        dirty_policy = "not-applicable"
+    else:
+        repository_kind = "git"
+        root = Path(capabilities.root).resolve()
+        scoped_root = selected.relative_to(root).as_posix() or "."
+        base_commit = capabilities.base_commit
+        dirty_policy = "committed-base" if capabilities.dirty and committed_base else "block"
+    identity_payload = json.dumps(
+        {"kind": repository_kind, "root": str(root)},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    repository_id = f"repository_{hashlib.sha256(identity_payload).hexdigest()[:24]}"
+    scope = {
+        "repository_kind": repository_kind,
+        "repository_id": repository_id,
+        "scoped_root": scoped_root,
+        "base_commit": base_commit,
+        "dirty_policy": dirty_policy,
+    }
+    scope["fingerprint"] = hashlib.sha256(
+        json.dumps(scope, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return scope
+
+
+def inspect_repository(start: Path, *, committed_base: bool = False) -> dict:
+    """Probe repository facts once and derive the matching saved-Goal scope."""
+    selected = Path(start).resolve()
+    if not selected.is_dir():
+        raise PolicyError("repository scope must be an existing directory")
+    if not os.access(selected, os.R_OK | os.X_OK):
+        raise PolicyError("repository scope must be readable")
+    capabilities = probe_repository(selected, committed_base=committed_base)
+    return {
+        "capabilities": capabilities.as_dict(),
+        "goal_scope": _goal_scope_from_probe(
+            selected,
+            capabilities,
+            committed_base=committed_base,
+        ),
+    }
+
+
+def goal_scope(start: Path, *, committed_base: bool = False) -> dict:
+    """Return the controller-derived scope used by saved prompt Goals.
+
+    The fingerprint binds local repository identity, selected scope, committed
+    base, and dirty-tree policy. It deliberately does not crawl or execute
+    repository content; discovery caches own separate content fingerprints.
+    """
+    return inspect_repository(start, committed_base=committed_base)["goal_scope"]
 
 
 BRANCH_PATTERN = re.compile(r"^pathfinder/auto/[a-z0-9][a-z0-9-]{0,62}$")

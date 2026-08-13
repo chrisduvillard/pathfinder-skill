@@ -12,7 +12,7 @@ Pathfinder can **create a bounded Goal in any readable folder**. It also exposes
 | Linux | Supported | Protocol checks pass in CI | Actual execution remains host-attestation dependent. |
 | macOS | Supported | Protocol checks pass locally and in CI | Actual execution remains host-attestation dependent. |
 | Windows Git-Bash/MSYS | Supported | Protocol checks pass in CI | Actual execution remains host-attestation dependent. |
-| Non-Git folder | Supported | Goal-only | Discovery and Goal generation work; no branch/commit/PR mission. |
+| Non-Git folder | Supported | Goal-only | Discovery and Goal generation work. On POSIX, canonical artifacts require an explicit owner-only work root outside the source folder; other platforms fail that write closed. No branch/commit/PR mission. |
 | Clean Git, no remote | Supported | Local protocol when host-attested | Ends at a committed local awaiting-review branch. |
 | Git with a non-GitHub remote | Supported | Same local protocol | Other forge adapters are deferred. |
 | GitHub remote | Supported | Same local protocol; no publication | Push, PR, CI polling, and merge are disabled in the bridge. |
@@ -28,6 +28,11 @@ Intent, host-receipt, terminal-result, and transition crash boundaries are teste
 The host/runtime must prove filesystem and process isolation, network policy, credential isolation, and native Goal lifecycle access. The local bridge must have no publication credential. Repository understanding, candidate value, code quality, and verifier judgment remain model behavior backed by evidence and replays—not formal proofs. `unknown` host enforcement blocks unattended execution.
 
 Stable installs use immutable release tags. Repository `main` is the edge channel and may change between commits.
+
+Before writing a saved Goal, use `repository inspect` to obtain the controller-derived repository
+identity and scope fingerprint. Dirty Git defaults to `block`; `--committed-base` is an explicit
+choice that binds the Goal to `HEAD`, requires the separate save acknowledgement, and excludes while preserving uncommitted files. Non-Git scope
+uses no fabricated commit and cannot be passed to `mission start` or a Goal pack.
 
 ## Credential-free host installation smoke
 

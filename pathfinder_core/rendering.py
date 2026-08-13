@@ -191,10 +191,20 @@ def render_goal_command(binding: dict) -> str:
     for name in sorted(binding["capabilities"]):
         lines.append(f"  - {_inline(name)}: {_inline(binding['capabilities'][name])}")
     lines.append("- scope:")
-    for name in (
+    scope_fields = [
         "repository_id", "scoped_root", "base_commit", "dirty_policy", "fingerprint"
-    ):
+    ]
+    if "repository_kind" in binding["scope"]:
+        scope_fields.insert(0, "repository_kind")
+    for name in scope_fields:
         lines.append(f"  - {name}: {_inline(binding['scope'][name])}")
+    if binding["scope"]["dirty_policy"] == "committed-base":
+        lines.extend([
+            "  - warning: this Goal is bound to the committed HEAD above; uncommitted files "
+            "are excluded from execution and preserved",
+            "  - autonomy: requires a separate explicit authorization and must not operate "
+            "on the current dirty checkout",
+        ])
     lines.append("- proof_requirements:")
     lines.extend(f"  - {_inline(value)}" for value in binding["proof_requirements"])
     lines.extend([

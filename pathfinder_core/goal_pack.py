@@ -89,6 +89,8 @@ class GoalPackController:
             zip(bindings, authorization["goal_bindings"], strict=True), 1
         ):
             self._validate("artifacts/goal-binding.schema.json", binding)
+            if binding["scope"].get("repository_kind", "git") != "git":
+                raise StateError("goal pack missions require Git Goal Bindings")
             if authorized["position"] != position:
                 raise StateError("goal pack ordered Goal Binding positions are not sequential")
             expected = {

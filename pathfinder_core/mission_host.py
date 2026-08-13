@@ -73,6 +73,8 @@ class HostMissionController:
         protected_registry: ProtectedSurfaceRegistry,
     ) -> None:
         self.store.validate("artifacts/goal-binding.schema.json", binding)
+        if binding["scope"].get("repository_kind", "git") != "git":
+            raise StateError("host missions require a Git Goal Binding")
         self.store.validate("mission/authorization-snapshot.schema.json", authorization)
         self.store.validate("artifacts/runtime-boundary.schema.json", boundary)
         expected = (

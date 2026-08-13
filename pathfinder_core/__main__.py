@@ -12,6 +12,7 @@ from .goal_pack import GoalPackController
 from .migrations import activate_intent, migrate_intent, migrate_mission
 from .mission_host import HostMissionController
 from .mission_views import write_mission_views
+from .repository import inspect_repository
 from .storage import MissionStore, read_json
 
 
@@ -33,6 +34,18 @@ def _parser() -> argparse.ArgumentParser:
         command.add_argument("--host-dir", required=True)
         command.add_argument("--publication-request-id", required=True)
         command.add_argument("--json", action="store_true", dest="as_json")
+    repository = commands.add_parser(
+        "repository", help="inspect repository scope without writes"
+    )
+    repository_commands = repository.add_subparsers(
+        dest="repository_command", required=True
+    )
+    inspect_repository = repository_commands.add_parser(
+        "inspect", help="derive a canonical saved-Goal scope"
+    )
+    inspect_repository.add_argument("--root", required=True)
+    inspect_repository.add_argument("--committed-base", action="store_true")
+    inspect_repository.add_argument("--json", action="store_true", dest="as_json")
     mission = commands.add_parser("mission", help="inspect controller mission state")
     mission_commands = mission.add_subparsers(dest="mission_command", required=True)
     start = mission_commands.add_parser("start", help="initialize a local host-driven mission")
@@ -117,6 +130,15 @@ def _parser() -> argparse.ArgumentParser:
     goal_saved.add_argument("--repo-root", required=True)
     goal_saved.add_argument("--output-dir", required=True)
     goal_saved.add_argument("--request-file", required=True)
+    goal_saved.add_argument(
+        "--host-work-root",
+        help="owner-only outside-source root required for non-Git artifacts",
+    )
+    goal_saved.add_argument(
+        "--acknowledge-committed-base",
+        action="store_true",
+        help="confirm that uncommitted files are preserved but excluded",
+    )
     goal_saved.add_argument("--consume-request", action="store_true")
     goal_saved.add_argument("--json", action="store_true", dest="as_json")
     mission_view = artifact_commands.add_parser(
@@ -149,6 +171,20 @@ def main(argv=None) -> int:
         args = _parser().parse_args(argv)
         if args.command == "doctor":
             return _doctor(args.as_json)
+        if args.command == "repository" and args.repository_command == "inspect":
+            result = inspect_repository(
+                Path(args.root), committed_base=args.committed_base
+            )
+            capabilities = result["capabilities"]
+            if args.as_json:
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"kind: {capabilities['kind']}")
+                print(f"root: {capabilities['root'] or args.root}")
+                print(f"dirty: {str(capabilities['dirty']).lower()}")
+                print(f"repository_id: {result['goal_scope']['repository_id']}")
+                print(f"scope_fingerprint: {result['goal_scope']['fingerprint']}")
+            return 0
         if args.command == "merge":
             from .merge_status import (
                 InstalledHostMergeReader,
@@ -326,6 +362,8 @@ def main(argv=None) -> int:
                 args.output_dir,
                 args.request_file,
                 consume_request=args.consume_request,
+                host_work_root=args.host_work_root,
+                acknowledge_committed_base=args.acknowledge_committed_base,
             )
             if args.as_json:
                 print(json.dumps(result, indent=2, sort_keys=True))

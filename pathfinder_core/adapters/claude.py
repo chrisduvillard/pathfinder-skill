@@ -21,11 +21,13 @@ class ClaudeGoalAdapter:
         if not objective.strip():
             raise StateError("Goal objective cannot be empty")
         command = f"/goal {objective}"
-        record = GoalRecord(None, objective, GoalStatus.ACTIVE)
         if self.launcher:
+            record = GoalRecord(None, objective, GoalStatus.ACTIVE)
             self.launcher(command)
             return AdapterResult("native-launched", record)
-        return AdapterResult("manual", record, command)
+        return AdapterResult(
+            "manual", GoalRecord(None, objective, GoalStatus.NONE), command
+        )
 
     def inspect(self) -> AdapterResult:
         return AdapterResult(
