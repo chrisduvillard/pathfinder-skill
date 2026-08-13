@@ -1,12 +1,12 @@
 # Specialized-agent security review: zero-merge trusted-host composition
 
-Status: provisional pending an immutable remediation commit and follow-up role review
+Status: approved within the recorded zero-merge source and evaluator scope
 
 Pull request: [#73](https://github.com/chrisduvillard/pathfinder-skill/pull/73)
 
 Comparison base: `7174eac5d1f813d1148ede76818b7ed38a4ea698`
 
-Reviewed target: `559e2e9953587bc868a36cdab8a94e5629db4bf4`
+Reviewed implementation/evaluator target: `d483e19c5fadab717ca5533df0401e12e0b62f7e`
 
 Reviewed: 2026-08-13
 
@@ -18,17 +18,18 @@ K5.2.
 
 ## Fixed review identity
 
-- [x] Compared `7174eac5d1f813d1148ede76818b7ed38a4ea698...559e2e9953587bc868a36cdab8a94e5629db4bf4`.
-- [x] Reviewed commits `1dc38c9` and `559e2e9` as the complete zero-merge composition slice.
+- [x] Compared `7174eac5d1f813d1148ede76818b7ed38a4ea698...d483e19c5fadab717ca5533df0401e12e0b62f7e`.
+- [x] Reviewed `1dc38c9` and `559e2e9` as the zero-merge composition, `cbdcced` as the review/eval remediation, and `d483e19` as the alias-isolation remediation.
 - [x] Isolated standards role: `/root/standards_review`.
 - [x] Isolated specification role: `/root/spec_fidelity_review`.
 - [x] Isolated adversarial security role: `/root/security_adversarial_review`.
 - [x] Coordinating agent independently inspected the diff, reproduced focused and package evidence, and adjudicated the reports.
-- [x] All eight hosted checks were green for exact target `559e2e9`.
+- [x] All eight hosted checks were green for source target `559e2e9`; full and exact-package checks passed again on final reviewed target `d483e19`.
 
-The source approval above remains pinned to `559e2e9`. Subsequent review-governance and deterministic
-eval changes require their own focused re-review; any later product or contract change invalidates
-this decision until the affected quorum roles run again.
+This approval is pinned to `d483e19`. The immediate successor that closes this record changes only
+the review record and progress log; it adds no product, evaluator, contract, gate, or capability
+behavior. Any later material product, evaluator, contract, or governance change invalidates the
+affected decision until the required quorum roles run again.
 
 ## Required safety invariants
 
@@ -47,13 +48,16 @@ this decision until the affected quorum roles run again.
 
 ## Reproduced evidence
 
-- [x] `bash scripts/check-all.sh .`: 514 tests plus all validators and artifact replays passed.
-- [x] `PATHFINDER_HOST_SMOKE=1 bash scripts/package-smoke.sh . 3.2.0 worktree`: exact package and credential-free Codex/Claude install/load passed.
+- [x] `bash scripts/check-all.sh .` on `d483e19`: 514 tests plus all validators and artifact replays passed.
+- [x] `PATHFINDER_HOST_SMOKE=1 bash scripts/package-smoke.sh . 3.2.0 worktree` on `d483e19`: exact package and credential-free Codex/Claude install/load passed.
 - [x] Focused publication/collector/controller/journal suite: 48 tests passed in both coordinator and adversarial-review snapshots.
 - [x] Source scan found zero packaged constructor callers of `TrustedHostPublicationEvidenceController`.
 - [x] Source scan found no live publication backend, authenticator/key loader, credential loader, merge writer, or merge-execution caller added by this diff.
 - [x] Standards review found one process defect: changed adapter behavior lacked the deterministic eval required by `CONTRIBUTING.md`.
 - [x] The process defect was remediated with `trusted-host-publication-contract`, covering terminal validation, exact binding, replay, recovery, zero callers, and zero merge primitives.
+- [x] The first follow-up adversarial review found two weak-oracle families: disconnected binding order and lexical constructor/sink scans; `cbdcced` moved the eval onto the real collector path and added AST/route checks.
+- [x] The second follow-up found re-export/assignment and bound-member alias bypasses; `d483e19` replaced symbol matching with non-owner capability-module isolation and member-reference checks.
+- [x] Disposable mutants for binding removal/reordering, direct/dotted/re-export/assignment/subclass aliases, bound methods, dynamic module lookup, `getattr`, and subscripted capability access all made the eval fail for the intended reason.
 
 ## Adversarial result
 
@@ -64,15 +68,18 @@ this decision until the affected quorum roles run again.
 - [x] One controlled two-thread dispatch interleaving retained one push and one PR creation.
 - [x] Empty, missing, and non-string evidence identities failed closed.
 - [x] Caller/source-to-sink tracing found no secret loader, ordinary route, or merge sink.
+- [x] Final remediation ledger on `d483e19` closed `COMPLETE_WITHIN_MODEL`: 14 `SURVIVED` and zero counterexample, inconclusive, blocked, or deferred rows.
 
 Residual bounds: one deterministic high-value two-thread schedule rather than every schedule; no live
 GitHub, concrete installed host, host authenticator, credential injector, or Windows ACL execution;
 injected host components remain trusted. These surfaces are absent or fail-closed in the reviewed
-source target and remain operational gates below.
+source target and remain operational gates below. The static reachability oracle covers direct,
+aliased, re-exported, subclassed, bound-member, exact dynamic-module, `getattr`, and subscript forms;
+deliberately obfuscated computed-string interpreter tricks remain outside the bounded model.
 
-## Provisional quorum decision
+## Quorum decision
 
-- [ ] **Approve the remediation target within the zero-merge scope and recorded bounds.** Pending immutable target and follow-up results.
+- [x] **Approve exact target `d483e19c5fadab717ca5533df0401e12e0b62f7e` within the zero-merge source/evaluator scope and recorded bounds.**
 - [ ] **Approve with unresolved conditions.**
 - [ ] **Reject.**
 
@@ -88,7 +95,10 @@ validated trust boundary; revisit only if another production consumer is approve
 Quorum attestation:
 
 - [x] Every role reviewed the fixed target independently and reported to the coordinating agent.
-- [ ] The coordinating agent reproduced the evidence and committed the only hard process remediation at an immutable target.
+- [x] Standards follow-up found no hard finding and confirmed the repository-required deterministic eval and final wording.
+- [x] Specification follow-up found no mismatch or scope creep and confirmed runtime-human, installed-host, and K5.2 boundaries.
+- [x] Adversarial follow-up found no confirmed defect on `d483e19`; closure was `COMPLETE_WITHIN_MODEL` and the decision was approve.
+- [x] The coordinating agent reproduced the findings, mutant failures, full checks, and exact-package checks on the immutable target.
 - [x] This decision does not approve an installed trusted host or K5.2 merge composition.
 - [x] K5.2 requires a later specialized-agent quorum over its exact design/diff plus explicit user authorization.
 - [x] Any future runtime self-merge still requires a GitHub-recorded independent human PR approval; agent review is not counted as that approval.
