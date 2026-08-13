@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -213,6 +214,10 @@ class ArtifactTests(unittest.TestCase):
                 write_saved_prompt_goal(root, output, request_path)
             self.assertFalse((output / "06-goal-binding.json").exists())
 
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "getuid"),
+        "requires POSIX ownership and mode validation",
+    )
     def test_non_git_goal_writes_only_to_explicit_owner_only_host_root(self):
         with tempfile.TemporaryDirectory() as directory:
             container = Path(directory)
@@ -278,6 +283,10 @@ class ArtifactTests(unittest.TestCase):
                     host_work_root=host_root,
                 )
 
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "getuid"),
+        "requires POSIX ownership and mode validation",
+    )
     def test_non_git_goal_is_available_through_the_packaged_cli(self):
         with tempfile.TemporaryDirectory() as directory:
             container = Path(directory)
