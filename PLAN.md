@@ -1757,7 +1757,9 @@ installation, and bot at the same trusted observation instant; the merge install
 enters this process. Nothing constructs it from a command,
 mission, pack, publication controller, environment, or installed host route. It therefore narrows
 but does not close the two installed-host readiness items, and it adds no merge token, writer,
-intent, request, or K5.2 authority.
+intent, request, or K5.2 authority. A package-wide polarity regression now rejects construction of
+the top-level collector outside its source module, matching the existing zero-constructor guards on
+its concrete candidate, ownership, and normalized-policy readers.
 
 **Normalized policy REST implementation note (2026-08-13):** added one source-only concrete
 reader for the remaining classic-protection, aggregate active-rule, source-ruleset, bypass-actor,

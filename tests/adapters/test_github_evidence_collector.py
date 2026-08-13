@@ -461,12 +461,13 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             self.assertGreaterEqual(authenticator.verify_calls, 2)
 
     def test_module_has_no_secret_loader_command_publication_or_merge_route(self):
-        source = (
+        source_path = (
             ROOT
             / "pathfinder_core"
             / "adapters"
             / "github_evidence_collector.py"
-        ).read_text()
+        )
+        source = source_path.read_text()
         for forbidden in (
             "GitHubEvidenceCredential(",
             "GitHubHTTPS",
@@ -479,6 +480,13 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             "def merge(",
         ):
             self.assertNotIn(forbidden, source)
+        callers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path == source_path:
+                continue
+            if "GitHubAuthenticatedEvidenceCollector(" in path.read_text():
+                callers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(callers, [])
 
 
 if __name__ == "__main__":
