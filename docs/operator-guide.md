@@ -39,12 +39,16 @@ separately hashed provenance receipt bound to the evidence, observer/merge/publi
 reviews, checks, request identities, and collection window. The ownership proof requires restricted
 create/update/delete rules, the authenticated publication App as the sole always-bypass actor, the
 complete effective-rule view for the exact head branch, and a final exact ref/SHA reread after
-evidence collection. It still does not authenticate durable host storage, install a collector,
-load a credential from the host, or add a caller. A separate source-only store can now place the
+evidence collection. It still does not install a collector, load a credential from the host, or add
+a caller. Before any GitHub read, the source collector now accepts only one closed input envelope
+whose exact canonical bytes, store/repository/evidence identity, and trusted-clock start are verified
+by the injected external host authenticator; it no longer accepts loose policy, authorization,
+receipt, or object-evidence arguments. Unsigned, altered, stale, malformed, or wrong-store input
+stops without a network read. After collection, the same source-only store can place the
 validated publication journal, exact operator policy/current-run authorization/protected policy,
 all three non-secret credential receipts, ownership proof, evidence, and provenance into one immutable
-externally authenticated v3 envelope. It ships no authenticator/key implementation. Its sole
-packaged consumer is an unconstructed read-only adapter that requires two explicit evidence ids,
+externally authenticated v3 envelope. It ships no authenticator/key implementation. Its packaged
+consumers are the unconstructed collector and an unconstructed read-only adapter that requires two explicit evidence ids,
 identical publication/authority documents, and the same authenticator/key identity. On POSIX the
 store pins an owner-only non-symlink directory
 outside repository trust and uses one size-bounded, fsynced, write-once file; Windows fails closed

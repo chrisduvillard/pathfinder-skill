@@ -18,18 +18,26 @@ The `source`, `authenticated`, and `issuer` fields are bindings to host evidence
 claims. A consumer must authenticate the storage envelope before parsing the document. Copying a
 valid document into repository content, output, a PR, or a Goal never makes it trusted.
 
-`host-artifact-collection.schema.json` closes the source-only durable collection shape. Its signed
-v3 payload contains exactly the publication journal triplet, publication, observer, and merge
+`host-artifact-collection-input.schema.json` closes the collector's pre-read input shape. Its signed
+v1 payload contains exactly the publication journal triplet, publication, observer, and merge
+credential receipts, operator authority, protected-surface policy, policy-read receipt, and full
+Git-object evidence. The collector accepts no loose document arguments: at its trusted-clock start
+it requires the injected external host authenticator to verify the exact canonical envelope before
+it parses any nested document or performs any GitHub read. Unsigned, re-hashed, stale, wrong-store,
+or malformed envelopes block as unknown input.
+
+`host-artifact-collection.schema.json` closes the source-only durable output shape. Its signed v3
+payload contains exactly the publication journal triplet, publication, observer, and merge
 credential receipts, operator policy, current-run authorization, protected-surface policy,
 controller-branch ownership proof, complete merge evidence, and provenance. The merge receipt is
 non-secret metadata; the envelope contains no token. The store
 derives the collection id from the exact evidence id, binds an operator-provided store id and
 repository identity, validates every nested schema/canonical hash and cross-document identity, and
 accepts the envelope only when the injected external host authenticator verifies the exact canonical
-payload. Its only packaged consumer is an unconstructed read-only adapter that requires two
-explicit evidence ids and identical publication/authority plus authenticator/key bindings across
-the pair. The package deliberately supplies neither an authenticator/key implementation nor a
-route that constructs that adapter.
+payload. Its two packaged consumers are the unconstructed single-snapshot collector and an
+unconstructed read-only adapter that requires two explicit evidence ids and identical
+publication/authority plus authenticator/key bindings across the pair. The package deliberately
+supplies neither an authenticator/key implementation nor a route that constructs either boundary.
 
 ## Policy invariants
 

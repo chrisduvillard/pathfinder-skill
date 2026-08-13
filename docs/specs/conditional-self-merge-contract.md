@@ -262,6 +262,12 @@ hashes, ownership proof, query hash, reconciled review ids, required checks, req
 collection window. Cross-surface request reuse or any split identity/policy/review/check/ownership
 input blocks. The composer owns no client, credential, storage, command, or caller, so it is not an
 installed production collector. A separate source-only store now defines the durable boundary: one
+closed externally authenticated input envelope first binds the exact journal, all three non-secret
+credential receipts, operator authority, protected policy, policy-read receipt, full Git-object
+evidence, repository, evidence id, store id, and trusted collection-start time. The collector
+verifies that canonical envelope through the injected authenticator before parsing nested documents
+or making any GitHub read; loose, stale, re-hashed, wrong-store, or unauthenticated inputs block.
+After collection, one
 immutable externally authenticated v3 envelope contains the exact publication journal, operator
 policy/current-run authorization/protected policy, publication, observer, and non-secret merge
 credential receipts,

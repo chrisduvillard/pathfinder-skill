@@ -1681,6 +1681,7 @@ approved composed merge rehearsal in K6.2.
 - [x] K4 source primitive is green and independently reviewed.
 - [x] The source-only publication prerequisite is crash-tested and independently reviewed.
 - [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, all three non-secret credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumers are an unconstructed single-snapshot collector and the unconstructed two-snapshot read-only adapter.
+- [x] The single-snapshot collector accepts one closed host-authenticated input envelope and verifies its exact canonical payload, store/repository/evidence identity, and trusted collection-start time before parsing nested authority or making any GitHub read.
 - [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
@@ -1760,6 +1761,17 @@ but does not close the two installed-host readiness items, and it adds no merge 
 intent, request, or K5.2 authority. A package-wide polarity regression now rejects construction of
 the top-level collector outside its source module, matching the existing zero-constructor guards on
 its concrete candidate, ownership, and normalized-policy readers.
+
+**Collector input-authentication note (2026-08-13):** replaced the collector's loose trusted
+document parameters with one closed v1 collection-input envelope. The existing injected external
+host authenticator must verify its canonical journal, publication/observer/merge credential
+receipts, policy, authorization, protected policy, policy-read receipt, full Git-object evidence,
+store/repository/evidence identity, and exact trusted-clock start before the collector parses a
+nested document or performs any GitHub read. Re-hashed tamper, stale authentication, wrong-store
+replay, malformed shape, and signature failure block at the input boundary; the output remains the
+same immutable v3 envelope. This adds no authenticator/key implementation, credential loader,
+constructor route, publication mutation, merge token, intent, request, writer, or K5.2 authority,
+so both installed-host readiness items remain unchecked.
 
 **Normalized policy REST implementation note (2026-08-13):** added one source-only concrete
 reader for the remaining classic-protection, aggregate active-rule, source-ruleset, bypass-actor,

@@ -1,4 +1,19 @@
 {
+  "input_schema_version": 1,
+  "input_source": "authenticated-host-collection-input",
+  "input_document_names": [
+    "authorization",
+    "merge_credential_receipt",
+    "object_evidence",
+    "observer_credential_receipt",
+    "policy",
+    "policy_read",
+    "protected_policy",
+    "publication_credential_receipt",
+    "publication_dispatch",
+    "publication_receipt",
+    "publication_request"
+  ],
   "schema_version": 3,
   "source": "authenticated-host-artifact-store",
   "store_id": "host_artifact_store_contract1",

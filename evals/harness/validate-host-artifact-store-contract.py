@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import hmac
 import json
@@ -84,6 +85,7 @@ def main() -> int:
 
     from tests.adapters import test_github_evidence_composer as composer_fixtures
     from tests.adapters.test_github_branch_ownership import credential_receipt
+    from tests.core.test_host_artifact_store import collection_input_envelope
 
     helper = composer_fixtures.GitHubCompleteEvidenceComposerTests()
     helper.setUp()
@@ -125,10 +127,65 @@ def main() -> int:
                 2026, 8, 11, 12, 8, 30, tzinfo=timezone.utc
             ),
         )
+        input_envelope = collection_input_envelope(
+            documents,
+            authenticator,
+            store_id=expected["store_id"],
+            policy_read=helper.context["policy_read"],
+            object_evidence=helper.context["object_evidence"],
+        )
+        input_schema = load(
+            root
+            / "schemas/publication/host-artifact-collection-input.schema.json"
+        )
+        Draft202012Validator.check_schema(input_schema)
+        Draft202012Validator(
+            input_schema, format_checker=FormatChecker()
+        ).validate(input_envelope)
+        input_payload = store.verify_collection_inputs(
+            input_envelope,
+            authenticated_at="2026-08-11T12:08:00+00:00",
+        )
+        require(
+            input_envelope["schema_version"] == expected["input_schema_version"]
+            and input_payload["source"] == expected["input_source"],
+            "host artifact collection input identity drift",
+        )
+        require(
+            sorted(input_payload["documents"])
+            == expected["input_document_names"],
+            "host artifact collection input document set drift",
+        )
+
+        tampered_input = copy.deepcopy(input_envelope)
+        tampered_input["payload"]["documents"]["policy"]["authority"][
+            "issuer"
+        ] = "attacker@example"
+        tampered_input["attestation"]["payload_sha256"] = canonical_sha256(
+            tampered_input["payload"]
+        )
+        tampered_input["envelope_sha256"] = canonical_sha256(
+            tampered_input, "envelope_sha256"
+        )
+        try:
+            store.verify_collection_inputs(
+                tampered_input,
+                authenticated_at="2026-08-11T12:08:00+00:00",
+            )
+        except Exception as error:
+            require(
+                "input attestation verification failed" in str(error),
+                "re-hashed input tampering failed for the wrong reason",
+            )
+        else:
+            raise ValueError(
+                "re-hashed input tampering bypassed host authentication"
+            )
+
         first = store.persist(**documents)
         second = store.persist(**documents)
         require(first == second, "repeat persistence changed the immutable envelope")
-        require(authenticator.attest_calls == 1, "repeat persistence re-attested")
+        require(authenticator.attest_calls == 2, "repeat persistence re-attested")
 
         schema = load(
             root / "schemas/publication/host-artifact-collection.schema.json"

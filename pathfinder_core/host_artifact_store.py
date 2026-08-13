@@ -97,6 +97,12 @@ class HostArtifactCollectionStore:
             read_json(SCHEMA_ROOT / "host-artifact-collection.schema.json"),
             format_checker=FormatChecker(),
         )
+        self._input_envelope_validator = Draft202012Validator(
+            read_json(
+                SCHEMA_ROOT / "host-artifact-collection-input.schema.json"
+            ),
+            format_checker=FormatChecker(),
+        )
         self._document_validators = {
             label: Draft202012Validator(
                 read_json(SCHEMA_ROOT / schema), format_checker=FormatChecker()
@@ -115,6 +121,13 @@ class HostArtifactCollectionStore:
             raise StateError(f"invalid merge evidence id: {evidence_id}")
         collection_id = f"host_artifact_collection_{match.group(1)}"
         return collection_id, f"{collection_id}.json"
+
+    @staticmethod
+    def _input_identity(evidence_id: str) -> str:
+        match = EVIDENCE_ID.fullmatch(evidence_id)
+        if match is None:
+            raise StateError(f"invalid merge evidence id: {evidence_id}")
+        return f"host_artifact_input_{match.group(1)}"
 
     def _open_root(self) -> int:
         if os.name == "nt":
@@ -284,22 +297,23 @@ class HostArtifactCollectionStore:
                 f"schema validation failed for {label}{suffix}: {error.message}"
             ) from error
 
-    def _validate_documents(self, documents: Mapping[str, object]) -> None:
+    def _validate_input_documents(
+        self, documents: Mapping[str, object]
+    ) -> str:
         try:
             request = documents["publication_request"]
             dispatch = documents["publication_dispatch"]
             receipt = documents["publication_receipt"]
-            publication_credential = documents["publication_credential_receipt"]
+            publication_credential = documents[
+                "publication_credential_receipt"
+            ]
             observer_credential = documents["observer_credential_receipt"]
             merge_credential = documents["merge_credential_receipt"]
             policy = documents["policy"]
             authorization = documents["authorization"]
             protected_policy = documents["protected_policy"]
-            ownership = documents["branch_ownership"]
-            evidence = documents["evidence"]
-            provenance = documents["provenance"]
         except (KeyError, TypeError) as error:
-            raise StateError("host artifact document set is incomplete") from error
+            raise StateError("host artifact input document set is incomplete") from error
 
         PublicationJournal(Path(".")).validate_records(request, dispatch, receipt)
         for label, document in (
@@ -309,9 +323,6 @@ class HostArtifactCollectionStore:
             ("policy", policy),
             ("authorization", authorization),
             ("protected_policy", protected_policy),
-            ("branch_ownership", ownership),
-            ("evidence", evidence),
-            ("provenance", provenance),
         ):
             self._validate_schema(label, document)
         self._validate_hash(
@@ -329,9 +340,6 @@ class HostArtifactCollectionStore:
         self._validate_hash(
             authorization, "authorization_sha256", "merge authorization"
         )
-        self._validate_hash(ownership, "ownership_sha256", "branch ownership")
-        self._validate_hash(evidence, "evidence_sha256", "merge evidence")
-        self._validate_hash(provenance, "provenance_sha256", "evidence provenance")
         try:
             shipped_protected = ProtectedSurfaceRegistry.load()
             if protected_policy["mode"] == "baseline":
@@ -339,16 +347,40 @@ class HostArtifactCollectionStore:
                     raise StateError(
                         "protected baseline differs from the shipped policy"
                     )
-                effective_protected_sha256 = shipped_protected.sha256
-            else:
-                effective_protected_sha256 = ProtectedSurfaceRegistry(
-                    shipped_protected.to_document(), protected_policy
-                ).sha256
+                return shipped_protected.sha256
+            return ProtectedSurfaceRegistry(
+                shipped_protected.to_document(), protected_policy
+            ).sha256
         except (KeyError, StateError, TypeError, ValueError) as error:
             raise StateError(
                 "host artifact protected policy is not a valid shipped baseline "
                 "or additive override"
             ) from error
+
+    def _validate_documents(self, documents: Mapping[str, object]) -> None:
+        try:
+            receipt = documents["publication_receipt"]
+            publication_credential = documents["publication_credential_receipt"]
+            observer_credential = documents["observer_credential_receipt"]
+            merge_credential = documents["merge_credential_receipt"]
+            policy = documents["policy"]
+            authorization = documents["authorization"]
+            ownership = documents["branch_ownership"]
+            evidence = documents["evidence"]
+            provenance = documents["provenance"]
+        except (KeyError, TypeError) as error:
+            raise StateError("host artifact document set is incomplete") from error
+
+        effective_protected_sha256 = self._validate_input_documents(documents)
+        for label, document in (
+            ("branch_ownership", ownership),
+            ("evidence", evidence),
+            ("provenance", provenance),
+        ):
+            self._validate_schema(label, document)
+        self._validate_hash(ownership, "ownership_sha256", "branch ownership")
+        self._validate_hash(evidence, "evidence_sha256", "merge evidence")
+        self._validate_hash(provenance, "provenance_sha256", "evidence provenance")
 
         receipt_repository = receipt["repository"]
         evidence_repository = {
@@ -549,6 +581,70 @@ class HostArtifactCollectionStore:
             )
         ):
             raise StateError("host artifact collection document bindings differ")
+
+    def verify_collection_inputs(
+        self,
+        envelope: Mapping[str, object],
+        *,
+        authenticated_at: str,
+    ) -> dict:
+        """Authenticate one closed input bundle before any nested document is used."""
+
+        document = copy.deepcopy(envelope)
+        try:
+            self._input_envelope_validator.validate(document)
+        except (SchemaError, ValidationError) as error:
+            location = ".".join(str(part) for part in getattr(error, "path", ()))
+            suffix = f" at {location}" if location else ""
+            raise StateError(
+                "schema validation failed for host artifact collection input"
+                f"{suffix}: {error.message}"
+            ) from error
+        if document["envelope_sha256"] != canonical_sha256(
+            document, "envelope_sha256"
+        ):
+            raise StateError("host artifact input envelope canonical hash differs")
+
+        payload = document["payload"]
+        attestation = document["attestation"]
+        payload_bytes = _canonical_bytes(payload)
+        payload_sha256 = canonical_sha256(payload)
+        input_id = self._input_identity(payload["evidence_id"])
+        if (
+            payload["input_id"] != input_id
+            or payload["store_id"] != self.store_id
+            or attestation["payload_sha256"] != payload_sha256
+        ):
+            raise StateError("host artifact input identity binding differs")
+        if (
+            payload["authenticated_at"] != authenticated_at
+            or attestation["authenticated_at"] != authenticated_at
+        ):
+            raise StateError(
+                "host artifact input was not authenticated at the trusted "
+                "collection start"
+            )
+        try:
+            verified = self.authenticator.verify(
+                payload_bytes, copy.deepcopy(attestation)
+            )
+        except Exception as error:
+            raise StateError(
+                "host artifact input attestation verification failed"
+            ) from error
+        if verified is not True:
+            raise StateError("host artifact input attestation verification failed")
+
+        documents = payload["documents"]
+        self._validate_input_documents(documents)
+        if (
+            payload["publication_request_id"]
+            != documents["publication_request"]["publication_request_id"]
+            or payload["repository"]
+            != documents["publication_receipt"]["repository"]
+        ):
+            raise StateError("host artifact input document bindings differ")
+        return copy.deepcopy(payload)
 
     def _validate_envelope(
         self, envelope: dict, *, expected_evidence_id: str

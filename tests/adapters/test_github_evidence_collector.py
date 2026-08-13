@@ -24,14 +24,19 @@ from pathfinder_core.adapters.github_graphql import GitHubGraphQLClient
 from pathfinder_core.adapters.github_identity import GitHubIdentityVerifier
 from pathfinder_core.adapters.github_merge_observer import GitHubObservationError
 from pathfinder_core.adapters.github_reviews import GitHubReviewReader
+from pathfinder_core.errors import StateError
 from pathfinder_core.host_artifact_store import HostArtifactCollectionStore
 from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
+from pathfinder_core.storage import canonical_sha256
 from tests.adapters.test_github_branch_ownership import credential_receipt
 from tests.adapters.test_github_evidence_composer import (
     GitHubCompleteEvidenceComposerTests,
 )
 from tests.adapters.test_github_merge_observer import FixtureObservationBackend
-from tests.core.test_host_artifact_store import FakeHostAuthenticator
+from tests.core.test_host_artifact_store import (
+    FakeHostAuthenticator,
+    collection_input_envelope,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -99,6 +104,21 @@ class Store:
     def __init__(self, events=None):
         self.events = events
         self.calls = []
+        self.input_calls = []
+
+    def verify_collection_inputs(self, envelope, *, authenticated_at):
+        self.input_calls.append((copy.deepcopy(envelope), authenticated_at))
+        if self.events is not None:
+            self.events.append("input-auth")
+        if (
+            envelope["payload"]["authenticated_at"] != authenticated_at
+            or envelope["attestation"]["authenticated_at"] != authenticated_at
+        ):
+            raise StateError(
+                "host artifact input was not authenticated at the trusted "
+                "collection start"
+            )
+        return copy.deepcopy(envelope["payload"])
 
     def persist(self, **values):
         self.calls.append(copy.deepcopy(values))
@@ -175,6 +195,7 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         publication = json.loads(PUBLICATION_FIXTURE.read_text())
         authority = json.loads(AUTHORITY_FIXTURE.read_text())
         self.helper = helper
+        snapshot = helper.compose()
         self.policy = authority["policy"]
         self.authorization = authority["authorization"]
         self.dispatch = publication["dispatch"]
@@ -214,6 +235,19 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             helper.branch_ownership, self.installation, self.events
         )
         self.store = Store(self.events)
+        self.input_authenticator = FakeHostAuthenticator()
+        self.input_documents = {
+            "publication_request": helper.publication_request,
+            "publication_dispatch": self.dispatch,
+            "publication_receipt": helper.publication_receipt,
+            "publication_credential_receipt": credential_receipt(),
+            "observer_credential_receipt": helper.identity.credential_receipt,
+            "merge_credential_receipt": helper.merge_identity.credential_receipt,
+            "policy": self.policy,
+            "authorization": self.authorization,
+            "protected_policy": ProtectedSurfaceRegistry.load().to_document(),
+            "evidence": snapshot.evidence,
+        }
 
     def collector(self, *, clock=None, graphql=None):
         values = iter((STARTED, COMPLETED))
@@ -228,7 +262,7 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             clock=clock or (lambda: next(values)),
         )
 
-    def inputs(self, *, backend=None):
+    def inputs(self, *, backend=None, authenticator=None, store_id=None):
         if backend is None:
             policy_backend = PolicyBackend(
                 copy.deepcopy(self.helper.responses),
@@ -240,18 +274,13 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             policy_backend = backend
         return {
             "policy_backend": policy_backend,
-            "observer_credential_receipt": self.helper.identity.credential_receipt,
-            "merge_credential_receipt": self.helper.merge_identity.credential_receipt,
-            "publication_request": self.helper.publication_request,
-            "publication_dispatch": self.dispatch,
-            "publication_receipt": self.helper.publication_receipt,
-            "publication_credential_receipt": credential_receipt(),
-            "policy": self.policy,
-            "authorization": self.authorization,
-            "protected_policy": ProtectedSurfaceRegistry.load().to_document(),
-            "policy_read": self.helper.context["policy_read"],
-            "object_evidence": self.helper.context["object_evidence"],
-            "evidence_id": self.helper.context["evidence_id"],
+            "input_envelope": collection_input_envelope(
+                self.input_documents,
+                authenticator or self.input_authenticator,
+                policy_read=self.helper.context["policy_read"],
+                object_evidence=self.helper.context["object_evidence"],
+                **({"store_id": store_id} if store_id is not None else {}),
+            ),
         }
 
     def test_collects_composes_and_persists_one_authenticated_snapshot(self):
@@ -284,6 +313,7 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             before,
             {key: value for key, value in inputs.items() if key != "policy_backend"},
         )
+        self.assertEqual(len(self.store.input_calls), 1)
 
     def test_eagerly_materializes_every_remaining_base_surface_before_ownership(self):
         backend = RecordingBackend(
@@ -336,6 +366,12 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         completed_index = self.events.index("clock:complete")
         candidate_index = self.events.index("candidate")
         ownership_index = self.events.index("ownership")
+        first_reader_index = min(
+            index
+            for index, event in enumerate(self.events)
+            if event.startswith(("base:", "reader:"))
+        )
+        self.assertLess(self.events.index("input-auth"), first_reader_index)
         self.assertTrue(all(
             index < completed_index
             for index, event in enumerate(self.events)
@@ -403,6 +439,61 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         self.assertEqual(self.ownership.calls, [])
         self.assertEqual(self.store.calls, [])
 
+    @unittest.skipIf(os.name == "nt", "host ACL verification is POSIX-only")
+    def test_rejects_rehashed_input_tamper_before_any_github_read(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repository = root / "repository"
+            host = root / "operator-host"
+            repository.mkdir(mode=0o755)
+            host.mkdir(mode=0o700)
+            authenticator = FakeHostAuthenticator()
+            store = HostArtifactCollectionStore(
+                repository,
+                host,
+                store_id="host_artifact_store_collector1",
+                authenticator=authenticator,
+            )
+            collector = GitHubAuthenticatedEvidenceCollector(
+                identity=self.identity,
+                graphql=self.graphql,
+                reviews=self.reviews,
+                checks=self.checks,
+                candidate=self.candidate,
+                ownership=self.ownership,
+                store=store,
+                clock=lambda: STARTED,
+            )
+            inputs = self.inputs(
+                authenticator=authenticator,
+                store_id="host_artifact_store_collector1",
+            )
+            envelope = inputs["input_envelope"]
+            envelope["payload"]["documents"]["policy"]["authority"][
+                "issuer"
+            ] = "attacker@example"
+            envelope["attestation"]["payload_sha256"] = canonical_sha256(
+                envelope["payload"]
+            )
+            envelope["envelope_sha256"] = canonical_sha256(
+                envelope, "envelope_sha256"
+            )
+
+            with self.assertRaisesRegex(
+                GitHubObservationError, "input attestation verification"
+            ):
+                collector.collect_and_persist(**inputs)
+
+            self.identity.verify_observer.assert_not_called()
+            self.identity.verify_merge_actor.assert_not_called()
+            self.graphql.read_pull_request.assert_not_called()
+            self.reviews.read_all.assert_not_called()
+            self.checks.read_all.assert_not_called()
+            self.assertEqual(inputs["policy_backend"].actor_calls, [])
+            self.assertEqual(self.candidate.calls, [])
+            self.assertEqual(self.ownership.calls, [])
+            self.assertFalse((host / "artifact-collections").exists())
+
     def test_rejects_backwards_or_expired_completion_before_proof_and_store(self):
         for completed in (
             STARTED - timedelta(seconds=1),
@@ -449,7 +540,10 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
                 clock=lambda: next(values),
             )
 
-            result = collector.collect_and_persist(**self.inputs())
+            result = collector.collect_and_persist(**self.inputs(
+                authenticator=authenticator,
+                store_id="host_artifact_store_collector1",
+            ))
             loaded = store.load(self.helper.context["evidence_id"])
 
             self.assertEqual(result.envelope, loaded)
@@ -457,8 +551,8 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
                 loaded["payload"]["documents"]["evidence"],
                 result.snapshot.evidence,
             )
-            self.assertEqual(authenticator.attest_calls, 1)
-            self.assertGreaterEqual(authenticator.verify_calls, 2)
+            self.assertEqual(authenticator.attest_calls, 2)
+            self.assertGreaterEqual(authenticator.verify_calls, 3)
 
     def test_module_has_no_secret_loader_command_publication_or_merge_route(self):
         source_path = (

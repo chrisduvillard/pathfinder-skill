@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable, Mapping, NoReturn, Protocol
 
+from ..errors import StateError
 from ..host_artifact_store import HostArtifactCollectionStore
 from ..merge_time import parse_aware_timestamp
 from .github_candidate_rest import GitHubCandidateRESTSnapshot
@@ -324,18 +325,7 @@ class GitHubAuthenticatedEvidenceCollector:
         self,
         *,
         policy_backend: NormalizedPolicyBackend,
-        observer_credential_receipt: Mapping[str, object],
-        merge_credential_receipt: Mapping[str, object],
-        publication_request: Mapping[str, object],
-        publication_dispatch: Mapping[str, object],
-        publication_receipt: Mapping[str, object],
-        publication_credential_receipt: Mapping[str, object],
-        policy: Mapping[str, object],
-        authorization: Mapping[str, object],
-        protected_policy: Mapping[str, object],
-        policy_read: Mapping[str, object],
-        object_evidence: Mapping[str, object],
-        evidence_id: str,
+        input_envelope: Mapping[str, object],
     ) -> AuthenticatedEvidenceCollection:
         if (
             policy_backend.credential
@@ -345,19 +335,17 @@ class GitHubAuthenticatedEvidenceCollector:
                 "policy-backend",
                 "normalized policy reader does not share the observer credential",
             )
-        documents = copy.deepcopy({
-            "observer_credential_receipt": observer_credential_receipt,
-            "merge_credential_receipt": merge_credential_receipt,
-            "publication_request": publication_request,
-            "publication_dispatch": publication_dispatch,
-            "publication_receipt": publication_receipt,
-            "publication_credential_receipt": publication_credential_receipt,
-            "policy": policy,
-            "authorization": authorization,
-            "protected_policy": protected_policy,
-            "policy_read": policy_read,
-            "object_evidence": object_evidence,
-        })
+
+        observed_time = self.clock()
+        observed_at = _timestamp(observed_time)
+        try:
+            input_payload = self.store.verify_collection_inputs(
+                input_envelope, authenticated_at=observed_at
+            )
+            documents = copy.deepcopy(input_payload["documents"])
+            evidence_id = input_payload["evidence_id"]
+        except (KeyError, StateError, TypeError) as error:
+            raise _fail("collection-input", str(error)) from error
         try:
             observer_receipt = GitHubEvidenceCredentialReceipt.from_document(
                 documents["observer_credential_receipt"]
@@ -367,8 +355,6 @@ class GitHubAuthenticatedEvidenceCollector:
                 "observer-credential", "observer credential receipt is invalid"
             ) from None
 
-        observed_time = self.clock()
-        observed_at = _timestamp(observed_time)
         if observed_time != _time(observer_receipt.verified_at, "observer-credential"):
             raise _fail(
                 "collection-window",

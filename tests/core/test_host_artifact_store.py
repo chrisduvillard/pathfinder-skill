@@ -42,6 +42,7 @@ AUTHORITY_FIXTURE = (
     / "publication-contracts.json"
 )
 NOW = datetime(2026, 8, 11, 12, 8, 30, tzinfo=timezone.utc)
+COLLECTION_STARTED = "2026-08-11T12:08:00+00:00"
 STORE_ID = "host_artifact_store_example1"
 
 
@@ -71,6 +72,72 @@ class FakeHostAuthenticator:
     def verify(self, payload, attestation):
         self.verify_calls += 1
         return hmac.compare_digest(attestation["proof"], self._proof(payload))
+
+
+def collection_input_envelope(
+    documents, authenticator, *, store_id=STORE_ID,
+    authenticated_at=COLLECTION_STARTED,
+    policy_read=None,
+    object_evidence=None,
+):
+    evidence = documents["evidence"]
+    evidence_id = evidence["evidence_id"]
+    suffix = evidence_id.removeprefix("merge_evidence_")
+    input_documents = {
+        key: copy.deepcopy(documents[key])
+        for key in (
+            "publication_request",
+            "publication_dispatch",
+            "publication_receipt",
+            "publication_credential_receipt",
+            "observer_credential_receipt",
+            "merge_credential_receipt",
+            "policy",
+            "authorization",
+            "protected_policy",
+        )
+    }
+    input_documents.update({
+        "policy_read": copy.deepcopy(
+            policy_read
+            if policy_read is not None
+            else evidence["observation"]["policy_read"]
+        ),
+        "object_evidence": copy.deepcopy(
+            object_evidence
+            if object_evidence is not None
+            else evidence["diff"]["object_evidence"]
+        ),
+    })
+    payload = {
+        "input_id": f"host_artifact_input_{suffix}",
+        "store_id": store_id,
+        "source": "authenticated-host-collection-input",
+        "publication_request_id": input_documents["publication_request"][
+            "publication_request_id"
+        ],
+        "evidence_id": evidence_id,
+        "repository": copy.deepcopy(
+            input_documents["publication_receipt"]["repository"]
+        ),
+        "authenticated_at": authenticated_at,
+        "documents": input_documents,
+    }
+    payload_bytes = json.dumps(
+        payload, sort_keys=True, separators=(",", ":")
+    ).encode()
+    envelope = {
+        "schema_version": 1,
+        "payload": payload,
+        "attestation": dict(authenticator.attest(
+            payload_bytes, authenticated_at=authenticated_at
+        )),
+        "envelope_sha256": "0" * 64,
+    }
+    envelope["envelope_sha256"] = canonical_sha256(
+        envelope, "envelope_sha256"
+    )
+    return envelope
 
 
 @unittest.skipIf(os.name == "nt", "host ACL verification is POSIX-only")
@@ -104,6 +171,8 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             "evidence": snapshot.evidence,
             "provenance": snapshot.provenance,
         }
+        self.input_policy_read = helper.context["policy_read"]
+        self.input_object_evidence = helper.context["object_evidence"]
 
     def store(self, **overrides):
         values = {**self.documents, **overrides}
@@ -229,6 +298,87 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         self.assertEqual(self.authenticator.attest_calls, 1)
         self.assertGreaterEqual(self.authenticator.verify_calls, 4)
         self.assertEqual(self.collection_path().stat().st_mode & 0o777, 0o600)
+
+    def test_verifies_one_authenticated_collection_input_before_use(self):
+        store, _values = self.store()
+        envelope = collection_input_envelope(
+            self.documents,
+            self.authenticator,
+            policy_read=self.input_policy_read,
+            object_evidence=self.input_object_evidence,
+        )
+
+        payload = store.verify_collection_inputs(
+            envelope, authenticated_at=COLLECTION_STARTED
+        )
+
+        self.assertEqual(payload, envelope["payload"])
+        self.assertEqual(payload["documents"]["policy"], self.documents["policy"])
+        self.assertEqual(self.authenticator.verify_calls, 1)
+
+    def test_collection_input_rejects_rehashed_tamper_stale_time_and_wrong_store(self):
+        store, _values = self.store()
+        envelope = collection_input_envelope(
+            self.documents,
+            self.authenticator,
+            policy_read=self.input_policy_read,
+            object_evidence=self.input_object_evidence,
+        )
+
+        changed = copy.deepcopy(envelope)
+        changed["payload"]["documents"]["policy"]["authority"]["issuer"] = (
+            "attacker@example"
+        )
+        changed["attestation"]["payload_sha256"] = canonical_sha256(
+            changed["payload"]
+        )
+        changed["envelope_sha256"] = canonical_sha256(
+            changed, "envelope_sha256"
+        )
+        with self.assertRaisesRegex(StateError, "attestation verification"):
+            store.verify_collection_inputs(
+                changed, authenticated_at=COLLECTION_STARTED
+            )
+
+        with self.assertRaisesRegex(StateError, "trusted collection start"):
+            store.verify_collection_inputs(
+                envelope, authenticated_at="2026-08-11T12:08:01+00:00"
+            )
+
+        wrong_store = copy.deepcopy(envelope)
+        wrong_store["payload"]["store_id"] = "host_artifact_store_different1"
+        wrong_store["envelope_sha256"] = canonical_sha256(
+            wrong_store, "envelope_sha256"
+        )
+        with self.assertRaisesRegex(StateError, "identity binding differs"):
+            store.verify_collection_inputs(
+                wrong_store, authenticated_at=COLLECTION_STARTED
+            )
+
+    def test_collection_input_rejects_malformed_nested_shape_before_authentication(self):
+        store, _values = self.store()
+        envelope = collection_input_envelope(
+            self.documents,
+            self.authenticator,
+            policy_read=self.input_policy_read,
+            object_evidence=self.input_object_evidence,
+        )
+        malformed = copy.deepcopy(envelope)
+        malformed["payload"]["documents"]["policy"] = []
+        malformed["attestation"]["payload_sha256"] = canonical_sha256(
+            malformed["payload"]
+        )
+        malformed["envelope_sha256"] = canonical_sha256(
+            malformed, "envelope_sha256"
+        )
+
+        with self.assertRaisesRegex(
+            StateError, "schema validation failed for host artifact collection input"
+        ):
+            store.verify_collection_inputs(
+                malformed, authenticated_at=COLLECTION_STARTED
+            )
+        self.assertEqual(self.authenticator.verify_calls, 0)
 
     def test_authenticated_pair_reader_requires_exact_shared_authority(self):
         initial = self.snapshot_variant("authpairinitial1")
@@ -647,6 +797,30 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             schema["properties"]["attestation"]["additionalProperties"]
         )
         self.assertEqual(schema["properties"]["schema_version"]["const"], 3)
+        input_schema = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "publication"
+                / "host-artifact-collection-input.schema.json"
+            ).read_text()
+        )
+        Draft202012Validator.check_schema(input_schema)
+        self.assertFalse(input_schema["additionalProperties"])
+        self.assertFalse(
+            input_schema["properties"]["payload"]["additionalProperties"]
+        )
+        self.assertFalse(
+            input_schema["properties"]["payload"]["properties"]["documents"][
+                "additionalProperties"
+            ]
+        )
+        self.assertFalse(
+            input_schema["$defs"]["attestation"]["additionalProperties"]
+        )
+        self.assertEqual(
+            input_schema["properties"]["schema_version"]["const"], 1
+        )
         provenance_schema = json.loads(
             (
                 ROOT
