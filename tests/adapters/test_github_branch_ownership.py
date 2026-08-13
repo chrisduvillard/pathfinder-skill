@@ -6,6 +6,15 @@ from pathlib import Path
 from pathfinder_core.adapters.github_branch_ownership import (
     GitHubControllerBranchOwnershipProver,
 )
+from pathfinder_core.adapters.github_branch_ownership_reader import (
+    GitHubControllerBranchOwnershipReader,
+)
+from pathfinder_core.adapters.github_evidence_credentials import (
+    EVIDENCE_BOUNDARY,
+    REQUIRED_READ_PERMISSIONS,
+    GitHubEvidenceCredential,
+)
+from pathfinder_core.adapters.github_get import GitHubGETClient
 from pathfinder_core.adapters.github_merge_observer import (
     EndpointResponse,
     GitHubObservationError,
@@ -16,6 +25,7 @@ from pathfinder_core.adapters.github_publication_reconciliation import (
     ControllerPusherProof,
 )
 from pathfinder_core.storage import canonical_sha256
+from tests.adapters.test_github_get import FixtureGETTransport, response
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -283,7 +293,7 @@ class GitHubControllerBranchOwnershipTests(unittest.TestCase):
         with self.assertRaisesRegex(GitHubObservationError, "reused"):
             self.prove(branch_ref=replace(response, audit=reused))
 
-    def test_prover_is_pure_uncalled_and_owns_no_client_or_mutation(self):
+    def test_prover_is_pure_and_only_called_by_source_reader(self):
         inputs = copy.deepcopy((
             credential_receipt(), ruleset_response(), effective_rules(), branch_ref()
         ))
@@ -311,6 +321,134 @@ class GitHubControllerBranchOwnershipTests(unittest.TestCase):
             if path == source_path or path.name == "github_evidence_composer.py":
                 continue
             if "GitHubControllerBranchOwnershipProver." in path.read_text():
+                callers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(callers, [
+            "pathfinder_core/adapters/github_branch_ownership_reader.py",
+        ])
+
+
+class GitHubControllerBranchOwnershipReaderTests(unittest.TestCase):
+    @staticmethod
+    def client(*results):
+        observed = iter((
+            OBSERVED,
+            "2026-08-11T12:08:22+00:00",
+            COMPLETED,
+        ))
+        credential = GitHubEvidenceCredential(
+            "test-ownership-observer-installation-token",
+            kind="installation-token",
+            permissions={name: "read" for name in REQUIRED_READ_PERMISSIONS},
+            boundary=EVIDENCE_BOUNDARY,
+        )
+        transport = FixtureGETTransport(*results)
+        client = GitHubGETClient(
+            credential,
+            transport=transport,
+            clock=lambda: next(observed),
+            sleeper=lambda _seconds: None,
+        )
+        return client, transport
+
+    @staticmethod
+    def raw_response(data, request_id, permission):
+        return response(
+            data=data,
+            headers={
+                "X-GitHub-Request-Id": request_id,
+                "X-Accepted-GitHub-Permissions": permission,
+            },
+        )
+
+    def reader(self, *, ruleset=None, effective=None, ref=None):
+        client, transport = self.client(
+            self.raw_response(
+                ruleset or ruleset_response().data,
+                "req-ownership-ruleset-live",
+                "metadata=read",
+            ),
+            self.raw_response(
+                effective or list(effective_rules().items),
+                "req-ownership-effective-live",
+                "metadata=read",
+            ),
+            self.raw_response(
+                ref or branch_ref().data,
+                "req-ownership-ref-live",
+                "contents=read",
+            ),
+        )
+        return GitHubControllerBranchOwnershipReader(
+            client, ruleset_id=7002
+        ), transport
+
+    def test_collects_qualified_facts_and_emits_canonical_proof(self):
+        reader, transport = self.reader()
+        document = reader.prove(
+            controller_pusher=pusher(),
+            publication_credential_receipt=credential_receipt(),
+            evidence_completed_at=EVIDENCE_COMPLETED,
+        )
+
+        self.assertEqual(document["ruleset"]["id"], 7002)
+        self.assertEqual(document["head_sha"], "c" * 40)
+        self.assertEqual(
+            document["ownership_sha256"],
+            canonical_sha256(document, "ownership_sha256"),
+        )
+        self.assertEqual(
+            [call["path"] for call in transport.calls],
+            [
+                f"{REPOSITORY_PATH}/rulesets/7002",
+                (
+                    f"{REPOSITORY_PATH}/rules/branches/"
+                    "pathfinder/auto/example1?per_page=100"
+                ),
+                (
+                    f"{REPOSITORY_PATH}/git/ref/heads/"
+                    "pathfinder/auto/example1"
+                ),
+            ],
+        )
+
+    def test_omitted_bypass_visibility_and_bad_target_fail_closed(self):
+        hidden = copy.deepcopy(ruleset_response().data)
+        del hidden["bypass_actors"]
+        reader, _transport = self.reader(ruleset=hidden)
+        with self.assertRaisesRegex(GitHubObservationError, "incomplete"):
+            reader.prove(
+                controller_pusher=pusher(),
+                publication_credential_receipt=credential_receipt(),
+                evidence_completed_at=EVIDENCE_COMPLETED,
+            )
+
+        changed = replace(pusher(), head_ref="feature/unowned")
+        reader, _transport = self.reader()
+        with self.assertRaisesRegex(GitHubObservationError, "identity is malformed"):
+            reader.prove(
+                controller_pusher=changed,
+                publication_credential_receipt=credential_receipt(),
+                evidence_completed_at=EVIDENCE_COMPLETED,
+            )
+
+    def test_reader_is_source_only_and_has_no_constructed_caller(self):
+        source_path = (
+            ROOT
+            / "pathfinder_core"
+            / "adapters"
+            / "github_branch_ownership_reader.py"
+        )
+        source = source_path.read_text()
+        for forbidden in (
+            "os.environ", "def merge", "def publish", "def push",
+            "GitHubHTTPSGETTransport",
+        ):
+            self.assertNotIn(forbidden, source)
+        callers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path == source_path:
+                continue
+            if "GitHubControllerBranchOwnershipReader(" in path.read_text():
                 callers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(callers, [])
 

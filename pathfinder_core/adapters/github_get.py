@@ -47,6 +47,20 @@ _FEATURE_PERMISSIONS = {
     "active-rules": "metadata=read",
     "source-rulesets": "metadata=read",
 }
+_BRANCH_OWNERSHIP_PERMISSIONS = {
+    "branch-ownership.ruleset": (
+        re.compile(r"/repos/[^/]+/[^/]+/rulesets/[1-9][0-9]*"),
+        "metadata=read",
+    ),
+    "branch-ownership.effective-rules": (
+        re.compile(r"/repos/[^/]+/[^/]+/rules/branches/[A-Za-z0-9_.~/-]+"),
+        "metadata=read",
+    ),
+    "branch-ownership.ref": (
+        re.compile(r"/repos/[^/]+/[^/]+/git/ref/heads/[A-Za-z0-9_.~/-]+"),
+        "contents=read",
+    ),
+}
 
 
 def _utc_now() -> str:
@@ -383,6 +397,91 @@ class GitHubGETClient:
             )
         return EndpointResponse(response.data, response.audit)
 
+    @staticmethod
+    def _qualified_audit(
+        response: JSONGETResponse,
+        *,
+        surface: str,
+        target: str,
+        required_permission: str,
+    ) -> RequestAudit:
+        accepted = {
+            item.strip().lower()
+            for item in response.headers.get(
+                "x-accepted-github-permissions", ""
+            ).split(";")
+            if item.strip()
+        }
+        if required_permission not in accepted:
+            raise GitHubObservationError(
+                ObservationOutcome.PERMISSION_MISSING,
+                surface,
+                "GitHub branch ownership read did not qualify its required permission",
+            )
+        return RequestAudit(
+            response.audit.request_id,
+            response.audit.observed_at,
+            response.audit.etag,
+            target,
+            response.status,
+            True,
+        )
+
+    @staticmethod
+    def _branch_ownership_permission(
+        surface: str,
+        target: str,
+        *,
+        paged: bool,
+    ) -> str:
+        configured = _BRANCH_OWNERSHIP_PERMISSIONS.get(surface)
+        expected_surface = "branch-ownership.effective-rules"
+        if (
+            configured is None
+            or configured[0].fullmatch(target) is None
+            or (surface == expected_surface) != paged
+        ):
+            raise ValueError("GitHub branch ownership target is unsupported")
+        return configured[1]
+
+    def get_qualified_branch_ownership_endpoint(
+        self, surface: str, target: str
+    ) -> EndpointResponse:
+        """Read one exact ownership endpoint with positive permission evidence."""
+        required_permission = self._branch_ownership_permission(
+            surface, target, paged=False
+        )
+        response = self.get_json(surface, target)
+        if not isinstance(response.data, Mapping):
+            raise GitHubObservationError(
+                ObservationOutcome.MALFORMED_RESPONSE,
+                surface,
+                "GitHub branch ownership endpoint did not return an object",
+            )
+        return EndpointResponse(
+            response.data,
+            self._qualified_audit(
+                response,
+                surface=surface,
+                target=target,
+                required_permission=required_permission,
+            ),
+        )
+
+    def get_qualified_branch_ownership_pages(
+        self, surface: str, target: str
+    ) -> PageResponse:
+        """Fully paginate the exact effective-rule view with qualified audits."""
+        required_permission = self._branch_ownership_permission(
+            surface, target, paged=True
+        )
+        return self._get_pages(
+            surface,
+            target,
+            required_permission=required_permission,
+            qualified_target=target,
+        )
+
     def get_pages(
         self,
         surface: str,
@@ -391,6 +490,25 @@ class GitHubGETClient:
         item_key: str | None = None,
         total_key: str | None = None,
         page_limit: int | None = None,
+    ) -> PageResponse:
+        return self._get_pages(
+            surface,
+            target,
+            item_key=item_key,
+            total_key=total_key,
+            page_limit=page_limit,
+        )
+
+    def _get_pages(
+        self,
+        surface: str,
+        target: str,
+        *,
+        item_key: str | None = None,
+        total_key: str | None = None,
+        page_limit: int | None = None,
+        required_permission: str | None = None,
+        qualified_target: str | None = None,
     ) -> PageResponse:
         limit = self.max_pages if page_limit is None else page_limit
         if not 1 <= limit <= self.max_pages:
@@ -403,16 +521,23 @@ class GitHubGETClient:
         last_cursor = None
         for page_number in range(1, limit + 1):
             response = self.get_json(surface, current)
-            if any(
-                audit.request_id == response.audit.request_id
-                for audit in audits
-            ):
+            audit = (
+                response.audit
+                if required_permission is None
+                else self._qualified_audit(
+                    response,
+                    surface=surface,
+                    target=str(qualified_target),
+                    required_permission=required_permission,
+                )
+            )
+            if any(value.request_id == audit.request_id for value in audits):
                 raise GitHubObservationError(
                     ObservationOutcome.FIELD_UNKNOWN,
                     surface,
                     "GitHub GET request id was reused during pagination",
                 )
-            audits.append(response.audit)
+            audits.append(audit)
             payload = response.data
             if item_key is not None:
                 if not isinstance(payload, Mapping) or not isinstance(payload.get(item_key), list):

@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from pathfinder_core.adapters.github_checks import GitHubCheckEvidenceReader
+from pathfinder_core.adapters.github_candidate_rest import GitHubCandidateRESTSnapshot
 from pathfinder_core.adapters.github_evidence_collector import (
     GitHubAuthenticatedEvidenceCollector,
 )
@@ -65,8 +66,9 @@ def app_credential(suffix):
 
 
 class OwnershipProvider:
-    def __init__(self, proof, events=None):
+    def __init__(self, proof, credential, events=None):
         self.proof = proof
+        self.credential = credential
         self.events = events
         self.calls = []
 
@@ -75,6 +77,20 @@ class OwnershipProvider:
         if self.events is not None:
             self.events.append("ownership")
         return copy.deepcopy(self.proof)
+
+
+class CandidateProvider:
+    def __init__(self, snapshot, credential, events=None):
+        self.snapshot = snapshot
+        self.credential = credential
+        self.events = events
+        self.calls = []
+
+    def read_all(self, **values):
+        self.calls.append(values)
+        if self.events is not None:
+            self.events.append("candidate")
+        return copy.deepcopy(self.snapshot)
 
 
 class Store:
@@ -90,9 +106,10 @@ class Store:
 
 
 class RecordingBackend(FixtureObservationBackend):
-    def __init__(self, responses, events):
+    def __init__(self, responses, events, credential):
         super().__init__(responses)
         self.events = events
+        self.credential = credential
 
     def _record(self, name, value):
         self.events.append(f"base:{name}")
@@ -152,7 +169,21 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             return_value=(helper._page("check-runs"), helper._page("commit-statuses"))
         )
         self.events = []
-        self.ownership = OwnershipProvider(helper.branch_ownership, self.events)
+        base = FixtureObservationBackend(copy.deepcopy(helper.responses))
+        self.candidate = CandidateProvider(
+            GitHubCandidateRESTSnapshot(
+                base.read_pull_request(),
+                base.read_refs(),
+                base.read_changed_files(),
+                base.read_deployments(),
+                base.read_merged_state(),
+            ),
+            self.installation,
+            self.events,
+        )
+        self.ownership = OwnershipProvider(
+            helper.branch_ownership, self.installation, self.events
+        )
         self.store = Store(self.events)
 
     def collector(self, *, clock=None, graphql=None):
@@ -162,15 +193,22 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             graphql=graphql or self.graphql,
             reviews=self.reviews,
             checks=self.checks,
+            candidate=self.candidate,
             ownership=self.ownership,
             store=self.store,
             clock=clock or (lambda: next(values)),
         )
 
     def inputs(self, *, backend=None):
+        if backend is None:
+            policy_backend = FixtureObservationBackend(
+                copy.deepcopy(self.helper.responses)
+            )
+            policy_backend.credential = self.installation
+        else:
+            policy_backend = backend
         return {
-            "base_backend": backend
-            or FixtureObservationBackend(copy.deepcopy(self.helper.responses)),
+            "policy_backend": policy_backend,
             "observer_credential_receipt": self.helper.identity.credential_receipt,
             "publication_request": self.helper.publication_request,
             "publication_dispatch": self.dispatch,
@@ -188,7 +226,9 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
 
     def test_collects_composes_and_persists_one_authenticated_snapshot(self):
         inputs = self.inputs()
-        before = copy.deepcopy({key: value for key, value in inputs.items() if key != "base_backend"})
+        before = copy.deepcopy({
+            key: value for key, value in inputs.items() if key != "policy_backend"
+        })
         result = self.collector().collect_and_persist(**inputs)
 
         self.assertTrue(result.snapshot.evidence["observation"]["collection_complete"])
@@ -203,11 +243,13 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         )
         self.assertEqual(
             before,
-            {key: value for key, value in inputs.items() if key != "base_backend"},
+            {key: value for key, value in inputs.items() if key != "policy_backend"},
         )
 
     def test_eagerly_materializes_every_remaining_base_surface_before_ownership(self):
-        backend = RecordingBackend(copy.deepcopy(self.helper.responses), self.events)
+        backend = RecordingBackend(
+            copy.deepcopy(self.helper.responses), self.events, self.installation
+        )
         original_identity = self.identity.verify_observer
         original_graphql = self.graphql.read_pull_request
         original_reviews = self.reviews.read_all
@@ -242,12 +284,14 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         self.collector(clock=clock).collect_and_persist(**self.inputs(backend=backend))
 
         completed_index = self.events.index("clock:complete")
+        candidate_index = self.events.index("candidate")
         ownership_index = self.events.index("ownership")
         self.assertTrue(all(
             index < completed_index
             for index, event in enumerate(self.events)
             if event.startswith(("base:", "reader:"))
         ))
+        self.assertLess(candidate_index, completed_index)
         self.assertLess(completed_index, ownership_index)
         self.assertLess(ownership_index, self.events.index("store"))
         self.assertEqual(
@@ -259,6 +303,22 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         different = GitHubGraphQLClient(installation_credential("different"))
         with self.assertRaisesRegex(ValueError, "share one observer"):
             self.collector(graphql=different)
+
+        self.ownership.credential = different.credential
+        with self.assertRaisesRegex(ValueError, "share one observer"):
+            self.collector()
+
+        self.ownership.credential = self.installation
+        self.candidate.credential = different.credential
+        with self.assertRaisesRegex(ValueError, "share one observer"):
+            self.collector()
+
+    def test_rejects_policy_backend_with_a_different_credential_before_reads(self):
+        backend = FixtureObservationBackend(copy.deepcopy(self.helper.responses))
+        backend.credential = installation_credential("different")
+        with self.assertRaisesRegex(GitHubObservationError, "share the observer"):
+            self.collector().collect_and_persist(**self.inputs(backend=backend))
+        self.graphql.read_pull_request.assert_not_called()
 
     def test_rejects_stale_receipt_before_any_read_or_persist(self):
         collector = self.collector(clock=lambda: STARTED.replace(second=1))
@@ -308,6 +368,7 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
                 graphql=self.graphql,
                 reviews=self.reviews,
                 checks=self.checks,
+                candidate=self.candidate,
                 ownership=self.ownership,
                 store=store,
                 clock=lambda: next(values),

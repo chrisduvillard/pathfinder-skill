@@ -625,6 +625,8 @@ class GitHubGETClientTests(unittest.TestCase):
             if "github_get" in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(sorted(consumers), [
+            "pathfinder_core/adapters/github_branch_ownership_reader.py",
+            "pathfinder_core/adapters/github_candidate_rest.py",
             "pathfinder_core/adapters/github_check_policy.py",
             "pathfinder_core/adapters/github_checks.py",
             "pathfinder_core/adapters/github_evidence_collector.py",
@@ -691,6 +693,8 @@ class GitHubGETClientTests(unittest.TestCase):
             for name in (
                 "github_evidence_credentials.py", "github_get.py",
                 "github_get_policy.py", "github_get_transport.py",
+                "github_branch_ownership_reader.py",
+                "github_candidate_rest.py",
                 "github_check_policy.py", "github_checks.py",
                 "github_memberships.py", "github_reviews.py",
                 "github_review_reconciliation.py",
@@ -698,6 +702,78 @@ class GitHubGETClientTests(unittest.TestCase):
         )
         self.assertNotIn("os.environ", sources)
         self.assertNotIn("getenv(", sources)
+
+    def test_branch_ownership_reads_are_exact_permission_qualified_and_paged(self):
+        ruleset_target = "/repos/owner/repo/rulesets/7002"
+        effective_target = "/repos/owner/repo/rules/branches/pathfinder/auto/example1"
+        ref_target = "/repos/owner/repo/git/ref/heads/pathfinder/auto/example1"
+        transport = FixtureGETTransport(
+            response(
+                data={"id": 7002},
+                headers={
+                    "X-GitHub-Request-Id": "ownership-ruleset-1",
+                    "X-Accepted-GitHub-Permissions": "metadata=read",
+                },
+            ),
+            response(
+                data=[{"type": "creation"}],
+                headers={
+                    "X-GitHub-Request-Id": "ownership-effective-1",
+                    "X-Accepted-GitHub-Permissions": "metadata=read",
+                },
+            ),
+            response(
+                data={"ref": "refs/heads/pathfinder/auto/example1"},
+                headers={
+                    "X-GitHub-Request-Id": "ownership-ref-1",
+                    "X-Accepted-GitHub-Permissions": "contents=read",
+                },
+            ),
+        )
+        value = client(transport)
+        ruleset = value.get_qualified_branch_ownership_endpoint(
+            "branch-ownership.ruleset", ruleset_target
+        )
+        effective = value.get_qualified_branch_ownership_pages(
+            "branch-ownership.effective-rules", effective_target
+        )
+        branch_ref = value.get_qualified_branch_ownership_endpoint(
+            "branch-ownership.ref", ref_target
+        )
+
+        self.assertEqual(ruleset.audit.target, ruleset_target)
+        self.assertEqual(effective.audits[0].target, effective_target)
+        self.assertEqual(branch_ref.audit.target, ref_target)
+        self.assertTrue(all(
+            audit.permission_qualified
+            for audit in (ruleset.audit, *effective.audits, branch_ref.audit)
+        ))
+        self.assertEqual(
+            [call["path"] for call in transport.calls],
+            [ruleset_target, f"{effective_target}?per_page=100", ref_target],
+        )
+
+        missing_permission = FixtureGETTransport(response(data={"id": 7002}))
+        with self.assertRaises(GitHubObservationError) as caught:
+            client(missing_permission).get_qualified_branch_ownership_endpoint(
+                "branch-ownership.ruleset", ruleset_target
+            )
+        self.assertEqual(
+            caught.exception.outcome, ObservationOutcome.PERMISSION_MISSING
+        )
+
+        for surface, target, paged in (
+            ("branch-ownership.ruleset", effective_target, False),
+            ("branch-ownership.effective-rules", ruleset_target, True),
+            ("branch-ownership.ref", ruleset_target, False),
+        ):
+            with self.subTest(surface=surface, target=target), self.assertRaises(
+                ValueError
+            ):
+                if paged:
+                    value.get_qualified_branch_ownership_pages(surface, target)
+                else:
+                    value.get_qualified_branch_ownership_endpoint(surface, target)
 
 
 if __name__ == "__main__":

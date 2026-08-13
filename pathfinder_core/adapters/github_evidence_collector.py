@@ -7,6 +7,7 @@ from typing import Callable, Mapping, NoReturn, Protocol
 
 from ..host_artifact_store import HostArtifactCollectionStore
 from ..merge_time import parse_aware_timestamp
+from .github_candidate_rest import GitHubCandidateRESTSnapshot
 from .github_check_policy import GitHubRequiredCheckProjector
 from .github_checks import GitHubCheckEvidenceReader
 from .github_evidence_composer import (
@@ -63,7 +64,10 @@ def _positive_int(value: object, surface: str) -> int:
 
 
 class BranchOwnershipProvider(Protocol):
-    """External read-only proof boundary; no credential implementation is shipped."""
+    """Read-only proof boundary sharing the collector's observer credential."""
+
+    @property
+    def credential(self) -> object: ...
 
     def prove(
         self,
@@ -72,6 +76,32 @@ class BranchOwnershipProvider(Protocol):
         publication_credential_receipt: Mapping[str, object],
         evidence_completed_at: str,
     ) -> Mapping[str, object]: ...
+
+
+class CandidateRESTProvider(Protocol):
+    """Exact candidate/diff/deployment reader using the observer credential."""
+
+    @property
+    def credential(self) -> object: ...
+
+    def read_all(
+        self,
+        *,
+        controller_pusher: ControllerPusherProof,
+        object_evidence: Mapping[str, object],
+    ) -> GitHubCandidateRESTSnapshot: ...
+
+
+class NormalizedPolicyBackend(Protocol):
+    """Remaining closed projection for protection, rulesets, and memberships."""
+
+    @property
+    def credential(self) -> object: ...
+
+    def read_classic_protection(self) -> EndpointResponse: ...
+    def read_active_rules(self) -> PageResponse: ...
+    def read_source_rulesets(self) -> tuple[PageResponse, PageResponse]: ...
+    def read_bypass_memberships(self) -> PageResponse: ...
 
 
 @dataclass(frozen=True)
@@ -164,6 +194,7 @@ class GitHubAuthenticatedEvidenceCollector:
         graphql: GitHubGraphQLClient,
         reviews: GitHubReviewReader,
         checks: GitHubCheckEvidenceReader,
+        candidate: CandidateRESTProvider,
         ownership: BranchOwnershipProvider,
         store: HostArtifactCollectionStore,
         clock: Callable[[], datetime],
@@ -173,6 +204,8 @@ class GitHubAuthenticatedEvidenceCollector:
             graphql.credential,
             reviews.client.credential,
             checks.client.credential,
+            candidate.credential,
+            ownership.credential,
         )
         if any(credential is not installation_credential for credential in readers):
             raise ValueError(
@@ -182,34 +215,31 @@ class GitHubAuthenticatedEvidenceCollector:
         self.graphql = graphql
         self.reviews = reviews
         self.checks = checks
+        self.candidate = candidate
         self.ownership = ownership
         self.store = store
         self.clock = clock
 
     @staticmethod
     def _prepare(
-        backend: GitHubMergeObservationBackend,
+        backend: NormalizedPolicyBackend,
+        candidate: GitHubCandidateRESTSnapshot,
     ) -> _PreparedObservationBackend:
-        pull_request = backend.read_pull_request()
-        refs = backend.read_refs()
-        changed_files = backend.read_changed_files()
         classic = backend.read_classic_protection()
         active = backend.read_active_rules()
         source_rulesets, bypass_actors = backend.read_source_rulesets()
         memberships = backend.read_bypass_memberships()
-        deployments = backend.read_deployments()
-        merged_state = backend.read_merged_state()
         return _PreparedObservationBackend(
-            pull_request,
-            refs,
-            changed_files,
+            candidate.pull_request,
+            candidate.refs,
+            candidate.changed_files,
             classic,
             active,
             source_rulesets,
             bypass_actors,
             memberships,
-            deployments,
-            merged_state,
+            candidate.deployments,
+            candidate.merged_state,
         )
 
     @staticmethod
@@ -273,7 +303,7 @@ class GitHubAuthenticatedEvidenceCollector:
     def collect_and_persist(
         self,
         *,
-        base_backend: GitHubMergeObservationBackend,
+        policy_backend: NormalizedPolicyBackend,
         observer_credential_receipt: Mapping[str, object],
         publication_request: Mapping[str, object],
         publication_dispatch: Mapping[str, object],
@@ -288,6 +318,14 @@ class GitHubAuthenticatedEvidenceCollector:
         object_evidence: Mapping[str, object],
         evidence_id: str,
     ) -> AuthenticatedEvidenceCollection:
+        if (
+            policy_backend.credential
+            is not self.identity.observer_installation.credential
+        ):
+            raise _fail(
+                "policy-backend",
+                "normalized policy reader does not share the observer credential",
+            )
         documents = copy.deepcopy({
             "observer_credential_receipt": observer_credential_receipt,
             "publication_request": publication_request,
@@ -343,7 +381,6 @@ class GitHubAuthenticatedEvidenceCollector:
             repository_node_id=node_id,
             observed_at=observed_time,
         )
-        prepared = self._prepare(base_backend)
         graphql = self.graphql.read_pull_request(
             owner=owner,
             name=name,
@@ -354,6 +391,11 @@ class GitHubAuthenticatedEvidenceCollector:
             publication_receipt=receipt,
             graphql=graphql,
         )
+        candidate = self.candidate.read_all(
+            controller_pusher=pusher,
+            object_evidence=documents["object_evidence"],
+        )
+        prepared = self._prepare(policy_backend, candidate)
         rest_reviews = self.reviews.read_all(
             repository={"owner": owner, "name": name},
             pull_number=number,

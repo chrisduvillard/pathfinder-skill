@@ -59,9 +59,12 @@ hashes.
   across the fixed identity, GraphQL, review, and check readers; eagerly closes the observation
   window before branch-ownership proof; composes canonical evidence/provenance; and persists the
   exact externally attested envelope without requiring any merge credential.
-- [ ] Supply the remaining normalized REST policy/diff/deployment backend and branch-ownership
-  reader from a trusted installed host. The source orchestrator accepts those injected read-only
-  seams but still has no credential loader, authenticator/key implementation, command, or route.
+- [x] Add source-only exact candidate/diff/deployment and controller-branch ownership readers. They
+  share the observer credential, fail closed on identity/ref/patch/visibility drift, and remain
+  unconstructed outside the source collector boundary.
+- [ ] Supply the remaining normalized classic-protection/ruleset/membership backend from a trusted
+  installed host and construct the source readers there. The package still has no credential
+  loader, authenticator/key implementation, command, or route.
 - [ ] Define an operator-owned, schema-valid merge policy outside repository trust. The rehearsal used
   an explicit non-authorizing dry-run binding so it could not be mistaken for merge authority.
 - [ ] Keep current-run merge authorization absent until an actual merge evaluation or execution is

@@ -1742,9 +1742,17 @@ normalized base surface, closes the trusted evidence window using only its injec
 obtains the post-window controller-branch proof, composes canonical evidence/provenance, and sends
 the exact documents to the immutable external-authentication store. Stale receipt time, mixed
 credentials, backwards/expired completion, post-window lazy reads, and persistence drift fail
-closed; a real-store integration attests and reloads the exact snapshot. The collector still
-requires an injected normalized REST policy/diff/deployment backend, ownership provider,
-authenticator, store, and already-created credentials. Nothing constructs it from a command,
+closed; a real-store integration attests and reloads the exact snapshot. A follow-up source slice
+now supplies the exact candidate/diff/deployment reader and the concrete post-window ownership
+reader. The collector consumes candidate reads only after authenticated REST/GraphQL publication
+reconciliation, and it requires both readers plus the remaining policy backend to share the exact
+observer installation credential. Changed-file patches are byte-counted directly; an omitted patch
+is accepted only for controller-attested binary content. Ownership reads are fixed to the configured
+repository ruleset, complete effective rules, and final branch ref; every response must carry the
+documented Metadata- or Contents-read qualification, and omitted bypass actors remain a hard
+unknown rather than an empty list. The collector still requires an injected normalized classic
+protection/ruleset/membership backend, external authenticator, store, and already-created
+credentials. Nothing constructs it from a command,
 mission, pack, publication controller, environment, or installed host route. It therefore narrows
 but does not close the two installed-host readiness items, and it adds no merge credential, writer,
 intent, request, or K5.2 authority.
