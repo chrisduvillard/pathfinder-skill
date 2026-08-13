@@ -290,7 +290,11 @@ package ships no authenticator implementation/key loader or route that construct
 the zero-merge orchestrator; Windows fails closed pending equivalent ACL proof. An installed trusted
 host must still inject a concrete publication backend, authenticator, credentials, authority,
 policy, and live collector and persist these facts rather than UI text. Conditional merge therefore
-remains unsupported for live use.
+remains unsupported for live use. Direct integration regressions cover completed-request replay and
+lost-response read-only recovery through the real publication controller and journal fixture. The
+independent reviewer must pin the final PR head and complete
+[`../reviews/2026-08-13-zero-merge-trusted-host-security-review.md`](../reviews/2026-08-13-zero-merge-trusted-host-security-review.md);
+the existence of that pending handoff does not satisfy an installed-host or K5.2 gate.
 
 ## Typed block and result contract
 

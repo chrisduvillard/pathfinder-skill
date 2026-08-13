@@ -1833,7 +1833,11 @@ The source API constructs none of its dependencies and ships no command, live pu
 credential or receipt loader, authenticator/key, environment-token access, merge token, writer,
 intent, request, or merge method. It therefore gives an external trusted host a narrow call graph
 without making either installed-host readiness claim true; both readiness items and K5.2 remain
-unchecked pending a concrete reviewed host integration.
+unchecked pending a concrete reviewed host integration. Direct integration regressions exercise
+terminal replay and lost-response recovery through the real publication controller, journal, and
+backend fixture. The exact-SHA independent-review handoff is
+[`docs/reviews/2026-08-13-zero-merge-trusted-host-security-review.md`](docs/reviews/2026-08-13-zero-merge-trusted-host-security-review.md);
+its pending checklist is evidence of an open gate, not approval.
 
 #### Sub-prompt K5.1 — read-only status and dry-run composition
 

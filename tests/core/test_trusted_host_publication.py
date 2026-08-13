@@ -1,15 +1,34 @@
 import copy
+import json
+import tempfile
 import unittest
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
+from pathfinder_core.adapters.github import GitHubPublisher
 from pathfinder_core.errors import StateError
+from pathfinder_core.publication_controller import (
+    PublicationController,
+    VerifiedPublicationEnvelope,
+)
+from pathfinder_core.publication_journal import PublicationJournal
 from pathfinder_core.trusted_host_publication import (
     TrustedHostPublicationEvidenceController,
 )
+from tests.core.test_publication_controller import EnvelopeReader, ExactBackend
 
 
 ROOT = Path(__file__).resolve().parents[2]
+FIXTURE = (
+    ROOT
+    / "tests"
+    / "contracts"
+    / "fixtures"
+    / "publication-controller-contracts.json"
+)
+STARTED = datetime.fromisoformat("2026-08-11T12:05:00+00:00")
+OBSERVED = datetime.fromisoformat("2026-08-11T12:06:00+00:00")
 
 
 @dataclass(frozen=True)
@@ -108,6 +127,32 @@ class TrustedHostPublicationEvidenceControllerTests(unittest.TestCase):
             policy_backend=self.policy,
         )
 
+    def real_controller(self, root, backend, times):
+        request = json.loads(FIXTURE.read_text())["request"]
+        envelope = VerifiedPublicationEnvelope(
+            "publication_envelope_example1",
+            "authenticated-host-storage",
+            STARTED.isoformat(),
+            request,
+        )
+        publication = PublicationController(
+            PublicationJournal(root),
+            EnvelopeReader(envelope),
+            GitHubPublisher(backend),
+            clock=lambda: next(times),
+        )
+        collector = Collector(self.collection)
+        return (
+            request,
+            collector,
+            TrustedHostPublicationEvidenceController(
+                publication=publication,
+                collector=collector,
+                collection_inputs=self.inputs,
+                policy_backend=self.policy,
+            ),
+        )
+
     def test_publish_then_collects_for_the_exact_terminal_journal(self):
         result = self.controller.publish_and_collect(
             self.request_id, "publication_envelope_example1"
@@ -140,6 +185,45 @@ class TrustedHostPublicationEvidenceControllerTests(unittest.TestCase):
         )
         self.assertEqual(len(self.collector.calls), 1)
         self.assertEqual(result.evidence_id, "merge_evidence_example1")
+
+    def test_real_publication_replay_collects_without_another_remote_effect(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            backend = ExactBackend()
+            request, collector, controller = self.real_controller(
+                Path(temporary), backend, iter((STARTED, OBSERVED))
+            )
+
+            first = controller.publish_and_collect(
+                request["publication_request_id"],
+                "publication_envelope_example1",
+            )
+            second = controller.publish_and_collect(
+                request["publication_request_id"], "unused-on-replay"
+            )
+
+        self.assertEqual(first.state, second.state)
+        self.assertEqual((backend.pushes, backend.creates), (1, 1))
+        self.assertEqual(len(collector.calls), 2)
+
+    def test_real_lost_response_requires_read_only_reconcile_before_collection(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            backend = ExactBackend(lose_create_response=True)
+            request, collector, controller = self.real_controller(
+                Path(temporary), backend, iter((STARTED, OBSERVED))
+            )
+            request_id = request["publication_request_id"]
+
+            with self.assertRaisesRegex(RuntimeError, "lost create response"):
+                controller.publish_and_collect(
+                    request_id, "publication_envelope_example1"
+                )
+            pending = controller.publish_and_collect(request_id, "unused")
+            recovered = controller.reconcile_and_collect(request_id)
+
+        self.assertEqual(pending.state, "reconcile-required")
+        self.assertEqual(recovered.state, "awaiting-review")
+        self.assertEqual((backend.pushes, backend.creates), (1, 1))
+        self.assertEqual(len(collector.calls), 1)
 
     def test_nonterminal_publication_never_requests_collection_inputs(self):
         pending = PublicationResult(
