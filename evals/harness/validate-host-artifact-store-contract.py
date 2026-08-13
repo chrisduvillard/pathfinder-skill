@@ -63,6 +63,7 @@ def main() -> int:
     sys.path.insert(0, str(root))
 
     from pathfinder_core.host_artifact_store import HostArtifactCollectionStore
+    from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
     from pathfinder_core.storage import canonical_sha256
 
     if os.name == "nt":
@@ -90,12 +91,18 @@ def main() -> int:
     publication = load(
         root / "tests/contracts/fixtures/publication-controller-contracts.json"
     )
+    authority = load(
+        root / "tests/contracts/fixtures/publication-contracts.json"
+    )
     documents = {
         "publication_request": publication["request"],
         "publication_dispatch": publication["dispatch"],
         "publication_receipt": publication["receipt"],
         "publication_credential_receipt": credential_receipt(),
         "observer_credential_receipt": helper.identity.credential_receipt,
+        "policy": authority["policy"],
+        "authorization": authority["authorization"],
+        "protected_policy": ProtectedSurfaceRegistry.load().to_document(),
         "branch_ownership": helper.branch_ownership,
         "evidence": snapshot.evidence,
         "provenance": snapshot.provenance,
@@ -178,6 +185,16 @@ def main() -> int:
     require(
         len(callers) == expected["packaged_callers"],
         "host artifact store gained a packaged caller",
+    )
+    readers = []
+    for path in (root / "pathfinder_core").rglob("*.py"):
+        if path.name == "host_artifact_store.py":
+            continue
+        if "HostArtifactCollectionStore" in path.read_text():
+            readers.append(path.relative_to(root).as_posix())
+    require(
+        readers == expected["packaged_readers"],
+        "host artifact store read-only consumer drift",
     )
     source = (root / "pathfinder_core/host_artifact_store.py").read_text()
     for forbidden in (

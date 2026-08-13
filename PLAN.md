@@ -1680,7 +1680,7 @@ approved composed merge rehearsal in K6.2.
 
 - [x] K4 source primitive is green and independently reviewed.
 - [x] The source-only publication prerequisite is crash-tested and independently reviewed.
-- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, both credential receipts, branch-ownership proof, evidence, and provenance with zero packaged callers.
+- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, both credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumer is an unconstructed two-snapshot read-only adapter.
 - [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
@@ -1722,9 +1722,16 @@ equivalent ACL proof. Reads never create state, exact repeats do not re-attest, 
 converge on one envelope, and renamed, re-hashed, wrong-store, split-identity, or externally
 unauthenticated records block. The composer now also rejects a publication/evidence diff or mission
 binding mismatch that this integration exposed. A deterministic actual-code eval and 460 controller
-tests are green. This closes the source storage contract only: no packaged caller, trusted
-authenticator/key, installed collector, live credential injector, publication route, or merge path
-was added, so both installed-host readiness items and K5.2 remain unchecked.
+tests are green. A follow-up v2 envelope now also carries the exact operator policy, current-run
+authorization, and shipped-baseline or additive protected policy. It independently binds their
+canonical/effective hashes, repository, mission, publication candidate, evidence policy-read, and
+validity windows. One source-only read adapter accepts only two explicit, distinct evidence ids,
+re-verifies both external attestations, and requires identical publication and authority documents
+plus one authenticator/key identity across the pair before passing them to K5.1. Additive policies
+are hashed only after recomposition with the shipped baseline. No package route constructs this
+adapter or supplies its authenticator. This closes a stronger source storage/composition contract
+only: no trusted authenticator/key, installed collector, live credential injector, publication
+route, or merge path was added, so both installed-host readiness items and K5.2 remain unchecked.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and

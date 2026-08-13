@@ -19,12 +19,16 @@ claims. A consumer must authenticate the storage envelope before parsing the doc
 valid document into repository content, output, a PR, or a Goal never makes it trusted.
 
 `host-artifact-collection.schema.json` closes the source-only durable collection shape. Its signed
-payload contains exactly the publication journal triplet, publication and observer credential
-receipts, controller-branch ownership proof, complete merge evidence, and provenance. The store
+v2 payload contains exactly the publication journal triplet, publication and observer credential
+receipts, operator policy, current-run authorization, protected-surface policy, controller-branch
+ownership proof, complete merge evidence, and provenance. The store
 derives the collection id from the exact evidence id, binds an operator-provided store id and
 repository identity, validates every nested schema/canonical hash and cross-document identity, and
 accepts the envelope only when the injected external host authenticator verifies the exact canonical
-payload. The package deliberately supplies neither an authenticator/key implementation nor a caller.
+payload. Its only packaged consumer is an unconstructed read-only adapter that requires two
+explicit evidence ids and identical publication/authority plus authenticator/key bindings across
+the pair. The package deliberately supplies neither an authenticator/key implementation nor a
+route that constructs that adapter.
 
 ## Policy invariants
 
@@ -122,9 +126,11 @@ final exact ref/SHA reread after the evidence instant. It owns no client, token,
 installed caller, so it is not a live collector. K5 composition still requires the separate
 trusted-host, security, and enablement gates in the security contract.
 
-The separate host-artifact store can now persist that source output as one immutable envelope. It
-also carries the two credential receipts referenced by ownership/provenance so their hashes and
-App/installation/bot/repository/time bindings can be independently reproduced. POSIX storage is
+The separate host-artifact store can now persist that source output and its exact operator policy,
+current-run authorization, protected-surface policy, and two credential receipts as one immutable
+envelope. Policy/authorization/candidate/evidence bindings and validity windows are reproduced;
+an additive protected policy is combined with the shipped baseline before its effective hash is
+checked. App/installation/bot/repository/time bindings are independently reproduced. POSIX storage is
 descriptor-pinned, owner-only, non-symlink, outside repository trust, size-bounded, atomically
 write-once, and directory-fsynced. Reads do not create state; exact repeats reuse the existing
 authenticated envelope; Windows fails closed until equivalent ACL proof exists. This source

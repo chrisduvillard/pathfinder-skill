@@ -258,12 +258,15 @@ hashes, ownership proof, query hash, reconciled review ids, required checks, req
 collection window. Cross-surface request reuse or any split identity/policy/review/check/ownership
 input blocks. The composer owns no client, credential, storage, command, or caller, so it is not an
 installed production collector. A separate source-only store now defines the durable boundary: one
-immutable externally authenticated envelope contains the exact publication journal, publication and
-observer credential receipts, ownership proof, evidence, and provenance. It independently rechecks
-their canonical hashes and complete cross-document identities, uses a pinned owner-only POSIX host
+immutable externally authenticated v2 envelope contains the exact publication journal, operator
+policy/current-run authorization/protected policy, publication and observer credential receipts,
+ownership proof, evidence, and provenance. It independently rechecks their canonical/effective
+hashes and complete cross-document identities, uses a pinned owner-only POSIX host
 directory outside repository trust, and rejects partial, replaced, renamed, re-hashed, wrong-store,
-or unauthenticated records. The package ships no authenticator implementation/key loader and no
-caller constructs the store; Windows fails closed pending equivalent ACL proof. An installed trusted
+or unauthenticated records. One unconstructed read-only adapter accepts two explicit evidence ids,
+re-verifies both envelopes, and rejects publication, authority, or authenticator/key drift. The
+package ships no authenticator implementation/key loader or route that constructs the adapter;
+Windows fails closed pending equivalent ACL proof. An installed trusted
 host must still inject the authenticator and live collector and persist these facts rather than UI
 text. Conditional merge therefore remains unsupported for live use.
 

@@ -16,6 +16,11 @@ from jsonschema import Draft202012Validator
 
 from pathfinder_core.errors import StateError
 from pathfinder_core.host_artifact_store import HostArtifactCollectionStore
+from pathfinder_core.merge_status import (
+    AuthenticatedHostMergeReader,
+    MergeStatusController,
+)
+from pathfinder_core.protected_surfaces import ProtectedSurfaceRegistry
 from pathfinder_core.storage import canonical_sha256
 from tests.adapters import test_github_evidence_composer as composer_fixtures
 from tests.adapters.test_github_branch_ownership import credential_receipt
@@ -29,6 +34,13 @@ FIXTURE = (
     / "fixtures"
     / "publication-controller-contracts.json"
 )
+AUTHORITY_FIXTURE = (
+    ROOT
+    / "tests"
+    / "contracts"
+    / "fixtures"
+    / "publication-contracts.json"
+)
 NOW = datetime(2026, 8, 11, 12, 8, 30, tzinfo=timezone.utc)
 STORE_ID = "host_artifact_store_example1"
 
@@ -36,6 +48,7 @@ STORE_ID = "host_artifact_store_example1"
 class FakeHostAuthenticator:
     def __init__(self, key=b"test-only-host-attestation-key"):
         self.key = key
+        self.key_id = "host_key_example1"
         self.attest_calls = 0
         self.verify_calls = 0
 
@@ -48,7 +61,7 @@ class FakeHostAuthenticator:
         return {
             "source": "external-host-authenticator",
             "authenticator_id": "host_authenticator_example1",
-            "key_id": "host_key_example1",
+            "key_id": self.key_id,
             "method": "external-host-authenticator-v1",
             "authenticated_at": authenticated_at,
             "payload_sha256": hashlib.sha256(payload).hexdigest(),
@@ -76,12 +89,16 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         helper.setUp()
         snapshot = helper.compose()
         publication = json.loads(FIXTURE.read_text())
+        authority = json.loads(AUTHORITY_FIXTURE.read_text())
         self.documents = {
             "publication_request": publication["request"],
             "publication_dispatch": publication["dispatch"],
             "publication_receipt": publication["receipt"],
             "publication_credential_receipt": credential_receipt(),
             "observer_credential_receipt": helper.identity.credential_receipt,
+            "policy": authority["policy"],
+            "authorization": authority["authorization"],
+            "protected_policy": ProtectedSurfaceRegistry.load().to_document(),
             "branch_ownership": helper.branch_ownership,
             "evidence": snapshot.evidence,
             "provenance": snapshot.provenance,
@@ -110,6 +127,79 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             / f"host_artifact_collection_{suffix}.json"
         )
 
+    def snapshot_variant(self, suffix):
+        documents = copy.deepcopy(self.documents)
+        observed_at = "2026-08-11T12:07:31+00:00"
+        completed_at = "2026-08-11T12:07:50+00:00"
+        evidence = documents["evidence"]
+        evidence["evidence_id"] = f"merge_evidence_{suffix}"
+        observation = evidence["observation"]
+        observation["policy_read"].update({
+            "receipt_id": f"policy_read_{suffix}",
+            "observed_at": "2026-08-11T12:07:32+00:00",
+        })
+        for request in observation["requests"]:
+            request["request_id"] = f"{request['request_id']}-{suffix}"
+            request["observed_at"] = "2026-08-11T12:07:40+00:00"
+        observation.update({
+            "request_ids_sha256": canonical_sha256([
+                request["request_id"] for request in observation["requests"]
+            ]),
+            "observed_at": observed_at,
+            "completed_at": completed_at,
+            "expires_at": "2026-08-11T12:09:00+00:00",
+        })
+        evidence["evidence_sha256"] = canonical_sha256(
+            evidence, "evidence_sha256"
+        )
+
+        observer = documents["observer_credential_receipt"]
+        observer.update({
+            "credential_receipt_id": f"evidence_credential_receipt_{suffix}",
+            "credential_id": f"evidence_credential_{suffix}",
+            "verified_at": observed_at,
+        })
+        observer["receipt_sha256"] = canonical_sha256(
+            observer, "receipt_sha256"
+        )
+
+        ownership = documents["branch_ownership"]
+        ownership["ownership_id"] = f"controller_branch_ownership_{suffix}"
+        ownership_observation = ownership["observation"]
+        ownership_observation.update({
+            "evidence_completed_at": completed_at,
+            "observed_at": "2026-08-11T12:07:51+00:00",
+            "completed_at": "2026-08-11T12:07:53+00:00",
+            "request_ids": [
+                f"{request_id}-{suffix}"
+                for request_id in ownership_observation["request_ids"]
+            ],
+        })
+        ownership_observation["request_ids_sha256"] = canonical_sha256(
+            ownership_observation["request_ids"]
+        )
+        ownership["ownership_sha256"] = canonical_sha256(
+            ownership, "ownership_sha256"
+        )
+
+        provenance = documents["provenance"]
+        provenance.update({
+            "provenance_id": f"merge_evidence_provenance_{suffix}",
+            "evidence_id": evidence["evidence_id"],
+            "evidence_sha256": evidence["evidence_sha256"],
+            "observer_credential_receipt_id": observer["credential_receipt_id"],
+            "observer_credential_receipt_sha256": observer["receipt_sha256"],
+            "branch_ownership_id": ownership["ownership_id"],
+            "branch_ownership_sha256": ownership["ownership_sha256"],
+            "request_ids_sha256": observation["request_ids_sha256"],
+            "observed_at": observed_at,
+            "completed_at": completed_at,
+        })
+        provenance["provenance_sha256"] = canonical_sha256(
+            provenance, "provenance_sha256"
+        )
+        return documents
+
     def test_persists_loads_and_idempotently_reuses_one_exact_envelope(self):
         store, first = self.persist()
         second = store.persist(**self.documents)
@@ -126,6 +216,100 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         self.assertEqual(self.authenticator.attest_calls, 1)
         self.assertGreaterEqual(self.authenticator.verify_calls, 4)
         self.assertEqual(self.collection_path().stat().st_mode & 0o777, 0o600)
+
+    def test_authenticated_pair_reader_requires_exact_shared_authority(self):
+        initial = self.snapshot_variant("authpairinitial1")
+        store, _values = self.store()
+        store.persist(**initial)
+        store.persist(**self.documents)
+        reader = AuthenticatedHostMergeReader(
+            store,
+            initial_evidence_id=initial["evidence"]["evidence_id"],
+            reread_evidence_id=self.documents["evidence"]["evidence_id"],
+        )
+
+        report = MergeStatusController(
+            reader, clock=lambda: NOW
+        ).inspect(
+            self.documents["publication_request"]["publication_request_id"],
+            operation="evaluate",
+        )
+
+        self.assertEqual(report["outcome"], "policy-blocked")
+        self.assertIn(
+            "merge-actor-can-bypass",
+            {block["code"] for block in report["blocks"]},
+        )
+        self.assertFalse(report["intent_ready"])
+        self.assertFalse(report["execution_available"])
+        with self.assertRaisesRegex(StateError, "distinct evidence ids"):
+            AuthenticatedHostMergeReader(
+                store,
+                initial_evidence_id=initial["evidence"]["evidence_id"],
+                reread_evidence_id=initial["evidence"]["evidence_id"],
+            )
+
+        changed_initial = self.snapshot_variant("authpairdrift1")
+        policy = changed_initial["policy"]
+        policy["authority"]["issuer"] = "different-host-admin@example"
+        policy["policy_sha256"] = canonical_sha256(policy, "policy_sha256")
+        authorization = changed_initial["authorization"]
+        authorization["policy"]["policy_sha256"] = policy["policy_sha256"]
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        evidence = changed_initial["evidence"]
+        evidence["observation"]["policy_read"]["policy_sha256"] = policy[
+            "policy_sha256"
+        ]
+        evidence["bindings"]["policy_sha256"] = policy["policy_sha256"]
+        evidence["bindings"]["authorization_sha256"] = authorization[
+            "authorization_sha256"
+        ]
+        evidence["evidence_sha256"] = canonical_sha256(
+            evidence, "evidence_sha256"
+        )
+        provenance = changed_initial["provenance"]
+        provenance["evidence_sha256"] = evidence["evidence_sha256"]
+        provenance["provenance_sha256"] = canonical_sha256(
+            provenance, "provenance_sha256"
+        )
+        store.persist(**changed_initial)
+        drifted = AuthenticatedHostMergeReader(
+            store,
+            initial_evidence_id=evidence["evidence_id"],
+            reread_evidence_id=self.documents["evidence"]["evidence_id"],
+        )
+        with self.assertRaisesRegex(StateError, "pair bindings differ"):
+            drifted.load(
+                self.documents["publication_request"]["publication_request_id"]
+            )
+
+    def test_authenticated_pair_reader_rejects_key_identity_drift(self):
+        initial = self.snapshot_variant("authpairkeyinitial1")
+        host_root = Path(self.temporary.name) / "rotating-key-host"
+        host_root.mkdir(mode=0o700)
+        authenticator = FakeHostAuthenticator()
+        store = HostArtifactCollectionStore(
+            self.repo_root,
+            host_root,
+            store_id=STORE_ID,
+            authenticator=authenticator,
+            clock=lambda: NOW,
+        )
+        store.persist(**initial)
+        authenticator.key_id = "host_key_rotated1"
+        store.persist(**self.documents)
+
+        reader = AuthenticatedHostMergeReader(
+            store,
+            initial_evidence_id=initial["evidence"]["evidence_id"],
+            reread_evidence_id=self.documents["evidence"]["evidence_id"],
+        )
+        with self.assertRaisesRegex(StateError, "pair bindings differ"):
+            reader.load(
+                self.documents["publication_request"]["publication_request_id"]
+            )
 
     def test_rehashed_tampering_still_fails_external_authentication(self):
         store, _envelope = self.persist()
@@ -152,6 +336,56 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(StateError, "attestation verification"):
             store.load(self.documents["evidence"]["evidence_id"])
 
+    def test_additive_protected_policy_uses_the_effective_baseline_hash(self):
+        documents = copy.deepcopy(self.documents)
+        baseline = ProtectedSurfaceRegistry.load().to_document()
+        additive = {
+            "schema_version": 1,
+            "policy_id": "protected-policy-host-extra",
+            "mode": "additive",
+            "base_policy_id": baseline["policy_id"],
+            "rules": [{
+                "rule_id": "protected-rule-host-extra",
+                "category": "host-extra",
+                "description": "Additional operator-owned protected surface.",
+                "patterns": ["operator-protected/**"],
+            }],
+        }
+        effective = ProtectedSurfaceRegistry(baseline, additive)
+        documents["protected_policy"] = additive
+        policy = documents["policy"]
+        policy["path_policy"]["protected_policy_sha256"] = effective.sha256
+        policy["policy_sha256"] = canonical_sha256(policy, "policy_sha256")
+        authorization = documents["authorization"]
+        authorization["policy"]["policy_sha256"] = policy["policy_sha256"]
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        evidence = documents["evidence"]
+        evidence["bindings"].update({
+            "policy_sha256": policy["policy_sha256"],
+            "authorization_sha256": authorization["authorization_sha256"],
+            "protected_policy_sha256": effective.sha256,
+        })
+        evidence["observation"]["policy_read"]["policy_sha256"] = policy[
+            "policy_sha256"
+        ]
+        evidence["evidence_sha256"] = canonical_sha256(
+            evidence, "evidence_sha256"
+        )
+        provenance = documents["provenance"]
+        provenance["evidence_sha256"] = evidence["evidence_sha256"]
+        provenance["provenance_sha256"] = canonical_sha256(
+            provenance, "provenance_sha256"
+        )
+
+        store, _values = self.store()
+        envelope = store.persist(**documents)
+
+        self.assertEqual(
+            envelope["payload"]["documents"]["protected_policy"], additive
+        )
+
     def test_split_document_identity_fails_before_persistence(self):
         ownership = copy.deepcopy(self.documents["branch_ownership"])
         ownership["head_sha"] = "d" * 40
@@ -167,6 +401,27 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         store, values = self.store(
             branch_ownership=ownership, provenance=provenance
         )
+        with self.assertRaisesRegex(StateError, "document bindings differ"):
+            store.persist(**values)
+
+        authorization = copy.deepcopy(self.documents["authorization"])
+        authorization["candidate"]["pull_request"]["number"] += 1
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        store, values = self.store(authorization=authorization)
+        with self.assertRaisesRegex(StateError, "document bindings differ"):
+            store.persist(**values)
+
+        policy = copy.deepcopy(self.documents["policy"])
+        policy["path_policy"]["protected_policy_sha256"] = "a" * 64
+        policy["policy_sha256"] = canonical_sha256(policy, "policy_sha256")
+        authorization = copy.deepcopy(self.documents["authorization"])
+        authorization["policy"]["policy_sha256"] = policy["policy_sha256"]
+        authorization["authorization_sha256"] = canonical_sha256(
+            authorization, "authorization_sha256"
+        )
+        store, values = self.store(policy=policy, authorization=authorization)
         with self.assertRaisesRegex(StateError, "document bindings differ"):
             store.persist(**values)
         self.assertFalse(self.collection_path().exists())
@@ -345,6 +600,7 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         self.assertFalse(
             schema["properties"]["attestation"]["additionalProperties"]
         )
+        self.assertEqual(schema["properties"]["schema_version"]["const"], 2)
 
         callers = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):
@@ -353,6 +609,13 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             if "HostArtifactCollectionStore(" in path.read_text():
                 callers.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(callers, [])
+        readers = []
+        for path in (ROOT / "pathfinder_core").rglob("*.py"):
+            if path.name == "host_artifact_store.py":
+                continue
+            if "HostArtifactCollectionStore" in path.read_text():
+                readers.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(readers, ["pathfinder_core/merge_status.py"])
         source = (ROOT / "pathfinder_core" / "host_artifact_store.py").read_text()
         for forbidden in (
             "os.environ",

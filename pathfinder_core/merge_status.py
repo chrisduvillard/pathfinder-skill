@@ -7,11 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Protocol
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 from .errors import StateError
+from .host_artifact_store import HostArtifactCollectionStore
 from .merge_policy import MergePolicyEvaluator
 from .merge_policy_types import (
     DenyCode,
@@ -72,6 +73,10 @@ class InstalledMergeInputs:
     initial_evidence: object | None
     reread_evidence: object | None
     input_states: dict[str, InputState]
+
+
+class MergeInputReader(Protocol):
+    def load(self, request_id: str) -> InstalledMergeInputs: ...
 
 
 class InstalledHostMergeReader:
@@ -253,6 +258,84 @@ class InstalledHostMergeReader:
         )
 
 
+class AuthenticatedHostMergeReader:
+    """Loads two explicit externally authenticated collections without discovery."""
+
+    SHARED_DOCUMENTS = (
+        "publication_request",
+        "publication_dispatch",
+        "publication_receipt",
+        "publication_credential_receipt",
+        "policy",
+        "authorization",
+        "protected_policy",
+    )
+
+    def __init__(
+        self,
+        store: HostArtifactCollectionStore,
+        *,
+        initial_evidence_id: str,
+        reread_evidence_id: str,
+    ):
+        if initial_evidence_id == reread_evidence_id:
+            raise StateError("authenticated snapshots require distinct evidence ids")
+        self.store = store
+        self.initial_evidence_id = initial_evidence_id
+        self.reread_evidence_id = reread_evidence_id
+
+    def load(self, request_id: str) -> InstalledMergeInputs:
+        if PUBLICATION_REQUEST_ID.fullmatch(request_id) is None:
+            raise StateError(f"invalid publication request id: {request_id}")
+        initial = self.store.load(self.initial_evidence_id)
+        reread = self.store.load(self.reread_evidence_id)
+        initial_payload = initial["payload"]
+        reread_payload = reread["payload"]
+        initial_documents = initial_payload["documents"]
+        reread_documents = reread_payload["documents"]
+        if (
+            initial_payload["publication_request_id"] != request_id
+            or reread_payload["publication_request_id"] != request_id
+            or initial["envelope_sha256"] == reread["envelope_sha256"]
+            or any(
+                initial["attestation"][name] != reread["attestation"][name]
+                for name in ("source", "authenticator_id", "key_id", "method")
+            )
+            or any(
+                initial_documents[name] != reread_documents[name]
+                for name in self.SHARED_DOCUMENTS
+            )
+        ):
+            raise StateError("authenticated snapshot pair bindings differ")
+
+        receipt = initial_documents["publication_receipt"]
+        PublicationJournal(Path(".")).validate_records(
+            initial_documents["publication_request"],
+            initial_documents["publication_dispatch"],
+            receipt,
+            expected_request_id=request_id,
+        )
+        states = {
+            name: InputState.PRESENT
+            for name in (
+                "policy",
+                "authorization",
+                "protected_policy",
+                "initial_evidence",
+                "reread_evidence",
+            )
+        }
+        return InstalledMergeInputs(
+            receipt,
+            initial_documents["policy"],
+            initial_documents["authorization"],
+            initial_documents["protected_policy"],
+            initial_documents["evidence"],
+            reread_documents["evidence"],
+            states,
+        )
+
+
 def _publication(receipt: Mapping[str, object]) -> dict:
     pull = receipt["pull_request"]
     repository = receipt["repository"]
@@ -398,7 +481,7 @@ class MergeStatusController:
 
     def __init__(
         self,
-        reader: InstalledHostMergeReader,
+        reader: MergeInputReader,
         *,
         clock=None,
     ):

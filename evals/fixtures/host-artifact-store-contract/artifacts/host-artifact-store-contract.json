@@ -1,16 +1,22 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "source": "authenticated-host-artifact-store",
   "store_id": "host_artifact_store_contract1",
   "document_names": [
+    "authorization",
     "branch_ownership",
     "evidence",
     "observer_credential_receipt",
+    "policy",
+    "protected_policy",
     "provenance",
     "publication_credential_receipt",
     "publication_dispatch",
     "publication_receipt",
     "publication_request"
   ],
-  "packaged_callers": 0
+  "packaged_callers": 0,
+  "packaged_readers": [
+    "pathfinder_core/merge_status.py"
+  ]
 }

@@ -15,6 +15,7 @@ from jsonschema.exceptions import SchemaError, ValidationError
 
 from .errors import StateError
 from .merge_time import parse_aware_timestamp
+from .protected_surfaces import ProtectedSurfaceRegistry
 from .publication_journal import PublicationJournal
 from .storage import canonical_sha256, load_json_stream, read_json
 
@@ -27,6 +28,8 @@ MAX_COLLECTION_BYTES = 8 * 1024 * 1024
 DOCUMENT_SCHEMAS = {
     "publication_credential_receipt": "publication-credential-receipt.schema.json",
     "observer_credential_receipt": "evidence-credential-receipt.schema.json",
+    "policy": "merge-policy.schema.json",
+    "authorization": "merge-authorization.schema.json",
     "branch_ownership": "controller-branch-ownership.schema.json",
     "evidence": "merge-evidence.schema.json",
     "provenance": "merge-evidence-provenance.schema.json",
@@ -99,6 +102,10 @@ class HostArtifactCollectionStore:
             )
             for label, schema in DOCUMENT_SCHEMAS.items()
         }
+        self._document_validators["protected_policy"] = Draft202012Validator(
+            read_json(ROOT / "schemas" / "policy" / "protected-surfaces.schema.json"),
+            format_checker=FormatChecker(),
+        )
 
     @staticmethod
     def _collection_identity(evidence_id: str) -> tuple[str, str]:
@@ -283,6 +290,9 @@ class HostArtifactCollectionStore:
             receipt = documents["publication_receipt"]
             publication_credential = documents["publication_credential_receipt"]
             observer_credential = documents["observer_credential_receipt"]
+            policy = documents["policy"]
+            authorization = documents["authorization"]
+            protected_policy = documents["protected_policy"]
             ownership = documents["branch_ownership"]
             evidence = documents["evidence"]
             provenance = documents["provenance"]
@@ -293,6 +303,9 @@ class HostArtifactCollectionStore:
         for label, document in (
             ("publication_credential_receipt", publication_credential),
             ("observer_credential_receipt", observer_credential),
+            ("policy", policy),
+            ("authorization", authorization),
+            ("protected_policy", protected_policy),
             ("branch_ownership", ownership),
             ("evidence", evidence),
             ("provenance", provenance),
@@ -306,9 +319,30 @@ class HostArtifactCollectionStore:
         self._validate_hash(
             observer_credential, "receipt_sha256", "observer credential receipt"
         )
+        self._validate_hash(policy, "policy_sha256", "merge policy")
+        self._validate_hash(
+            authorization, "authorization_sha256", "merge authorization"
+        )
         self._validate_hash(ownership, "ownership_sha256", "branch ownership")
         self._validate_hash(evidence, "evidence_sha256", "merge evidence")
         self._validate_hash(provenance, "provenance_sha256", "evidence provenance")
+        try:
+            shipped_protected = ProtectedSurfaceRegistry.load()
+            if protected_policy["mode"] == "baseline":
+                if protected_policy != shipped_protected.to_document():
+                    raise StateError(
+                        "protected baseline differs from the shipped policy"
+                    )
+                effective_protected_sha256 = shipped_protected.sha256
+            else:
+                effective_protected_sha256 = ProtectedSurfaceRegistry(
+                    shipped_protected.to_document(), protected_policy
+                ).sha256
+        except (KeyError, StateError, TypeError, ValueError) as error:
+            raise StateError(
+                "host artifact protected policy is not a valid shipped baseline "
+                "or additive override"
+            ) from error
 
         receipt_repository = receipt["repository"]
         evidence_repository = {
@@ -333,6 +367,17 @@ class HostArtifactCollectionStore:
             for check in provenance["required_checks"]
         )
         observer_actor = evidence["actor"]
+        policy_repository = {
+            **{key: receipt_repository[key] for key in REPOSITORY_KEYS},
+            "base_branch": receipt_pull["base_ref"],
+        }
+        candidate = {
+            "source": "authenticated-controller-publication",
+            "mission_state_sha256": receipt["mission"]["mission_state_sha256"],
+            "publication_receipt_id": receipt["publication_receipt_id"],
+            "pull_request": {key: receipt_pull[key] for key in PULL_KEYS},
+            "diff": receipt["diff"],
+        }
         try:
             credential_times_valid = (
                 parse_aware_timestamp(observer_credential["issued_at"])
@@ -347,8 +392,19 @@ class HostArtifactCollectionStore:
                 <= parse_aware_timestamp(ownership["observation"]["completed_at"])
                 < parse_aware_timestamp(publication_credential["expires_at"])
             )
+            authority_times_valid = (
+                parse_aware_timestamp(policy["issued_at"])
+                <= parse_aware_timestamp(evidence["observation"]["observed_at"])
+                <= parse_aware_timestamp(evidence["observation"]["completed_at"])
+                < parse_aware_timestamp(policy["expires_at"])
+                and parse_aware_timestamp(authorization["issued_at"])
+                <= parse_aware_timestamp(evidence["observation"]["observed_at"])
+                <= parse_aware_timestamp(evidence["observation"]["completed_at"])
+                < parse_aware_timestamp(authorization["expires_at"])
+            )
         except (TypeError, ValueError):
             credential_times_valid = False
+            authority_times_valid = False
         if (
             ownership["publication_receipt_id"] != receipt["publication_receipt_id"]
             or ownership["publication_receipt_sha256"] != receipt["receipt_sha256"]
@@ -378,6 +434,14 @@ class HostArtifactCollectionStore:
             or evidence["bindings"]["binding_id"] != receipt["mission"]["binding_id"]
             or evidence["bindings"]["mission_authorization_id"]
             != receipt["mission"]["mission_authorization_id"]
+            or evidence["bindings"]["policy_id"] != policy["policy_id"]
+            or evidence["bindings"]["policy_sha256"] != policy["policy_sha256"]
+            or evidence["bindings"]["merge_authorization_id"]
+            != authorization["merge_authorization_id"]
+            or evidence["bindings"]["authorization_sha256"]
+            != authorization["authorization_sha256"]
+            or evidence["bindings"]["protected_policy_sha256"]
+            != effective_protected_sha256
             or evidence["pull_request"]["last_pusher_id"]
             != ownership["publisher"]["actor_id"]
             or provenance["evidence_id"] != evidence["evidence_id"]
@@ -404,6 +468,33 @@ class HostArtifactCollectionStore:
             or observer_credential["login"] != observer_actor["login"]
             or observer_credential["app_id"] == publication_credential["app_id"]
             or not credential_times_valid
+            or not authority_times_valid
+            or policy["repository"] != policy_repository
+            or authorization["repository"] != policy_repository
+            or authorization["policy"] != {
+                "policy_id": policy["policy_id"],
+                "policy_sha256": policy["policy_sha256"],
+            }
+            or authorization["mission"] != {
+                **{
+                    key: receipt["mission"][key]
+                    for key in (
+                        "mission_id",
+                        "binding_id",
+                        "mission_authorization_id",
+                    )
+                },
+                "goal_scope": "single-goal",
+            }
+            or authorization["candidate"] != candidate
+            or policy["path_policy"]["protected_policy_sha256"]
+            != effective_protected_sha256
+            or evidence["observation"]["policy_read"]["policy_id"]
+            != policy["policy_id"]
+            or evidence["observation"]["policy_read"]["policy_sha256"]
+            != policy["policy_sha256"]
+            or ownership["observation"]["evidence_completed_at"]
+            != evidence["observation"]["completed_at"]
             or provenance["graphql_query_sha256"]
             != evidence["observation"]["graphql_query_sha256"]
             or provenance["request_ids_sha256"]
@@ -487,6 +578,9 @@ class HostArtifactCollectionStore:
         publication_receipt: Mapping[str, object],
         publication_credential_receipt: Mapping[str, object],
         observer_credential_receipt: Mapping[str, object],
+        policy: Mapping[str, object],
+        authorization: Mapping[str, object],
+        protected_policy: Mapping[str, object],
         branch_ownership: Mapping[str, object],
         evidence: Mapping[str, object],
         provenance: Mapping[str, object],
@@ -497,6 +591,9 @@ class HostArtifactCollectionStore:
             "publication_receipt": publication_receipt,
             "publication_credential_receipt": publication_credential_receipt,
             "observer_credential_receipt": observer_credential_receipt,
+            "policy": policy,
+            "authorization": authorization,
+            "protected_policy": protected_policy,
             "branch_ownership": branch_ownership,
             "evidence": evidence,
             "provenance": provenance,
@@ -552,7 +649,7 @@ class HostArtifactCollectionStore:
                         "host artifact attestation could not be created"
                     ) from error
                 envelope = {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "payload": payload,
                     "attestation": attestation,
                     "envelope_sha256": "0" * 64,
