@@ -506,6 +506,7 @@ class GitHubGraphQLClientTests(unittest.TestCase):
         self.assertEqual(
             consumers,
             [
+                "pathfinder_core/adapters/github_evidence_collector.py",
                 "pathfinder_core/adapters/github_evidence_composer.py",
                 "pathfinder_core/adapters/github_graphql_projection.py",
                 "pathfinder_core/adapters/github_publication_reconciliation.py",

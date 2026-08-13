@@ -440,7 +440,9 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
                 continue
             if "GitHubCompleteEvidenceComposer." in path.read_text():
                 consumers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(consumers, [])
+        self.assertEqual(consumers, [
+            "pathfinder_core/adapters/github_evidence_collector.py"
+        ])
 
 
 if __name__ == "__main__":

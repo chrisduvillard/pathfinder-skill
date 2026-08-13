@@ -1680,7 +1680,7 @@ approved composed merge rehearsal in K6.2.
 
 - [x] K4 source primitive is green and independently reviewed.
 - [x] The source-only publication prerequisite is crash-tested and independently reviewed.
-- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, both credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumer is an unconstructed two-snapshot read-only adapter.
+- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, both credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumers are an unconstructed single-snapshot collector and the unconstructed two-snapshot read-only adapter.
 - [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
@@ -1732,6 +1732,22 @@ are hashed only after recomposition with the shipped baseline. No package route 
 adapter or supplies its authenticator. This closes a stronger source storage/composition contract
 only: no trusted authenticator/key, installed collector, live credential injector, publication
 route, or merge path was added, so both installed-host readiness items and K5.2 remain unchecked.
+
+**Source collector implementation note (2026-08-13):** added one unconstructed orchestration
+boundary around the already fixed observer identity, GraphQL, permission-qualified REST review, and
+exact check/status readers. Every reader must share the same injected observer installation
+credential; the observer verifier no longer requires or constructs a merge App credential. The
+collector derives the exact candidate and required-check union, eagerly materializes every supplied
+normalized base surface, closes the trusted evidence window using only its injected clock, then
+obtains the post-window controller-branch proof, composes canonical evidence/provenance, and sends
+the exact documents to the immutable external-authentication store. Stale receipt time, mixed
+credentials, backwards/expired completion, post-window lazy reads, and persistence drift fail
+closed; a real-store integration attests and reloads the exact snapshot. The collector still
+requires an injected normalized REST policy/diff/deployment backend, ownership provider,
+authenticator, store, and already-created credentials. Nothing constructs it from a command,
+mission, pack, publication controller, environment, or installed host route. It therefore narrows
+but does not close the two installed-host readiness items, and it adds no merge credential, writer,
+intent, request, or K5.2 authority.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and

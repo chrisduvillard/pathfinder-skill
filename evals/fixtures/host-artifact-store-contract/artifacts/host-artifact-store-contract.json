@@ -17,6 +17,7 @@
   ],
   "packaged_callers": 0,
   "packaged_readers": [
+    "pathfinder_core/adapters/github_evidence_collector.py",
     "pathfinder_core/merge_status.py"
   ]
 }

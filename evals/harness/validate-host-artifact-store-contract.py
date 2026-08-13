@@ -193,7 +193,7 @@ def main() -> int:
         if "HostArtifactCollectionStore" in path.read_text():
             readers.append(path.relative_to(root).as_posix())
     require(
-        readers == expected["packaged_readers"],
+        sorted(readers) == expected["packaged_readers"],
         "host artifact store read-only consumer drift",
     )
     source = (root / "pathfinder_core/host_artifact_store.py").read_text()

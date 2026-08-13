@@ -627,6 +627,7 @@ class GitHubGETClientTests(unittest.TestCase):
         self.assertEqual(sorted(consumers), [
             "pathfinder_core/adapters/github_check_policy.py",
             "pathfinder_core/adapters/github_checks.py",
+            "pathfinder_core/adapters/github_evidence_collector.py",
             "pathfinder_core/adapters/github_evidence_composer.py",
             "pathfinder_core/adapters/github_identity.py",
             "pathfinder_core/adapters/github_memberships.py",

@@ -55,10 +55,13 @@ hashes.
 - [ ] Turn the one-off external publication adapter into a reviewed, installed trusted-host boundary;
   do not weaken the package guard or add it to ordinary `/goal`, `/pathfinder`, auto, pack, or resume
   routes.
-- [ ] Add a production read-only GraphQL/REST collector that preserves exact selected API version,
-  request ids, pagination, App/installation/bot identity, and the qualified feature-unavailable
-  protection/rules absence proof. A source-only fixed-query GraphQL transport now covers the
-  GraphQL pagination/query-hash half, but it has no installed caller or REST/identity composition.
+- [x] Add a source-only orchestration boundary that shares one observer installation credential
+  across the fixed identity, GraphQL, review, and check readers; eagerly closes the observation
+  window before branch-ownership proof; composes canonical evidence/provenance; and persists the
+  exact externally attested envelope without requiring any merge credential.
+- [ ] Supply the remaining normalized REST policy/diff/deployment backend and branch-ownership
+  reader from a trusted installed host. The source orchestrator accepts those injected read-only
+  seams but still has no credential loader, authenticator/key implementation, command, or route.
 - [ ] Define an operator-owned, schema-valid merge policy outside repository trust. The rehearsal used
   an explicit non-authorizing dry-run binding so it could not be mistaken for merge authority.
 - [ ] Keep current-run merge authorization absent until an actual merge evaluation or execution is

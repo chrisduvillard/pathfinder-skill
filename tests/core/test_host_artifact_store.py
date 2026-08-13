@@ -580,7 +580,7 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(StateError, "predates its collection"):
             early_clock.persist(**values)
 
-    def test_schema_is_closed_and_store_has_no_packaged_caller(self):
+    def test_schema_is_closed_and_store_has_only_source_boundary_consumers(self):
         schema = json.loads(
             (
                 ROOT
@@ -615,7 +615,10 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
                 continue
             if "HostArtifactCollectionStore" in path.read_text():
                 readers.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(readers, ["pathfinder_core/merge_status.py"])
+        self.assertEqual(sorted(readers), [
+            "pathfinder_core/adapters/github_evidence_collector.py",
+            "pathfinder_core/merge_status.py",
+        ])
         source = (ROOT / "pathfinder_core" / "host_artifact_store.py").read_text()
         for forbidden in (
             "os.environ",

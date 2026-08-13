@@ -205,6 +205,31 @@ def verifier(**overrides):
 
 
 class GitHubIdentityVerifierTests(unittest.TestCase):
+    def test_observer_only_verifier_requires_no_merge_credential(self):
+        value, clients = verifier()
+        observer_only = GitHubIdentityVerifier(
+            observer_app=clients["observer_app"],
+            observer_installation=clients["observer_installation"],
+        )
+        observer = observer_only.verify_observer(
+            evidence_receipt(),
+            owner="example-owner",
+            name="example-repo",
+            repository_node_id=REPOSITORY_NODE_ID,
+            observed_at=datetime.fromisoformat(NOW),
+        )
+        self.assertEqual(observer.repository["id"], REPOSITORY_ID)
+        with self.assertRaisesRegex(
+            GitHubObservationError, "without an injected App JWT"
+        ):
+            observer_only.verify_merge_actor(
+                merge_receipt(),
+                owner="example-owner",
+                name="example-repo",
+                repository_id=REPOSITORY_ID,
+                observed_at=datetime.fromisoformat(NOW),
+            )
+
     def test_exact_observer_and_merge_identities_cross_check_live_responses(self):
         value, clients = verifier()
         observer = value.verify_observer(

@@ -82,13 +82,13 @@ class GitHubIdentityVerifier:
         *,
         observer_app: GitHubGETClient,
         observer_installation: GitHubGETClient,
-        merge_app: GitHubGETClient,
+        merge_app: GitHubGETClient | None = None,
     ):
         if observer_app.credential.kind != "app-jwt":
             raise ValueError("observer identity requires its App JWT boundary")
         if observer_installation.credential.kind != "installation-token":
             raise ValueError("observer identity requires its installation boundary")
-        if merge_app.credential.kind != "app-jwt":
+        if merge_app is not None and merge_app.credential.kind != "app-jwt":
             raise ValueError("merge actor identity requires its App JWT boundary")
         self.observer_app = observer_app
         self.observer_installation = observer_installation
@@ -264,6 +264,11 @@ class GitHubIdentityVerifier:
         repository_id: int,
         observed_at: datetime,
     ) -> VerifiedMergeActorIdentity:
+        if self.merge_app is None:
+            raise _error(
+                "merge-actor",
+                "merge actor verification is unavailable without an injected App JWT",
+            )
         try:
             schema = json.loads(MERGE_RECEIPT_SCHEMA.read_text())
             Draft202012Validator.check_schema(schema)
