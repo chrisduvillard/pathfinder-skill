@@ -194,9 +194,7 @@ def reader(*responses, max_pages=30):
         clock=lambda: NOW,
         sleeper=lambda _seconds: None,
     )
-    return GitHubPolicyRESTReader(
-        client, repository=REPOSITORY, merge_actor=MERGE_ACTOR
-    ), transport
+    return GitHubPolicyRESTReader(client, repository=REPOSITORY), transport
 
 
 def complete_responses(*, source_detail=None):
@@ -231,9 +229,22 @@ class SnapshotObservationBackend(FixtureObservationBackend):
 
 
 class GitHubPolicyRESTReaderTests(unittest.TestCase):
+    def test_verified_merge_actor_is_required_per_snapshot_before_any_read(self):
+        value, transport = reader(*complete_responses())
+        self.assertFalse(hasattr(value, "merge_actor"))
+        for actor in (
+            {},
+            {**MERGE_ACTOR, "future": True},
+            {"actor_id": MERGE_ACTOR["actor_id"], "login": "not-a-bot"},
+        ):
+            with self.subTest(actor=actor):
+                with self.assertRaises(GitHubObservationError):
+                    value.read_all(merge_actor=actor)
+        self.assertEqual(transport.calls, [])
+
     def test_one_snapshot_owns_normalized_policy_and_required_check_views(self):
         value, transport = reader(*complete_responses())
-        observed = value.read_all()
+        observed = value.read_all(merge_actor=MERGE_ACTOR)
 
         self.assertEqual(observed.classic_protection.data["status"], "present")
         self.assertEqual(
@@ -283,7 +294,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
 
     def test_snapshot_composes_as_complete_observer_evidence_without_shared_audits(self):
         value, _transport = reader(*complete_responses())
-        snapshot = value.read_all()
+        snapshot = value.read_all(merge_actor=MERGE_ACTOR)
         fixture = json.loads(OBSERVER_FIXTURE.read_text())
         journal = json.loads(JOURNAL_FIXTURE.read_text())
         backend = SnapshotObservationBackend(fixture["responses"], snapshot)
@@ -306,7 +317,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response(absent, "active-1", "metadata=read", status=403),
             response(absent, "sources-1", "metadata=read", status=403),
         )
-        observed = value.read_all()
+        observed = value.read_all(merge_actor=MERGE_ACTOR)
 
         self.assertEqual(observed.classic_protection.data["status"], "absent")
         self.assertEqual(observed.classic_check_policy.status, 403)
@@ -319,12 +330,12 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response(absent, "classic-1", "", status=403),
         )
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(caught.exception.outcome, ObservationOutcome.PERMISSION_MISSING)
 
     def test_omitted_ruleset_bypass_actors_remain_unknown(self):
         value, transport = reader(*complete_responses(source_detail=detail(bypass=False)))
-        snapshot = value.read_all()
+        snapshot = value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(
             snapshot.source_rulesets.items[0]["bypass_visibility"], "unknown"
         )
@@ -344,7 +355,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             "actor_id": 71, "actor_type": "Team", "bypass_mode": "always",
         }]
         value, transport = reader(*complete_responses(source_detail=changed))
-        snapshot = value.read_all()
+        snapshot = value.read_all(merge_actor=MERGE_ACTOR)
 
         self.assertNotIn("actor_name", snapshot.bypass_actors.items[0])
         self.assertEqual(snapshot.bypass_memberships.items, ())
@@ -374,7 +385,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             *complete_responses(source_detail=changed),
             response(membership, "membership-1", "members=read"),
         )
-        snapshot = value.read_all()
+        snapshot = value.read_all(merge_actor=MERGE_ACTOR)
 
         self.assertEqual(
             snapshot.bypass_memberships.items[0]["organization_role"], "member"
@@ -397,7 +408,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response([summary()], "source-index-1", "metadata=read"),
         )
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(
             caught.exception.outcome, ObservationOutcome.MALFORMED_RESPONSE
         )
@@ -410,7 +421,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response([summary()], "source-index-1", "metadata=read"),
         )
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
 
         missing = {**summary(), "id": 7002}
@@ -420,7 +431,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response([missing], "source-index-1", "metadata=read"),
         )
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(
             caught.exception.outcome, ObservationOutcome.RULESET_EVIDENCE_INCOMPLETE
         )
@@ -431,14 +442,14 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             *complete_responses(source_detail=drifted)
         )
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(
             caught.exception.outcome, ObservationOutcome.RULESET_EVIDENCE_INCOMPLETE
         )
 
         value, transport = reader(*complete_responses(), max_pages=1)
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(caught.exception.outcome, ObservationOutcome.PAGINATION_INCOMPLETE)
         self.assertEqual(len(transport.calls), 3)
 
@@ -457,7 +468,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response([summary()], "source-index-1", "metadata=read"),
             response(source, "source-detail-1", "metadata=read"),
         )
-        snapshot = value.read_all()
+        snapshot = value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(
             snapshot.active_rules.items[-1]["parameters"], {}
         )
@@ -469,7 +480,7 @@ class GitHubPolicyRESTReaderTests(unittest.TestCase):
             response([summary()], "source-index-1", "metadata=read"),
         )
         with self.assertRaises(GitHubObservationError) as caught:
-            value.read_all()
+            value.read_all(merge_actor=MERGE_ACTOR)
         self.assertEqual(caught.exception.outcome, ObservationOutcome.FIELD_UNKNOWN)
 
     def test_reader_is_source_only_and_has_no_constructor_or_write_primitive(self):

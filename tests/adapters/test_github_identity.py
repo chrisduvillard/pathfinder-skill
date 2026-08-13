@@ -20,6 +20,7 @@ from pathfinder_core.merge_credentials import (
     REQUIRED_MERGE_PERMISSIONS,
     GitHubMergeCredential,
 )
+from pathfinder_core.storage import canonical_sha256
 
 
 NOW = "2026-08-11T12:08:10+00:00"
@@ -311,6 +312,22 @@ class GitHubIdentityVerifierTests(unittest.TestCase):
         self.assertEqual(
             caught.exception.outcome, ObservationOutcome.ACTOR_IDENTITY_UNKNOWN
         )
+
+        overlong = merge_receipt()
+        overlong["expires_at"] = "2026-08-11T13:00:01+00:00"
+        overlong["receipt_sha256"] = canonical_sha256(
+            overlong, "receipt_sha256"
+        )
+        value, clients = verifier()
+        with self.assertRaises(GitHubObservationError):
+            value.verify_merge_actor(
+                overlong,
+                owner="example-owner",
+                name="example-repo",
+                repository_id=REPOSITORY_ID,
+                observed_at=datetime.fromisoformat(NOW),
+            )
+        self.assertEqual(clients["merge_app"].calls, [])
 
         value, _clients = verifier()
         with self.assertRaises(GitHubObservationError):

@@ -20,7 +20,10 @@ from pathfinder_core.adapters.github_graphql import (
     GraphQLConnection,
     GraphQLPullRequestSnapshot,
 )
-from pathfinder_core.adapters.github_identity import VerifiedObserverIdentity
+from pathfinder_core.adapters.github_identity import (
+    VerifiedMergeActorIdentity,
+    VerifiedObserverIdentity,
+)
 from pathfinder_core.adapters.github_merge_observer import (
     GitHubObservationError,
     PageResponse,
@@ -42,6 +45,7 @@ from tests.adapters.test_github_merge_observer import (
     FixtureObservationBackend,
     audit,
 )
+from tests.adapters.test_github_identity import merge_receipt
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -90,6 +94,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         self.branch_ownership = self._branch_ownership()
         self.rest_reviews = self._reviews()
         self.identity = self._identity()
+        self.merge_identity = self._merge_identity()
         self.classic_policy = self._classic_policy()
         self.active_policy = self._active_policy()
 
@@ -190,11 +195,11 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             repository_ids=[123456789],
             app_id=24680,
             app_node_id="A_kgDOApp1234",
-            installation_id=13579,
+            installation_id=97531,
             installation_account_id=123456789,
-            actor_id=97531,
-            actor_node_id="U_kgDOBot1234",
-            login="pathfinder-merge[bot]",
+            actor_id=112233,
+            actor_node_id="U_kgDOObserver1",
+            login="pathfinder-observer[bot]",
             issued_at="2026-08-11T12:00:00+00:00",
             expires_at="2026-08-11T13:00:00+00:00",
             verified_at=self.context["observed_at"],
@@ -231,6 +236,39 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             audit(self.responses["classic-protection"]["audit"]),
         )
 
+    def _merge_identity(self):
+        receipt = merge_receipt()
+        receipt["verified_at"] = self.context["observed_at"]
+        receipt["receipt_sha256"] = canonical_sha256(
+            receipt, "receipt_sha256"
+        )
+        actor = {
+            "app": {
+                "id": receipt["app_id"],
+                "node_id": receipt["app_node_id"],
+            },
+            "installation": {
+                "id": receipt["installation_id"],
+                "account_id": receipt["installation_account_id"],
+            },
+            "user": {
+                "id": receipt["actor_id"],
+                "node_id": receipt["actor_node_id"],
+                "login": receipt["login"],
+                "suspended": receipt["suspended"],
+            },
+            "permissions": {"administration": "none"},
+        }
+        requests = tuple(
+            RequestAudit(value, self.context["observed_at"])
+            for value in (
+                "req-merge-app-1",
+                "req-merge-installation-1",
+                "req-merge-actor-1",
+            )
+        )
+        return VerifiedMergeActorIdentity(actor, receipt, requests)
+
     def _active_policy(self):
         raw = self.responses["active-rules"]
         items = tuple({
@@ -262,6 +300,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
                 copy.deepcopy(self.responses)
             ),
             "observer_identity": self.identity,
+            "merge_actor_identity": self.merge_identity,
             "publication_request": self.publication_request,
             "publication_receipt": self.publication_receipt,
             "branch_ownership": self.branch_ownership,
@@ -286,7 +325,8 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         evidence = result.evidence
         provenance = result.provenance
         self.assertTrue(evidence["observation"]["collection_complete"])
-        self.assertEqual(evidence["actor"]["app_id"], 24680)
+        self.assertEqual(evidence["actor"]["app_id"], 24681)
+        self.assertEqual(evidence["actor"]["actor_id"], 112234)
         self.assertEqual(evidence["pull_request"]["last_pusher_id"], 97531)
         self.assertEqual(evidence["reviews"][0]["id"], 9001)
         self.assertEqual(evidence["review_threads"][0]["node_id"], "PRRT_kwDOThread1")
@@ -295,6 +335,10 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             "context": "preflight (ubuntu-latest)", "app_id": 15368,
         }])
         self.assertEqual(provenance["evidence_sha256"], evidence["evidence_sha256"])
+        self.assertEqual(
+            provenance["merge_credential_receipt_sha256"],
+            self.merge_identity.credential_receipt["receipt_sha256"],
+        )
         self.assertEqual(
             provenance["branch_ownership_sha256"],
             self.branch_ownership["ownership_sha256"],
@@ -311,6 +355,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         ]
         self.assertEqual(len(request_ids), len(set(request_ids)))
         self.assertIn("req-observer-installation-1", request_ids)
+        self.assertIn("req-merge-installation-1", request_ids)
         self.assertNotIn("req-review-threads-1", request_ids)
 
     def test_identity_review_policy_and_check_drift_fail_closed(self):
@@ -320,6 +365,19 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         wrong_identity = replace(self.identity, credential_receipt=receipt)
         with self.assertRaises(GitHubObservationError):
             self.compose(observer_identity=wrong_identity)
+
+        merge_receipt_document = copy.deepcopy(
+            self.merge_identity.credential_receipt
+        )
+        merge_receipt_document["repository_ids"] = [1]
+        merge_receipt_document["receipt_sha256"] = canonical_sha256(
+            merge_receipt_document, "receipt_sha256"
+        )
+        with self.assertRaises(GitHubObservationError):
+            self.compose(merge_actor_identity=replace(
+                self.merge_identity,
+                credential_receipt=merge_receipt_document,
+            ))
 
         graph = copy.deepcopy(self.graphql)
         graph.latest_reviews.items[0]["commit_sha"] = "d" * 40
@@ -403,10 +461,14 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         with self.assertRaisesRegex(GitHubObservationError, "collection window"):
             self.compose(graphql=graph)
 
+        with self.assertRaisesRegex(GitHubObservationError, "merge credential"):
+            self.compose(expires_at="2026-08-11T13:00:01+00:00")
+
     def test_inputs_are_not_mutated_and_composer_owns_no_client(self):
         inputs = copy.deepcopy((
             self.responses,
             self.identity,
+            self.merge_identity,
             self.publication_request,
             self.publication_receipt,
             self.branch_ownership,
@@ -417,6 +479,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         self.assertEqual(inputs, (
             self.responses,
             self.identity,
+            self.merge_identity,
             self.publication_request,
             self.publication_receipt,
             self.branch_ownership,

@@ -25,22 +25,25 @@ identity on every page. This does not make live observation available: a later p
 the REST and GraphQL outputs, but no installed trusted-host credential reader calls either. A separate
 source-only verifier now accepts a hash-bound, fresh, one-repository observer issuance receipt and
 cross-checks the observer App/installation/bot/repository plus the future merge
-App/installation/bot through exact live reads. A dedicated feature read treats the private-plan
+App/installation/bot through exact live reads. The source collector requires both verified
+identities at the same trusted instant and uses only the merge bot for policy-membership and
+evidence-actor decisions; its authenticated artifact stores the non-secret receipt, never the merge
+token. A dedicated feature read treats the private-plan
 upgrade response as absence only when GitHub also identifies the exact required read permission;
-ordinary 403 remains a permission error. A pure source-only composer now requires the verified
-observer receipt and all identity audits, authenticated publication receipt, fixed-query GraphQL
+ordinary 403 remains a permission error. A pure source-only composer now requires distinct verified
+observer and merge receipts and all seven identity audits, authenticated publication receipt, fixed-query GraphQL
 projection, reconciled REST reviews, policy-derived required checks, exact check/status pages, and
 the remaining normalized REST families and a canonical controller-branch ownership proof. It
 emits one schema-valid evidence document plus a
-separately hashed provenance receipt bound to the evidence, credential/publication receipts,
+separately hashed provenance receipt bound to the evidence, observer/merge/publication receipts,
 reviews, checks, request identities, and collection window. The ownership proof requires restricted
 create/update/delete rules, the authenticated publication App as the sole always-bypass actor, the
 complete effective-rule view for the exact head branch, and a final exact ref/SHA reread after
 evidence collection. It still does not authenticate durable host storage, install a collector,
 load a credential from the host, or add a caller. A separate source-only store can now place the
 validated publication journal, exact operator policy/current-run authorization/protected policy,
-both non-secret credential receipts, ownership proof, evidence, and provenance into one immutable
-externally authenticated v2 envelope. It ships no authenticator/key implementation. Its sole
+all three non-secret credential receipts, ownership proof, evidence, and provenance into one immutable
+externally authenticated v3 envelope. It ships no authenticator/key implementation. Its sole
 packaged consumer is an unconstructed read-only adapter that requires two explicit evidence ids,
 identical publication/authority documents, and the same authenticator/key identity. On POSIX the
 store pins an owner-only non-symlink directory

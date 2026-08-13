@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["schema_version", "payload", "attestation", "envelope_sha256"],
   "properties": {
-    "schema_version": {"const": 2},
+    "schema_version": {"const": 3},
     "payload": {
       "type": "object",
       "additionalProperties": false,
@@ -37,6 +37,7 @@
             "publication_receipt",
             "publication_credential_receipt",
             "observer_credential_receipt",
+            "merge_credential_receipt",
             "policy",
             "authorization",
             "protected_policy",
@@ -50,6 +51,7 @@
             "publication_receipt": {"type": "object"},
             "publication_credential_receipt": {"type": "object"},
             "observer_credential_receipt": {"type": "object"},
+            "merge_credential_receipt": {"type": "object"},
             "policy": {"type": "object"},
             "authorization": {"type": "object"},
             "protected_policy": {"type": "object"},

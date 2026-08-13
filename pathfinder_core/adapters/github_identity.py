@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Mapping
 from urllib.parse import quote
@@ -288,11 +288,14 @@ class GitHubIdentityVerifier:
                 "merge actor credential receipt hash differs",
             )
         try:
+            issued_at = parse_aware_timestamp(credential_receipt["issued_at"])
+            expires_at = parse_aware_timestamp(credential_receipt["expires_at"])
             current = (
-                parse_aware_timestamp(credential_receipt["issued_at"])
+                issued_at
                 <= observed_at
                 == parse_aware_timestamp(credential_receipt["verified_at"])
-                < parse_aware_timestamp(credential_receipt["expires_at"])
+                < expires_at
+                <= issued_at + timedelta(hours=1)
             )
         except (KeyError, TypeError, ValueError):
             current = False

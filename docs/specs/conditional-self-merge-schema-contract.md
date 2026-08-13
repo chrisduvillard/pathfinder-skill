@@ -1,8 +1,8 @@
 # Conditional self-merge policy and authorization schemas
 
-> Status: closed data contracts with unused read-only observation, pure evaluation helpers, an
+> Status: closed data contracts with uninstalled read-only collection, pure evaluation helpers, an
 > inert two-snapshot readiness-proof contract, and an unreachable K4 journal/writer primitive. No
-> credentialed observer, eligibility route, merge command, or writer composition is enabled.
+> credential loader, installed eligibility route, merge command, or writer composition is enabled.
 
 The Draft 2020-12 schemas under `schemas/publication/` represent the two independent keys required
 by the [conditional self-merge security contract](conditional-self-merge-contract.md). They are
@@ -19,9 +19,10 @@ claims. A consumer must authenticate the storage envelope before parsing the doc
 valid document into repository content, output, a PR, or a Goal never makes it trusted.
 
 `host-artifact-collection.schema.json` closes the source-only durable collection shape. Its signed
-v2 payload contains exactly the publication journal triplet, publication and observer credential
-receipts, operator policy, current-run authorization, protected-surface policy, controller-branch
-ownership proof, complete merge evidence, and provenance. The store
+v3 payload contains exactly the publication journal triplet, publication, observer, and merge
+credential receipts, operator policy, current-run authorization, protected-surface policy,
+controller-branch ownership proof, complete merge evidence, and provenance. The merge receipt is
+non-secret metadata; the envelope contains no token. The store
 derives the collection id from the exact evidence id, binds an operator-provided store id and
 repository identity, validates every nested schema/canonical hash and cross-document identity, and
 accepts the envelope only when the injected external host authenticator verifies the exact canonical
@@ -115,7 +116,8 @@ ambiguous dispatched operation; only the atomic intent creator may write it, and
 never sends a second mutation. Because a durable local marker cannot be atomic with the remote
 request, restarted reconciliation never credits a pending dispatched operation as merged even when
 observation finds matching merged state. The fixture observer can supply a complete dry-run
-snapshot. A pure uncalled composer now requires the verified observer receipt/identity audits,
+snapshot. A pure uncalled composer now requires the verified observer receipt/identity audits, a
+separately verified merge receipt and live App/installation/bot audits,
 authenticated publication receipt, fixed-query GraphQL projection, reconciled REST reviews,
 policy-derived required checks, exact check/status pages, and the remaining normalized REST
 families plus a canonical controller-branch ownership proof before it emits evidence and an
@@ -127,7 +129,7 @@ installed caller, so it is not a live collector. K5 composition still requires t
 trusted-host, security, and enablement gates in the security contract.
 
 The separate host-artifact store can now persist that source output and its exact operator policy,
-current-run authorization, protected-surface policy, and two credential receipts as one immutable
+current-run authorization, protected-surface policy, and three credential receipts as one immutable
 envelope. Policy/authorization/candidate/evidence bindings and validity windows are reproduced;
 an additive protected policy is combined with the shipped baseline before its effective hash is
 checked. App/installation/bot/repository/time bindings are independently reproduced. POSIX storage is

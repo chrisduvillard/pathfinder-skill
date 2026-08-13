@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock
@@ -112,8 +113,10 @@ class PolicyBackend(FixtureObservationBackend):
         self.credential = credential
         self.classic_policy = classic_policy
         self.active_policy = active_policy
+        self.actor_calls = []
 
-    def read_all(self):
+    def read_all(self, *, merge_actor):
+        self.actor_calls.append(copy.deepcopy(merge_actor))
         source, bypass = self.read_source_rulesets()
         return GitHubNormalizedPolicySnapshot(
             self.read_classic_protection(),
@@ -180,11 +183,15 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         self.identity = GitHubIdentityVerifier(
             observer_app=GitHubGETClient(app_credential("observer")),
             observer_installation=observer_client,
+            merge_app=GitHubGETClient(app_credential("merge")),
         )
         self.graphql = GitHubGraphQLClient(self.installation)
         self.reviews = GitHubReviewReader(observer_client)
         self.checks = GitHubCheckEvidenceReader(observer_client)
         self.identity.verify_observer = Mock(return_value=helper.identity)
+        self.identity.verify_merge_actor = Mock(
+            return_value=helper.merge_identity
+        )
         self.graphql.read_pull_request = Mock(return_value=helper.graphql)
         self.reviews.read_all = Mock(return_value=helper.rest_reviews)
         self.checks.read_all = Mock(
@@ -234,6 +241,7 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         return {
             "policy_backend": policy_backend,
             "observer_credential_receipt": self.helper.identity.credential_receipt,
+            "merge_credential_receipt": self.helper.merge_identity.credential_receipt,
             "publication_request": self.helper.publication_request,
             "publication_dispatch": self.dispatch,
             "publication_receipt": self.helper.publication_receipt,
@@ -264,6 +272,15 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             self.helper.identity.credential_receipt,
         )
         self.assertEqual(
+            persisted["merge_credential_receipt"],
+            self.helper.merge_identity.credential_receipt,
+        )
+        self.assertEqual(
+            inputs["policy_backend"].actor_calls,
+            [{"actor_id": 112234, "login": "pathfinder-merge[bot]"}],
+        )
+        self.assertEqual(result.snapshot.evidence["actor"]["actor_id"], 112234)
+        self.assertEqual(
             before,
             {key: value for key, value in inputs.items() if key != "policy_backend"},
         )
@@ -277,12 +294,19 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             self.helper.active_policy,
         )
         original_identity = self.identity.verify_observer
+        original_merge_identity = self.identity.verify_merge_actor
         original_graphql = self.graphql.read_pull_request
         original_reviews = self.reviews.read_all
         original_checks = self.checks.read_all
         self.identity.verify_observer = Mock(
             side_effect=lambda *args, **kwargs: (
                 self.events.append("reader:identity"), original_identity(*args, **kwargs)
+            )[1]
+        )
+        self.identity.verify_merge_actor = Mock(
+            side_effect=lambda *args, **kwargs: (
+                self.events.append("reader:merge-identity"),
+                original_merge_identity(*args, **kwargs),
             )[1]
         )
         self.graphql.read_pull_request = Mock(
@@ -350,11 +374,32 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
             self.collector().collect_and_persist(**self.inputs(backend=backend))
         self.graphql.read_pull_request.assert_not_called()
 
+    def test_rejects_a_merge_identity_for_a_different_receipt_before_policy_reads(self):
+        changed_receipt = copy.deepcopy(
+            self.helper.merge_identity.credential_receipt
+        )
+        changed_receipt["credential_receipt_id"] = (
+            "merge_credential_receipt_different1"
+        )
+        self.identity.verify_merge_actor.return_value = replace(
+            self.helper.merge_identity,
+            credential_receipt=changed_receipt,
+        )
+        inputs = self.inputs()
+
+        with self.assertRaisesRegex(GitHubObservationError, "supplied receipt"):
+            self.collector().collect_and_persist(**inputs)
+
+        self.graphql.read_pull_request.assert_not_called()
+        self.assertEqual(inputs["policy_backend"].actor_calls, [])
+        self.assertEqual(self.store.calls, [])
+
     def test_rejects_stale_receipt_before_any_read_or_persist(self):
         collector = self.collector(clock=lambda: STARTED.replace(second=1))
         with self.assertRaisesRegex(GitHubObservationError, "trusted collection start"):
             collector.collect_and_persist(**self.inputs())
         self.identity.verify_observer.assert_not_called()
+        self.identity.verify_merge_actor.assert_not_called()
         self.assertEqual(self.ownership.calls, [])
         self.assertEqual(self.store.calls, [])
 

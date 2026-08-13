@@ -96,6 +96,7 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             "publication_receipt": publication["receipt"],
             "publication_credential_receipt": credential_receipt(),
             "observer_credential_receipt": helper.identity.credential_receipt,
+            "merge_credential_receipt": helper.merge_identity.credential_receipt,
             "policy": authority["policy"],
             "authorization": authority["authorization"],
             "protected_policy": ProtectedSurfaceRegistry.load().to_document(),
@@ -163,6 +164,16 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             observer, "receipt_sha256"
         )
 
+        merge = documents["merge_credential_receipt"]
+        merge.update({
+            "credential_receipt_id": f"merge_credential_receipt_{suffix}",
+            "credential_id": f"merge_credential_{suffix}",
+            "verified_at": observed_at,
+        })
+        merge["receipt_sha256"] = canonical_sha256(
+            merge, "receipt_sha256"
+        )
+
         ownership = documents["branch_ownership"]
         ownership["ownership_id"] = f"controller_branch_ownership_{suffix}"
         ownership_observation = ownership["observation"]
@@ -189,6 +200,8 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             "evidence_sha256": evidence["evidence_sha256"],
             "observer_credential_receipt_id": observer["credential_receipt_id"],
             "observer_credential_receipt_sha256": observer["receipt_sha256"],
+            "merge_credential_receipt_id": merge["credential_receipt_id"],
+            "merge_credential_receipt_sha256": merge["receipt_sha256"],
             "branch_ownership_id": ownership["ownership_id"],
             "branch_ownership_sha256": ownership["ownership_sha256"],
             "request_ids_sha256": observation["request_ids_sha256"],
@@ -235,11 +248,8 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             operation="evaluate",
         )
 
-        self.assertEqual(report["outcome"], "policy-blocked")
-        self.assertIn(
-            "merge-actor-can-bypass",
-            {block["code"] for block in report["blocks"]},
-        )
+        self.assertEqual(report["outcome"], "eligible")
+        self.assertEqual(report["blocks"], [])
         self.assertFalse(report["intent_ready"])
         self.assertFalse(report["execution_available"])
         with self.assertRaisesRegex(StateError, "distinct evidence ids"):
@@ -400,6 +410,42 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
 
         store, values = self.store(
             branch_ownership=ownership, provenance=provenance
+        )
+        with self.assertRaisesRegex(StateError, "document bindings differ"):
+            store.persist(**values)
+
+        overlong = copy.deepcopy(self.documents["merge_credential_receipt"])
+        overlong["expires_at"] = "2026-08-11T13:00:01+00:00"
+        overlong["receipt_sha256"] = canonical_sha256(
+            overlong, "receipt_sha256"
+        )
+        provenance = copy.deepcopy(self.documents["provenance"])
+        provenance["merge_credential_receipt_sha256"] = overlong[
+            "receipt_sha256"
+        ]
+        provenance["provenance_sha256"] = canonical_sha256(
+            provenance, "provenance_sha256"
+        )
+        store, values = self.store(
+            merge_credential_receipt=overlong, provenance=provenance
+        )
+        with self.assertRaisesRegex(StateError, "document bindings differ"):
+            store.persist(**values)
+
+        merge = copy.deepcopy(self.documents["merge_credential_receipt"])
+        merge["actor_id"] += 1
+        merge["receipt_sha256"] = canonical_sha256(
+            merge, "receipt_sha256"
+        )
+        provenance = copy.deepcopy(self.documents["provenance"])
+        provenance["merge_credential_receipt_sha256"] = merge[
+            "receipt_sha256"
+        ]
+        provenance["provenance_sha256"] = canonical_sha256(
+            provenance, "provenance_sha256"
+        )
+        store, values = self.store(
+            merge_credential_receipt=merge, provenance=provenance
         )
         with self.assertRaisesRegex(StateError, "document bindings differ"):
             store.persist(**values)
@@ -600,7 +646,22 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
         self.assertFalse(
             schema["properties"]["attestation"]["additionalProperties"]
         )
-        self.assertEqual(schema["properties"]["schema_version"]["const"], 2)
+        self.assertEqual(schema["properties"]["schema_version"]["const"], 3)
+        provenance_schema = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "publication"
+                / "merge-evidence-provenance.schema.json"
+            ).read_text()
+        )
+        Draft202012Validator.check_schema(provenance_schema)
+        self.assertEqual(
+            provenance_schema["properties"]["schema_version"]["const"], 2
+        )
+        self.assertIn(
+            "merge_credential_receipt_sha256", provenance_schema["required"]
+        )
 
         callers = []
         for path in (ROOT / "pathfinder_core").rglob("*.py"):

@@ -19,7 +19,7 @@ from .github_evidence_credentials import (
 )
 from .github_get import QualifiedFeatureResponse
 from .github_graphql import GitHubGraphQLClient
-from .github_identity import GitHubIdentityVerifier
+from .github_identity import GitHubIdentityVerifier, VerifiedMergeActorIdentity
 from .github_merge_observer import (
     EndpointResponse,
     GitHubMergeObservationBackend,
@@ -98,7 +98,9 @@ class NormalizedPolicyBackend(Protocol):
     @property
     def credential(self) -> object: ...
 
-    def read_all(self) -> GitHubNormalizedPolicySnapshot: ...
+    def read_all(
+        self, *, merge_actor: Mapping[str, object]
+    ) -> GitHubNormalizedPolicySnapshot: ...
 
 
 @dataclass(frozen=True)
@@ -234,8 +236,16 @@ class GitHubAuthenticatedEvidenceCollector:
     def _prepare(
         backend: NormalizedPolicyBackend,
         candidate: GitHubCandidateRESTSnapshot,
+        merge_actor: VerifiedMergeActorIdentity,
     ) -> tuple[_PreparedObservationBackend, GitHubNormalizedPolicySnapshot]:
-        policy = backend.read_all()
+        try:
+            subject = {
+                "actor_id": merge_actor.actor["user"]["id"],
+                "login": merge_actor.actor["user"]["login"],
+            }
+        except (KeyError, TypeError):
+            raise _fail("merge-actor", "verified merge actor is malformed") from None
+        policy = backend.read_all(merge_actor=subject)
         if not isinstance(policy, GitHubNormalizedPolicySnapshot):
             raise _fail("policy-backend", "normalized policy snapshot is malformed")
         prepared = _PreparedObservationBackend(
@@ -315,6 +325,7 @@ class GitHubAuthenticatedEvidenceCollector:
         *,
         policy_backend: NormalizedPolicyBackend,
         observer_credential_receipt: Mapping[str, object],
+        merge_credential_receipt: Mapping[str, object],
         publication_request: Mapping[str, object],
         publication_dispatch: Mapping[str, object],
         publication_receipt: Mapping[str, object],
@@ -336,6 +347,7 @@ class GitHubAuthenticatedEvidenceCollector:
             )
         documents = copy.deepcopy({
             "observer_credential_receipt": observer_credential_receipt,
+            "merge_credential_receipt": merge_credential_receipt,
             "publication_request": publication_request,
             "publication_dispatch": publication_dispatch,
             "publication_receipt": publication_receipt,
@@ -389,6 +401,18 @@ class GitHubAuthenticatedEvidenceCollector:
             repository_node_id=node_id,
             observed_at=observed_time,
         )
+        merge_identity = self.identity.verify_merge_actor(
+            documents["merge_credential_receipt"],
+            owner=owner,
+            name=name,
+            repository_id=repository_id,
+            observed_at=observed_time,
+        )
+        if merge_identity.credential_receipt != documents["merge_credential_receipt"]:
+            raise _fail(
+                "merge-actor",
+                "verified merge actor receipt differs from the supplied receipt",
+            )
         graphql = self.graphql.read_pull_request(
             owner=owner,
             name=name,
@@ -403,7 +427,9 @@ class GitHubAuthenticatedEvidenceCollector:
             controller_pusher=pusher,
             object_evidence=documents["object_evidence"],
         )
-        prepared, policy_snapshot = self._prepare(policy_backend, candidate)
+        prepared, policy_snapshot = self._prepare(
+            policy_backend, candidate, merge_identity
+        )
         rest_reviews = self.reviews.read_all(
             repository={"owner": owner, "name": name},
             pull_number=number,
@@ -437,6 +463,7 @@ class GitHubAuthenticatedEvidenceCollector:
         authority = _mapping(documents["authorization"], "authorization")
         expiry_values = (
             observer_receipt.expires_at,
+            merge_identity.credential_receipt["expires_at"],
             policy_document.get("expires_at"),
             authority.get("expires_at"),
         )
@@ -465,6 +492,7 @@ class GitHubAuthenticatedEvidenceCollector:
         snapshot = GitHubCompleteEvidenceComposer.compose(
             base_backend=prepared,
             observer_identity=observer_identity,
+            merge_actor_identity=merge_identity,
             publication_request=documents["publication_request"],
             publication_receipt=receipt,
             branch_ownership=ownership,
@@ -497,6 +525,7 @@ class GitHubAuthenticatedEvidenceCollector:
             observer_credential_receipt=documents[
                 "observer_credential_receipt"
             ],
+            merge_credential_receipt=documents["merge_credential_receipt"],
             policy=policy_document,
             authorization=authority,
             protected_policy=documents["protected_policy"],

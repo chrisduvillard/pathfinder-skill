@@ -164,8 +164,11 @@ selection, read permissions, App/installation/account/bot identity, suspension, 
 issuance/expiry/verification. An uncalled verifier requires a fresh receipt and independently reads
 the exact observer App, repository installation, bot, and repository. It separately validates the
 future merge credential receipt and reads the merge App, exact repository installation, and bot;
-the observer token never substitutes for the merge actor. These source checks do not authenticate
-their own host receipt or install a credential reader.
+the observer token never substitutes for the merge actor. The source collector now consumes both
+verified identities at one trusted observation instant: observer audits prove the read boundary,
+while the verified merge actor alone drives bypass-membership reads and the evidence actor. The
+externally authenticated v3 artifact stores both non-secret receipts and binds evidence/provenance
+to the merge receipt. It contains no merge token and installs no credential reader.
 
 For private-plan feature absence, the GET boundary accepts `403` only through a dedicated closed
 method for classic protection, active branch rules, or source rulesets. It requires the exact
@@ -248,18 +251,20 @@ coverage, query drift, identity drift, duplicate reviewers/threads/request ids, 
 drift block. This projector is pure, uncalled, and not a complete snapshot composer.
 
 One pure source-only composer now binds these primitives together. It requires the verified
-one-repository observer receipt and all four App/installation/bot/repository audits, the canonical
+one-repository observer receipt and all four App/installation/bot/repository audits, the separately
+verified merge receipt and three App/installation/bot audits, the canonical
 publication request/receipt pair, the fixed-query GraphQL snapshot, the complete permission-
 qualified REST review history, host/classic/ruleset required-check union, exact check/status pages,
 every remaining normalized REST family, and the canonical controller-branch ownership proof. It
 emits one schema-valid evidence document plus a
-separately hashed provenance receipt bound to the evidence hash, credential/publication receipt
+separately hashed provenance receipt bound to the evidence hash, observer/merge/publication receipt
 hashes, ownership proof, query hash, reconciled review ids, required checks, request-id hash, and
 collection window. Cross-surface request reuse or any split identity/policy/review/check/ownership
 input blocks. The composer owns no client, credential, storage, command, or caller, so it is not an
 installed production collector. A separate source-only store now defines the durable boundary: one
-immutable externally authenticated v2 envelope contains the exact publication journal, operator
-policy/current-run authorization/protected policy, publication and observer credential receipts,
+immutable externally authenticated v3 envelope contains the exact publication journal, operator
+policy/current-run authorization/protected policy, publication, observer, and non-secret merge
+credential receipts,
 ownership proof, evidence, and provenance. It independently rechecks their canonical/effective
 hashes and complete cross-document identities, uses a pinned owner-only POSIX host
 directory outside repository trust, and rejects partial, replaced, renamed, re-hashed, wrong-store,

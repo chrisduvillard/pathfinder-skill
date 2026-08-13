@@ -100,6 +100,7 @@ def main() -> int:
         "publication_receipt": publication["receipt"],
         "publication_credential_receipt": credential_receipt(),
         "observer_credential_receipt": helper.identity.credential_receipt,
+        "merge_credential_receipt": helper.merge_identity.credential_receipt,
         "policy": authority["policy"],
         "authorization": authority["authorization"],
         "protected_policy": ProtectedSurfaceRegistry.load().to_document(),

@@ -6,7 +6,7 @@ import os
 import re
 import secrets
 import stat
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Mapping, Protocol
 
@@ -28,6 +28,7 @@ MAX_COLLECTION_BYTES = 8 * 1024 * 1024
 DOCUMENT_SCHEMAS = {
     "publication_credential_receipt": "publication-credential-receipt.schema.json",
     "observer_credential_receipt": "evidence-credential-receipt.schema.json",
+    "merge_credential_receipt": "merge-credential-receipt.schema.json",
     "policy": "merge-policy.schema.json",
     "authorization": "merge-authorization.schema.json",
     "branch_ownership": "controller-branch-ownership.schema.json",
@@ -290,6 +291,7 @@ class HostArtifactCollectionStore:
             receipt = documents["publication_receipt"]
             publication_credential = documents["publication_credential_receipt"]
             observer_credential = documents["observer_credential_receipt"]
+            merge_credential = documents["merge_credential_receipt"]
             policy = documents["policy"]
             authorization = documents["authorization"]
             protected_policy = documents["protected_policy"]
@@ -303,6 +305,7 @@ class HostArtifactCollectionStore:
         for label, document in (
             ("publication_credential_receipt", publication_credential),
             ("observer_credential_receipt", observer_credential),
+            ("merge_credential_receipt", merge_credential),
             ("policy", policy),
             ("authorization", authorization),
             ("protected_policy", protected_policy),
@@ -318,6 +321,9 @@ class HostArtifactCollectionStore:
         )
         self._validate_hash(
             observer_credential, "receipt_sha256", "observer credential receipt"
+        )
+        self._validate_hash(
+            merge_credential, "receipt_sha256", "merge credential receipt"
         )
         self._validate_hash(policy, "policy_sha256", "merge policy")
         self._validate_hash(
@@ -366,7 +372,7 @@ class HostArtifactCollectionStore:
             (check["context"], check["app_id"])
             for check in provenance["required_checks"]
         )
-        observer_actor = evidence["actor"]
+        merge_actor = evidence["actor"]
         policy_repository = {
             **{key: receipt_repository[key] for key in REPOSITORY_KEYS},
             "base_branch": receipt_pull["base_ref"],
@@ -384,23 +390,38 @@ class HostArtifactCollectionStore:
                 <= parse_aware_timestamp(observer_credential["verified_at"])
                 == parse_aware_timestamp(evidence["observation"]["observed_at"])
                 <= parse_aware_timestamp(evidence["observation"]["completed_at"])
-                < parse_aware_timestamp(observer_credential["expires_at"])
+                < parse_aware_timestamp(evidence["observation"]["expires_at"])
+                <= parse_aware_timestamp(observer_credential["expires_at"])
+                <= parse_aware_timestamp(observer_credential["issued_at"])
+                + timedelta(hours=1)
+                and parse_aware_timestamp(merge_credential["issued_at"])
+                <= parse_aware_timestamp(merge_credential["verified_at"])
+                == parse_aware_timestamp(evidence["observation"]["observed_at"])
+                <= parse_aware_timestamp(evidence["observation"]["completed_at"])
+                < parse_aware_timestamp(evidence["observation"]["expires_at"])
+                <= parse_aware_timestamp(merge_credential["expires_at"])
+                <= parse_aware_timestamp(merge_credential["issued_at"])
+                + timedelta(hours=1)
                 and parse_aware_timestamp(publication_credential["issued_at"])
                 <= parse_aware_timestamp(publication_credential["verified_at"])
                 <= parse_aware_timestamp(receipt["observed_at"])
                 <= parse_aware_timestamp(ownership["observation"]["observed_at"])
                 <= parse_aware_timestamp(ownership["observation"]["completed_at"])
                 < parse_aware_timestamp(publication_credential["expires_at"])
+                <= parse_aware_timestamp(publication_credential["issued_at"])
+                + timedelta(hours=1)
             )
             authority_times_valid = (
                 parse_aware_timestamp(policy["issued_at"])
                 <= parse_aware_timestamp(evidence["observation"]["observed_at"])
                 <= parse_aware_timestamp(evidence["observation"]["completed_at"])
-                < parse_aware_timestamp(policy["expires_at"])
+                < parse_aware_timestamp(evidence["observation"]["expires_at"])
+                <= parse_aware_timestamp(policy["expires_at"])
                 and parse_aware_timestamp(authorization["issued_at"])
                 <= parse_aware_timestamp(evidence["observation"]["observed_at"])
                 <= parse_aware_timestamp(evidence["observation"]["completed_at"])
-                < parse_aware_timestamp(authorization["expires_at"])
+                < parse_aware_timestamp(evidence["observation"]["expires_at"])
+                <= parse_aware_timestamp(authorization["expires_at"])
             )
         except (TypeError, ValueError):
             credential_times_valid = False
@@ -455,18 +476,39 @@ class HostArtifactCollectionStore:
             != observer_credential["credential_receipt_id"]
             or provenance["observer_credential_receipt_sha256"]
             != observer_credential["receipt_sha256"]
+            or provenance["merge_credential_receipt_id"]
+            != merge_credential["credential_receipt_id"]
+            or provenance["merge_credential_receipt_sha256"]
+            != merge_credential["receipt_sha256"]
             or observer_credential["repository_ids"] != [receipt_repository["id"]]
-            or observer_credential["app_id"] != observer_actor["app_id"]
-            or observer_credential["app_node_id"] != observer_actor["app_node_id"]
-            or observer_credential["installation_id"]
-            != observer_actor["installation_id"]
-            or observer_credential["installation_account_id"]
-            != observer_actor["installation_account_id"]
-            or observer_credential["actor_id"] != observer_actor["actor_id"]
-            or observer_credential["actor_node_id"]
-            != observer_actor["actor_node_id"]
-            or observer_credential["login"] != observer_actor["login"]
-            or observer_credential["app_id"] == publication_credential["app_id"]
+            or merge_credential["repository_ids"] != [receipt_repository["id"]]
+            or merge_credential["app_id"] != merge_actor["app_id"]
+            or merge_credential["app_node_id"] != merge_actor["app_node_id"]
+            or merge_credential["installation_id"]
+            != merge_actor["installation_id"]
+            or merge_credential["installation_account_id"]
+            != merge_actor["installation_account_id"]
+            or merge_credential["actor_id"] != merge_actor["actor_id"]
+            or merge_credential["actor_node_id"]
+            != merge_actor["actor_node_id"]
+            or merge_credential["login"] != merge_actor["login"]
+            or merge_credential["suspended"] != merge_actor["suspended"]
+            or merge_actor["administration_permission"] != "none"
+            or len({
+                publication_credential["app_id"],
+                observer_credential["app_id"],
+                merge_credential["app_id"],
+            }) != 3
+            or len({
+                publication_credential["installation_id"],
+                observer_credential["installation_id"],
+                merge_credential["installation_id"],
+            }) != 3
+            or len({
+                publication_credential["actor_id"],
+                observer_credential["actor_id"],
+                merge_credential["actor_id"],
+            }) != 3
             or not credential_times_valid
             or not authority_times_valid
             or policy["repository"] != policy_repository
@@ -578,6 +620,7 @@ class HostArtifactCollectionStore:
         publication_receipt: Mapping[str, object],
         publication_credential_receipt: Mapping[str, object],
         observer_credential_receipt: Mapping[str, object],
+        merge_credential_receipt: Mapping[str, object],
         policy: Mapping[str, object],
         authorization: Mapping[str, object],
         protected_policy: Mapping[str, object],
@@ -591,6 +634,7 @@ class HostArtifactCollectionStore:
             "publication_receipt": publication_receipt,
             "publication_credential_receipt": publication_credential_receipt,
             "observer_credential_receipt": observer_credential_receipt,
+            "merge_credential_receipt": merge_credential_receipt,
             "policy": policy,
             "authorization": authorization,
             "protected_policy": protected_policy,
@@ -649,7 +693,7 @@ class HostArtifactCollectionStore:
                         "host artifact attestation could not be created"
                     ) from error
                 envelope = {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "payload": payload,
                     "attestation": attestation,
                     "envelope_sha256": "0" * 64,

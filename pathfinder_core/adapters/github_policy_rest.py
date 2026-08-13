@@ -138,14 +138,13 @@ class GitHubPolicyRESTReader:
         client: GitHubGETClient,
         *,
         repository: Mapping[str, object],
-        merge_actor: Mapping[str, object],
     ):
         if not isinstance(client, GitHubGETClient):
             raise TypeError("GitHub policy reader requires a fixed GET client")
         if client.credential.kind != "installation-token":
             raise ValueError("GitHub policy reads require an installation token")
-        if set(repository) != _REPOSITORY_FIELDS or set(merge_actor) != _ACTOR_FIELDS:
-            raise ValueError("GitHub policy repository or merge actor is not closed")
+        if set(repository) != _REPOSITORY_FIELDS:
+            raise ValueError("GitHub policy repository is not closed")
         self.repository = {
             "id": _positive_int(repository["id"], "policy.repository"),
             "node_id": _nonempty(repository["node_id"], "policy.repository"),
@@ -158,12 +157,6 @@ class GitHubPolicyRESTReader:
                 repository["base_branch"], "policy.repository.base-branch"
             ),
         }
-        self.merge_actor = {
-            "actor_id": _positive_int(
-                merge_actor["actor_id"], "policy.merge-actor"
-            ),
-            "login": _nonempty(merge_actor["login"], "policy.merge-actor"),
-        }
         owner = self.repository["owner"]
         name = self.repository["name"]
         branch = self.repository["base_branch"]
@@ -171,13 +164,8 @@ class GitHubPolicyRESTReader:
             re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", str(owner)) is None
             or re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", str(name)) is None
             or re.fullmatch(r"[A-Za-z0-9_.~/-]{1,255}", str(branch)) is None
-            or re.fullmatch(
-                r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\[bot\]",
-                str(self.merge_actor["login"]),
-            )
-            is None
         ):
-            raise ValueError("GitHub policy repository or merge actor is malformed")
+            raise ValueError("GitHub policy repository is malformed")
         self.client = client
         self.memberships = GitHubBypassMembershipReader(client)
         self.repository_path = (
@@ -188,6 +176,21 @@ class GitHubPolicyRESTReader:
     @property
     def credential(self):
         return self.client.credential
+
+    @staticmethod
+    def _merge_actor(value: Mapping[str, object]) -> dict[str, object]:
+        if not isinstance(value, Mapping) or set(value) != _ACTOR_FIELDS:
+            raise _fail("policy.merge-actor", "verified merge actor is not closed")
+        actor = {
+            "actor_id": _positive_int(value["actor_id"], "policy.merge-actor"),
+            "login": _nonempty(value["login"], "policy.merge-actor"),
+        }
+        if re.fullmatch(
+            r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\[bot\]",
+            str(actor["login"]),
+        ) is None:
+            raise _fail("policy.merge-actor", "verified merge actor is malformed")
+        return actor
 
     @staticmethod
     def _enabled(
@@ -859,7 +862,10 @@ class GitHubPolicyRESTReader:
             membership_targets,
         )
 
-    def read_all(self) -> GitHubNormalizedPolicySnapshot:
+    def read_all(
+        self, *, merge_actor: Mapping[str, object]
+    ) -> GitHubNormalizedPolicySnapshot:
+        subject = self._merge_actor(merge_actor)
         classic_raw = self.client.get_qualified_feature(
             "classic-protection",
             f"{self.repository_path}/branches/{self.branch_path}/protection",
@@ -886,7 +892,7 @@ class GitHubPolicyRESTReader:
                 "owner": self.repository["owner"],
                 "name": self.repository["name"],
             },
-            subject=self.merge_actor,
+            subject=subject,
         )
         _unique_audits((
             classic.audit,

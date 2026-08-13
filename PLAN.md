@@ -1491,11 +1491,11 @@ nonchronological history, incomplete pagination, or reused request ids block. Re
 threads, mergeability, and queue state now pass through a second pure projector that requires the
 exact compiled query hash, one real GraphQL audit family, complete independent connections, exact
 repository/PR/ref/SHA identity, rate-limit/audit coverage, and the reconciled publication-pusher
-proof. A pure, uncalled composer now requires those projections plus the verified observer receipt,
-all four App/installation/bot/repository identity audits, complete REST review history, the policy-
+proof. A pure, uncalled composer now requires those projections plus distinct verified observer and
+merge receipts, all seven App/installation/bot/repository identity audits, complete REST review history, the policy-
 derived required-check union, exact check pages, and every remaining normalized REST family. It
 emits schema-valid evidence plus a separate canonical provenance receipt bound to the evidence,
-credential/publication receipts, query, reviews, checks, request ids, and collection window. The
+observer/merge/publication receipts, query, reviews, checks, request ids, and collection window. The
 publication request now also binds the
 authenticated publication credential's bot database/node/login identity through exact preflight and
 the durable repository/ref/SHA push receipt. An uncalled pure reconciler validates both canonical
@@ -1676,11 +1676,11 @@ boundaries; and a disposable-repository rehearsal has exercised publication plus
 read-only evidence collection with zero merge calls. This is distinct from the later, separately
 approved composed merge rehearsal in K6.2.
 
-**Current readiness gate (2026-08-12):**
+**Current readiness gate (2026-08-13):**
 
 - [x] K4 source primitive is green and independently reviewed.
 - [x] The source-only publication prerequisite is crash-tested and independently reviewed.
-- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, both credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumers are an unconstructed single-snapshot collector and the unconstructed two-snapshot read-only adapter.
+- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, operator policy/authorization/protected policy, all three non-secret credential receipts, branch-ownership proof, evidence, and provenance; its only packaged consumers are an unconstructed single-snapshot collector and the unconstructed two-snapshot read-only adapter.
 - [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
@@ -1712,8 +1712,8 @@ that does not close either installed-host prerequisite or authorize K5.2.
 **Authenticated host-artifact implementation note (2026-08-13):** added one source-only,
 uncalled immutable collection store for the completed publication/evidence boundary. It accepts an
 injected external host authenticator but ships no authenticator implementation or key loader. One
-closed envelope atomically contains the validated publication request/dispatch/receipt, publication
-and observer credential receipts, controller-branch ownership proof, complete evidence, and
+closed envelope atomically contains the validated publication request/dispatch/receipt, publication,
+observer, and non-secret merge credential receipts, controller-branch ownership proof, complete evidence, and
 provenance. The store independently rechecks every canonical hash plus repository, mission, PR,
 ref/SHA, diff, App/installation/bot, review/check, request, and observation-time binding. POSIX
 storage is current-user-owned, owner-only, non-symlink, outside repository trust, descriptor-pinned,
@@ -1722,7 +1722,7 @@ equivalent ACL proof. Reads never create state, exact repeats do not re-attest, 
 converge on one envelope, and renamed, re-hashed, wrong-store, split-identity, or externally
 unauthenticated records block. The composer now also rejects a publication/evidence diff or mission
 binding mismatch that this integration exposed. A deterministic actual-code eval and 460 controller
-tests are green. A follow-up v2 envelope now also carries the exact operator policy, current-run
+tests are green. A follow-up v2 envelope added the exact operator policy, current-run
 authorization, and shipped-baseline or additive protected policy. It independently binds their
 canonical/effective hashes, repository, mission, publication candidate, evidence policy-read, and
 validity windows. One source-only read adapter accepts only two explicit, distinct evidence ids,
@@ -1751,9 +1751,12 @@ is accepted only for controller-attested binary content. Ownership reads are fix
 repository ruleset, complete effective rules, and final branch ref; every response must carry the
 documented Metadata- or Contents-read qualification, and omitted bypass actors remain a hard
 unknown rather than an empty list. The collector still requires an injected policy backend,
-external authenticator, store, and already-created credentials. Nothing constructs it from a command,
+external authenticator, store, and already-created credentials. A follow-up now also consumes a
+non-secret current merge receipt plus a separate merge App JWT solely to verify the App,
+installation, and bot at the same trusted observation instant; the merge installation token never
+enters this process. Nothing constructs it from a command,
 mission, pack, publication controller, environment, or installed host route. It therefore narrows
-but does not close the two installed-host readiness items, and it adds no merge credential, writer,
+but does not close the two installed-host readiness items, and it adds no merge token, writer,
 intent, request, or K5.2 authority.
 
 **Normalized policy REST implementation note (2026-08-13):** added one source-only concrete
@@ -1768,11 +1771,15 @@ private-plan absence remains explicit, while an ordinary 403, omitted ruleset `b
 unknown field/parameter, source drift, request/page ceiling, or unsupported source blocks. Classic
 team and ruleset organization-admin memberships use the existing exact qualified endpoints;
 ruleset Team/RepositoryRole ids remain unresolved and ineligible because REST does not provide the
-source-owned slug/role name required to prove them safely. The reader accepts only an injected exact
-merge-actor subject and is still unconstructed; binding that subject to a separately verified merge
-App receipt, supplying the observer credential and external authenticator/key, and installing a
-trusted host route remain open. No credential loader, command, publication mutation, merge
-credential, intent, request, or K5.2 path was added.
+source-owned slug/role name required to prove them safely. The reader accepts the exact merge actor
+only on each snapshot read and is still unconstructed. A follow-up now requires the collector to
+verify a current one-repository merge receipt against the live merge App/installation/bot before
+deriving that subject. The same verified identity becomes the evidence actor, while the observer
+remains only the read boundary. Provenance and the upgraded v3 host artifact bind the non-secret
+merge receipt, and all three credential identities must be distinct. Supplying the observer
+credential, merge App JWT, receipt source, external authenticator/key, and installed trusted-host
+route remain open. No credential loader, command, publication mutation, merge token, intent,
+request, or K5.2 path was added.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and

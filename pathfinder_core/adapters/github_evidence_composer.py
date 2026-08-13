@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Mapping, Sequence
 
 from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import SchemaError, ValidationError
 
 from ..storage import canonical_sha256, read_json
 from .github_branch_ownership import GitHubControllerBranchOwnershipProver
@@ -17,7 +18,7 @@ from .github_graphql_projection import (
     GitHubGraphQLProjector,
     GraphQLPullRequestProjection,
 )
-from .github_identity import VerifiedObserverIdentity
+from .github_identity import VerifiedMergeActorIdentity, VerifiedObserverIdentity
 from .github_merge_observer import (
     EndpointResponse,
     GitHubMergeObservationBackend,
@@ -39,6 +40,12 @@ PROVENANCE_SCHEMA = (
     / "schemas"
     / "publication"
     / "merge-evidence-provenance.schema.json"
+)
+MERGE_RECEIPT_SCHEMA = (
+    Path(__file__).resolve().parents[2]
+    / "schemas"
+    / "publication"
+    / "merge-credential-receipt.schema.json"
 )
 
 
@@ -92,7 +99,7 @@ class _ComposedObservationBackend:
         *,
         base: GitHubMergeObservationBackend,
         observer_identity: VerifiedObserverIdentity,
-        observer_receipt: GitHubEvidenceCredentialReceipt,
+        merge_actor_identity: VerifiedMergeActorIdentity,
         controller_pusher: ControllerPusherProof,
         graphql: GraphQLPullRequestSnapshot,
         projection: GraphQLPullRequestProjection,
@@ -104,7 +111,7 @@ class _ComposedObservationBackend:
     ):
         self.base = base
         self.observer_identity = observer_identity
-        self.observer_receipt = observer_receipt
+        self.merge_actor_identity = merge_actor_identity
         self.controller_pusher = controller_pusher
         self.graphql = graphql
         self.projection = projection
@@ -116,30 +123,16 @@ class _ComposedObservationBackend:
 
     def read_repository(self) -> EndpointResponse:
         audits = self.observer_identity.requests
-        return EndpointResponse(self.observer_identity.repository, audits[3])
+        return EndpointResponse(
+            self.observer_identity.repository, audits[3], audits[:3]
+        )
 
     def read_credential_actor(self) -> EndpointResponse:
-        receipt = self.observer_receipt
-        data = {
-            "app": {"id": receipt.app_id, "node_id": receipt.app_node_id},
-            "installation": {
-                "id": receipt.installation_id,
-                "account_id": receipt.installation_account_id,
-            },
-            "user": {
-                "id": receipt.actor_id,
-                "node_id": receipt.actor_node_id,
-                "login": receipt.login,
-                "suspended": receipt.suspended,
-            },
-            "permissions": {
-                "administration": receipt.permissions["administration"],
-            },
-        }
+        audits = self.merge_actor_identity.requests
         return EndpointResponse(
-            data,
-            self.observer_identity.requests[0],
-            self.observer_identity.requests[1:3],
+            self.merge_actor_identity.actor,
+            audits[0],
+            audits[1:],
         )
 
     def read_pull_request(self) -> EndpointResponse:
@@ -281,6 +274,9 @@ class GitHubCompleteEvidenceComposer:
     _provenance_validator = Draft202012Validator(
         read_json(PROVENANCE_SCHEMA), format_checker=FormatChecker()
     )
+    _merge_receipt_validator = Draft202012Validator(
+        read_json(MERGE_RECEIPT_SCHEMA), format_checker=FormatChecker()
+    )
 
     @classmethod
     def compose(
@@ -288,6 +284,7 @@ class GitHubCompleteEvidenceComposer:
         *,
         base_backend: GitHubMergeObservationBackend,
         observer_identity: VerifiedObserverIdentity,
+        merge_actor_identity: VerifiedMergeActorIdentity,
         publication_request: Mapping[str, object],
         publication_receipt: Mapping[str, object],
         branch_ownership: Mapping[str, object],
@@ -308,6 +305,8 @@ class GitHubCompleteEvidenceComposer:
     ) -> ComposedEvidenceSnapshot:
         if not isinstance(observer_identity, VerifiedObserverIdentity):
             raise _fail("observer-identity", "verified observer identity is missing")
+        if not isinstance(merge_actor_identity, VerifiedMergeActorIdentity):
+            raise _fail("merge-actor", "verified merge actor identity is missing")
         if (
             not isinstance(rest_reviews, PageResponse)
             or not isinstance(classic_check_policy, QualifiedFeatureResponse)
@@ -326,6 +325,15 @@ class GitHubCompleteEvidenceComposer:
             raise _fail(
                 "observer-identity", "observer credential receipt is invalid"
             ) from None
+        merge_receipt = merge_actor_identity.credential_receipt
+        try:
+            cls._merge_receipt_validator.validate(merge_receipt)
+        except (SchemaError, ValidationError):
+            raise _fail("merge-actor", "merge credential receipt is invalid") from None
+        if merge_receipt["receipt_sha256"] != canonical_sha256(
+            merge_receipt, "receipt_sha256"
+        ):
+            raise _fail("merge-actor", "merge credential receipt hash differs")
         observed = _time(observed_at, "observation")
         completed = _time(completed_at, "observation")
         expires = _time(expires_at, "observation")
@@ -341,12 +349,30 @@ class GitHubCompleteEvidenceComposer:
                 "observer-identity",
                 "observer credential expires before collection completes",
             )
+        merge_issued = _time(merge_receipt["issued_at"], "merge-actor")
+        merge_expiry = _time(merge_receipt["expires_at"], "merge-actor")
+        if (
+            not merge_issued <= observed
+            or _time(merge_receipt["verified_at"], "merge-actor") != observed
+            or completed >= merge_expiry
+            or merge_expiry > merge_issued + timedelta(hours=1)
+            or expires > merge_expiry
+            or expires > _time(observer_receipt.expires_at, "observer-identity")
+        ):
+            raise _fail(
+                "merge-actor",
+                "merge credential receipt is not fresh for the collection window",
+            )
         identity_requests = observer_identity.requests
         if len(identity_requests) != 4:
             raise _fail(
                 "observer-identity", "observer identity audit coverage is incomplete"
             )
         _request_ids(identity_requests, "observer-identity")
+        merge_requests = merge_actor_identity.requests
+        if len(merge_requests) != 3:
+            raise _fail("merge-actor", "merge actor audit coverage is incomplete")
+        _request_ids(merge_requests, "merge-actor")
 
         pusher = GitHubPublicationReconciler.reconcile(
             publication_request=publication_request,
@@ -417,11 +443,45 @@ class GitHubCompleteEvidenceComposer:
                 "observer-identity",
                 "observer, publication, and repository identities differ",
             )
+        try:
+            expected_merge_actor = {
+                "app": {
+                    "id": merge_receipt["app_id"],
+                    "node_id": merge_receipt["app_node_id"],
+                },
+                "installation": {
+                    "id": merge_receipt["installation_id"],
+                    "account_id": merge_receipt["installation_account_id"],
+                },
+                "user": {
+                    "id": merge_receipt["actor_id"],
+                    "node_id": merge_receipt["actor_node_id"],
+                    "login": merge_receipt["login"],
+                    "suspended": merge_receipt["suspended"],
+                },
+                "permissions": {"administration": "none"},
+            }
+            separate_credentials = all(
+                observer_identity.credential_receipt[field]
+                != merge_receipt[field]
+                for field in ("app_id", "installation_id", "actor_id")
+            )
+        except (KeyError, TypeError):
+            raise _fail("merge-actor", "verified merge actor is malformed") from None
+        if (
+            merge_actor_identity.actor != expected_merge_actor
+            or merge_receipt["repository_ids"] != [pusher.repository_id]
+            or not separate_credentials
+        ):
+            raise _fail(
+                "merge-actor",
+                "merge actor, repository, or credential boundary differs",
+            )
 
         backend = _ComposedObservationBackend(
             base=base_backend,
             observer_identity=observer_identity,
-            observer_receipt=observer_receipt,
+            merge_actor_identity=merge_actor_identity,
             controller_pusher=pusher,
             graphql=graphql,
             projection=projection,
@@ -490,7 +550,7 @@ class GitHubCompleteEvidenceComposer:
             )
         suffix = evidence_id.removeprefix("merge_evidence_")
         provenance = {
-            "schema_version": 1,
+            "schema_version": 2,
             "provenance_id": f"merge_evidence_provenance_{suffix}",
             "evidence_id": evidence_id,
             "evidence_sha256": evidence["evidence_sha256"],
@@ -500,6 +560,10 @@ class GitHubCompleteEvidenceComposer:
             "observer_credential_receipt_sha256": observer_identity.credential_receipt[
                 "receipt_sha256"
             ],
+            "merge_credential_receipt_id": merge_receipt[
+                "credential_receipt_id"
+            ],
+            "merge_credential_receipt_sha256": merge_receipt["receipt_sha256"],
             "publication_receipt_id": pusher.publication_receipt_id,
             "publication_receipt_sha256": pusher.publication_receipt_sha256,
             "branch_ownership_id": branch_ownership["ownership_id"],

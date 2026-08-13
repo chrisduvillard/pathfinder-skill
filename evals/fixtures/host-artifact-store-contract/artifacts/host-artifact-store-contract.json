@@ -1,11 +1,12 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "source": "authenticated-host-artifact-store",
   "store_id": "host_artifact_store_contract1",
   "document_names": [
     "authorization",
     "branch_ownership",
     "evidence",
+    "merge_credential_receipt",
     "observer_credential_receipt",
     "policy",
     "protected_policy",
