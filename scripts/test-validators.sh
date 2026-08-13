@@ -33,6 +33,15 @@ here="$(cd "$(dirname "$0")/.." && pwd)"
 skillsrc="$here/scripts/check-skill-consistency.sh"
 mansrc="$here/scripts/check-manifests.sh"
 relsrc="$here/.github/workflows/release.yml"
+if [ -x "$here/.venv/bin/python" ]; then
+  manifest_python="$here/.venv/bin/python"
+elif [ -n "${PATHFINDER_CONTROLLER_PYTHON:-}" ]; then
+  manifest_python="$PATHFINDER_CONTROLLER_PYTHON"
+elif command -v python3 >/dev/null 2>&1; then
+  manifest_python="$(command -v python3)"
+else
+  manifest_python="$(command -v python)"
+fi
 fail=0
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -65,6 +74,19 @@ newroot() {
   printf '%s' "$d"
 }
 
+new_manifest_root() {
+  local d
+  d="$(mktemp -d "$tmp/manifests.XXXXXX")"
+  mkdir -p "$d/.github/workflows" "$d/.claude-plugin" "$d/.codex-plugin" "$d/.agents/plugins"
+  cp "$here/.github/workflows/release.yml" "$d/.github/workflows/release.yml"
+  cp "$here/.claude-plugin/plugin.json" "$d/.claude-plugin/plugin.json"
+  cp "$here/.claude-plugin/marketplace.json" "$d/.claude-plugin/marketplace.json"
+  cp "$here/.codex-plugin/plugin.json" "$d/.codex-plugin/plugin.json"
+  cp "$here/.agents/plugins/marketplace.json" "$d/.agents/plugins/marketplace.json"
+  cp "$here/VERSION.md" "$d/VERSION.md"
+  printf '%s' "$d"
+}
+
 csc() { MSYS_NO_PATHCONV=1 bash "$skillsrc" "$1" 2>&1; }
 
 assert_pass() {  # <root> <label>
@@ -75,6 +97,21 @@ assert_pass() {  # <root> <label>
 assert_catch() {  # <root> <regex> <label>
   local out ec
   out="$(csc "$1")"; ec=$?
+  if [ "$ec" -ne 0 ] && printf '%s' "$out" | grep -Eq "$2"; then
+    ok "$3"
+  else
+    bad "$3 (exit=$ec; expected non-zero output matching /$2/)"
+  fi
+}
+
+assert_manifest_pass() {  # <root> <label>
+  local out ec
+  out="$(cd "$1" && PATHFINDER_CONTROLLER_PYTHON="$manifest_python" bash "$mansrc" . 2>&1)"; ec=$?
+  if [ "$ec" -eq 0 ]; then ok "$2"; else bad "$2 (exit=$ec, expected 0)"; printf '%s\n' "$out" | tail -4; fi
+}
+assert_manifest_catch() {  # <root> <regex> <label>
+  local out ec
+  out="$(cd "$1" && PATHFINDER_CONTROLLER_PYTHON="$manifest_python" bash "$mansrc" . 2>&1)"; ec=$?
   if [ "$ec" -ne 0 ] && printf '%s' "$out" | grep -Eq "$2"; then
     ok "$3"
   else
@@ -188,6 +225,189 @@ EOF
     bad "changelog extractor leaked an adjacent block or dropped the target (parser 4c)"
   fi
 fi
+
+echo "== policy 4d: release workflow remains manual-only, main-only, and version-confirmed =="
+R="$(new_manifest_root)"
+assert_manifest_pass "$R" "release workflow baseline satisfies the manual release boundary"
+
+R="$(new_manifest_root)"
+awk '{ if ($0 == "  workflow_dispatch:") print "  push: {branches: [main]}"; print }' \
+  "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "release trigger must be exactly.*workflow_dispatch" \
+  "release guard catches an added inline automatic push trigger"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "  workflow_dispatch:") {
+    print "  ? push"
+    print "  : {}"
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "release trigger must be exactly.*workflow_dispatch" \
+  "release guard catches an explicit-key automatic push trigger"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "        required: true") {
+    print "        required: false"
+    print "        default: 3.2.0"
+    next
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "must require one typed version confirmation" \
+  "release input guard catches an optional defaulted version"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "      - name: Create release if VERSION.md declares a new version") {
+    print "      - name: Unexpected write-capable step"
+    print "        run: gh release create v0.0.0"
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "exactly two gated jobs and one isolated write permission" \
+  "release job-shape guard catches an added write-capable step"
+
+R="$(new_manifest_root)"
+awk '
+  /^  release:[[:space:]]*$/ { in_release=1 }
+  in_release && $0 == "    if: github.ref == '\''refs/heads/main'\'' && needs.validate.outputs.version == inputs.version" {
+    print "    if: true"
+    next
+  }
+  { print }
+' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "exactly two gated jobs and one isolated write permission" \
+  "release job-shape guard catches removal of the pre-job authority gate"
+
+R="$(new_manifest_root)"
+awk '
+  /^  release:[[:space:]]*$/ {
+    print "  alternate-release:"
+    print "    runs-on: ubuntu-latest"
+    print "    permissions: {contents: write}"
+    print "    steps: []"
+  }
+  { print }
+' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "exactly two gated jobs and one isolated write permission" \
+  "release permission guard catches an extra job with inline contents write"
+
+R="$(new_manifest_root)"
+awk 'BEGIN { replaced=0 } {
+  if ($0 == "permissions:") {
+    print "permissions: write-all"
+    replaced=1
+    next
+  }
+  if (replaced == 1 && $0 == "  contents: read") { replaced=2; next }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "exactly two gated jobs and one isolated write permission" \
+  "release permission guard catches top-level write-all syntax"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "  release:") {
+    print "  alternate: {runs-on: ubuntu-latest, permissions: write-all, steps: []}"
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "exactly two gated jobs and one isolated write permission" \
+  "release job-list guard catches a compact alternate write job"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "  release:") {
+    print "  ? alternate"
+    print "  :"
+    print "    runs-on: ubuntu-latest"
+    print "    ? permissions"
+    print "    : write-all"
+    print "    steps: []"
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "exactly two gated jobs and one isolated write permission" \
+  "release canonical-syntax guard catches explicit job and permission keys"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "    permissions:") {
+    print "    \"permissions\": write-all"
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "invalid workflow YAML|exactly two gated jobs and one isolated write permission" \
+  "release permission guard catches a quoted alternate permission key"
+
+R="$(new_manifest_root)"
+cat > "$R/.github/workflows/auto-release.yml" <<'YAML'
+name: automatic release bypass
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release create v0.0.0
+YAML
+assert_manifest_catch "$R" "release/tag authority is permitted only" \
+  "repository-wide guard catches a second automatic release workflow"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "          if [ \"$GITHUB_REF\" != \"refs/heads/main\" ]; then") {
+    print "          # if [ \"$GITHUB_REF\" != \"refs/heads/main\" ]; then"
+    print "          if false; then"
+    next
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "reject a non-main ref before any GitHub release call" \
+  "release behavior probe catches an inert commented main-branch check"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "          if [ \"$REQUESTED_VERSION\" != \"$version\" ]; then") {
+    print "          # if [ \"$REQUESTED_VERSION\" != \"$version\" ]; then"
+    print "          if false; then"
+    next
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "reject a mismatched requested version before any GitHub release call" \
+  "release behavior probe catches an inert commented typed-version check"
+
+R="$(new_manifest_root)"
+awk '{
+  if ($0 == "          REQUESTED_VERSION: ${{ inputs.version }}") {
+    print "          # REQUESTED_VERSION: ${{ inputs.version }}"
+    print "          REQUESTED_VERSION: 3.2.0"
+    next
+  }
+  print
+}' "$R/.github/workflows/release.yml" > "$R/.github/workflows/release.yml.new" \
+  && mv "$R/.github/workflows/release.yml.new" "$R/.github/workflows/release.yml"
+assert_manifest_catch "$R" "must bind requested and validated versions" \
+  "release binding guard catches a constant input hidden behind a decoy comment"
 
 echo "== parser 5: SHA-pin scan covers composite actions (BE-3/SEC-1) =="
 # check-portability.sh must flag an unpinned uses: inside a composite action definition
