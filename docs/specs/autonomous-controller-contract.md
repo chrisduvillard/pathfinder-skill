@@ -23,7 +23,7 @@ state transitions, Git isolation, execution eligibility, and publication gates.
 | D-05 | Merge | No autonomous self-merge in v1. Successful publication ends at `awaiting-review`. |
 | D-06 | Intent and authority | Descriptive intent may remain repo-local; approval and authorization evidence must be host-owned or supplied explicitly per run. |
 | D-07 | Concurrency | Exactly one Goal and one attempt execute at a time. |
-| D-08 | Distribution | Stable releases use immutable refs; rolling `main` is an explicitly labeled edge channel. |
+| D-08 | Distribution | Stable releases use versioned refs that maintainers do not rewrite; rolling `main` is an explicitly labeled edge channel. |
 
 Future conditional merge remains design-only and does not alter D-05. Its separately reviewed
 authority and evidence requirements are recorded in the

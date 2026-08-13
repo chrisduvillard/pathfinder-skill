@@ -50,7 +50,7 @@ Observable success means:
 
 - Whether “manual approval required” means approval before implementation, before publication, or only human review before merge.
 - Whether persistent creator intent may recommend autonomy or actually authorize a later run. This plan recommends recommendation-only.
-- Whether stable users should receive rolling `main` or immutable releases.
+- Whether stable users should receive rolling `main` or versioned releases governed by a no-rewrite policy.
 - Whether Python can be guaranteed by both plugin hosts; otherwise a packaged binary or host-native tool server is needed.
 - Whether future self-merge is a product requirement. This plan treats it as optional and out of v1.
 - Which host APIs permit programmatic Goal creation and status updates from a plugin versus requiring a user slash command.
@@ -149,7 +149,7 @@ The first autonomous release should be deliberately narrower than the current pr
 - [x] **D-05 — Self-merge:** remove it from v1 autonomous behavior and make it a later, explicit repository policy. Recommendation: **yes**.
 - [x] **D-06 — Intent storage:** keep descriptive intent repo-local but keep authorization snapshots and creator approvals in host/user state outside the repository. Recommendation: **yes**.
 - [x] **D-07 — Parallelism:** disable autonomous parallel execution until sequential crash/resume and publication tests are stable. Recommendation: **yes**.
-- [x] **D-08 — Release channels:** add immutable stable tags and retain `main` only as an explicitly labeled edge channel. Recommendation: **yes**.
+- [x] **D-08 — Release channels:** add versioned stable tags with a no-rewrite maintainer policy and retain `main` only as an explicitly labeled edge channel. Recommendation: **yes**.
 
 ## Master improvement checklist
 
@@ -283,7 +283,7 @@ compose the publisher. Those limits are explicit non-guarantees, not implied pro
 
 ### P3 — Harden distribution, operations, and documentation
 
-- [x] Introduce `stable` and `edge` marketplace channels; stable resolves to an immutable release tag or commit.
+- [x] Introduce `stable` and `edge` marketplace channels; stable resolves to a versioned release tag or commit that maintainers do not rewrite.
 - [x] Generate release notes from structured change metadata or validate the current `VERSION.md` extraction with cross-platform tests.
 - [x] Smoke-install the exact release artifact before publishing a tag.
 - [x] Publish a compatibility matrix for host versions, Goal support, Python/controller availability, Git/GitHub requirements, and supported operating systems.
@@ -815,7 +815,7 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 
 ### Phase 5 — Migrate, package, and release safely
 
-**Goal:** ship the controller-backed behavior with explicit compatibility, migrations, and an immutable stable release.
+**Goal:** ship the controller-backed behavior with explicit compatibility, migrations, and a versioned stable release governed by a no-rewrite policy.
 
 **Preconditions:** Phases 0-4 green; threat-model review complete; clean worktree; release candidate tested from its packaged artifact.
 
@@ -837,13 +837,13 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 - [ ] `[writes code]` Change only plugin/marketplace manifests, release workflow, version docs, and packaging tests.
 - [ ] First present a release-channel plan, then edit.
 - [ ] Imitate existing manifest identity/version checks.
-- [ ] Make stable resolve immutably and label `main` as edge; smoke-install the packaged artifact before tag/release creation.
+- [ ] Make stable resolve through a versioned tag governed by the no-rewrite policy and label `main` as edge; smoke-install the packaged artifact before tag/release creation.
 - [ ] Existing tests must pass unmodified; update expected manifest policy only after new negative fixtures exist.
 - [ ] Show all callers before removing the enforced `source.ref: main` rule.
 - [ ] Expected diff: 80-150 lines; split packaging test from channel change.
 - [ ] Verify with `bash scripts/check-all.sh .`, package smoke tests, and a dry-run release that creates no tag or external release.
 - [ ] Append the required result line to `PROGRESS.md`.
-- [ ] Stop if either host cannot consume immutable refs; retain edge-only distribution and document the limitation.
+- [ ] Stop if either host cannot consume versioned refs; retain edge-only distribution and document the limitation.
 
 #### Sub-prompt P5.3 — operator and compatibility documentation
 
@@ -860,7 +860,7 @@ The master checklist above is the completion record. The risk-ordered sub-prompt
 
 **Phase verification:** an install from the release candidate can generate a Goal in a synthetic non-Git folder, run one local Git mission to a verified branch, and run one GitHub fixture mission to exactly one awaiting-review PR record; migrations preserve existing intent without granting authority.
 
-**Rollback:** publish a new patch release pointing stable back to the prior immutable artifact; do not rewrite tags. Preserve migration backups and provide a downgrade reader where feasible.
+**Rollback:** publish a new patch release pointing stable back to the prior versioned artifact; do not rewrite tags. Preserve migration backups and provide a downgrade reader where feasible.
 
 **Decision:** only promote stable after at least one release-candidate dogfood cycle on each supported host.
 
