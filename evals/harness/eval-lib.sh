@@ -110,6 +110,23 @@ assert_replay_contract() {
   validation_output="$("$PATHFINDER_EVAL_PYTHON" "$PATHFINDER_EVAL_VALIDATOR" "$PATHFINDER_SCHEMA_ROOT/replays/replay.schema.json" "$path" 2>&1)" || {
     add_error "replay.json invalid: $validation_output"
   }
+  if [ "$("$PATHFINDER_EVAL_PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["scenario"])' "$path" 2>/dev/null)" = "prompt-fast-path" ]; then
+    for pair in \
+      "06-goal-binding.json:artifacts/goal-binding.schema.json" \
+      "08-final-summary.json:artifacts/final-summary.schema.json"
+    do
+      local artifact="${pair%%:*}" schema="${pair#*:}"
+      require_artifact "$artifact" || continue
+      validation_output="$("$PATHFINDER_EVAL_PYTHON" "$PATHFINDER_EVAL_VALIDATOR" "$PATHFINDER_SCHEMA_ROOT/$schema" "$(artifact_file "$artifact")" 2>&1)" || {
+        add_error "$artifact invalid: $validation_output"
+      }
+    done
+    validation_output="$(
+      "$PATHFINDER_EVAL_PYTHON" \
+        "${PATHFINDER_SCHEMA_ROOT%/schemas}/evals/harness/validate-prompt-replay.py" \
+        "$ARTIFACT_DIR" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+    )" || add_error "prompt replay artifacts invalid: $validation_output"
+  fi
 }
 
 assert_injection_surface_fixtures() {

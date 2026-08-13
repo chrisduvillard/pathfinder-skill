@@ -1975,3 +1975,10 @@ identity through an installed trusted host, live evidence collects every require
 policy and credential boundaries exist, the disposable rehearsal passes, and a separate
 execution-enable decision authorizes K5.2. Do not infer K5 authority from source presence, source
 review, or green fixture tests.
+
+## Post-v3.2 safety and dogfood batch
+
+- [x] Replace merge-triggered release creation with a manual-only, main-only workflow that requires the maintainer to confirm the exact `VERSION.md` value.
+- [x] Add a deterministic guard that rejects any automatic release trigger or removal of the main/version confirmation boundary.
+- [x] Dogfood prompt-to-goal and local autonomous execution against representative Git, dirty-tree, and non-Git repositories; convert each reproduced friction point into a bounded regression before changing behavior. *(Read-only real-repository tracing plus disposable dirty/non-Git runs now cover canonical scope derivation, explicit committed-base disclosure, outside-source non-Git artifacts, honest manual Goal state, complete completion claims, and actual six-artifact prompt replay.)*
+- [x] Keep publication, merge execution, releases, deployments, force-pushes, secrets, and other irreversible operations unreachable from the enabled Pathfinder controller throughout dogfooding. *(The full behavior/manifest/eval/controller preflight remains green with manual release authority isolated and no new publication, merge, credential, network, deploy, force-push, or secret path.)*

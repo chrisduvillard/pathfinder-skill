@@ -28,8 +28,9 @@ Then invoke it in Codex with `$pathfinder:pathfinder`, or run `/skills` to pick 
 
 Codex namespaces plugin skills as `$plugin-name:skill-name`. The shorter
 `$pathfinder` form below is for a manual skill install. Codex's native `/goal`
-command is a separate lifecycle control for the durable Goal that Pathfinder
-prepares.
+command is a separate lifecycle control used only after Pathfinder prepares a
+Goal and the user chooses to activate it. A printed manual command is not an
+active Goal.
 
 Codex reads the marketplace entry from `.agents/plugins/marketplace.json` and the plugin manifest from `.codex-plugin/plugin.json` at the repository root.
 
@@ -91,7 +92,7 @@ python3 -m venv .venv
 .venv/bin/python -m pathfinder_core doctor --json
 ```
 
-On Windows use `.venv/Scripts/python.exe`. `runner_available` is the compatibility name for those controller dependencies. `mission_runner_available` separately reports the callable local start/next/record/resume protocol. It does not grant unattended eligibility: an actual run still requires a clean Git repository, a trusted authorization snapshot, host-proven filesystem/process/network/credential isolation, a stable native Goal identity, and typed receipts. Missing evidence degrades to saved-Goal/manual-handoff behavior; publication is disabled.
+On Windows use `.venv/Scripts/python.exe`. `runner_available` is the compatibility name for those controller dependencies. `mission_runner_available` separately reports the callable local start/next/record/resume protocol. It does not grant unattended eligibility: an actual run still requires a clean Git repository or an explicitly acknowledged committed base, a trusted authorization snapshot, host-proven filesystem/process/network/credential isolation, a stable native Goal identity, and typed receipts. The host must verify the actual repository and `HEAD`; `mission start` validates the supplied closed documents and does not independently discover repository state. Missing evidence degrades to saved-Goal/manual-handoff behavior; publication is disabled.
 
 Full plugin installs include `scripts/pathfinder-controller.sh`, which resolves the plugin root even while Pathfinder operates on another repository. A manual copy of only `skills/pathfinder/` is Goal-generation-only unless the controller is separately installed.
 

@@ -115,6 +115,24 @@ class GoalPackMissionTests(unittest.TestCase):
                 self.assertEqual(json.loads(path.read_text()), binding)
                 self.assertEqual(path.stat().st_mode & 0o222, 0)
 
+    def test_pack_start_rejects_non_git_goal_bindings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bindings = pack_bindings()
+            for binding in bindings:
+                binding["schema_version"] = 2
+                binding["scope"].update(
+                    repository_kind="non-git",
+                    base_commit=None,
+                    dirty_policy="not-applicable",
+                )
+            authorization = pack_authorization(bindings)
+            with self.assertRaisesRegex(StateError, "require Git Goal Bindings"):
+                self.start(
+                    directory,
+                    bindings=bindings,
+                    authorization=authorization,
+                )
+
     def test_start_is_idempotent_and_rejects_contract_drift(self):
         with tempfile.TemporaryDirectory() as directory:
             bindings = pack_bindings()

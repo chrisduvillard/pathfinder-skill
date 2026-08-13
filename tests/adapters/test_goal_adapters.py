@@ -57,9 +57,13 @@ class GoalAdapterTests(unittest.TestCase):
 
     def test_claude_launcher_and_manual_modes(self):
         launched = []
-        self.assertEqual(ClaudeGoalAdapter().create("objective").mode, "manual")
+        manual = ClaudeGoalAdapter().create("objective")
+        self.assertEqual(manual.mode, "manual")
+        self.assertEqual(manual.record.status, GoalStatus.NONE)
+        self.assertEqual(manual.instruction, "/goal objective")
         result = ClaudeGoalAdapter(launched.append).create("objective")
         self.assertEqual(result.mode, "native-launched")
+        self.assertEqual(result.record.status, GoalStatus.ACTIVE)
         self.assertEqual(launched, ["/goal objective"])
 
     def test_generic_fallback_is_labeled_non_persistent(self):

@@ -5,7 +5,7 @@
   "type": "object", "additionalProperties": false,
   "required": ["schema_version", "binding_id", "mission_id", "goal_id", "objective", "objective_source", "selected_candidate_ids", "intent_snapshot", "capabilities", "scope", "proof_requirements", "protected_surfaces", "runtime_boundary_required", "budgets", "created_at"],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {"enum": [1, 2]},
     "binding_id": {"type": "string", "pattern": "^binding_[a-z0-9][a-z0-9_-]{7,63}$"},
     "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
     "goal_id": {"type": "string", "pattern": "^goal_[a-z0-9][a-z0-9_-]{7,63}$"},
@@ -40,10 +40,11 @@
       "type": "object", "additionalProperties": false,
       "required": ["repository_id", "scoped_root", "base_commit", "dirty_policy", "fingerprint"],
       "properties": {
+        "repository_kind": {"enum": ["git", "non-git"]},
         "repository_id": {"type": "string", "minLength": 1},
         "scoped_root": {"type": "string", "minLength": 1},
-        "base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
-        "dirty_policy": {"enum": ["block", "committed-base"]},
+        "base_commit": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{40,64}$"}, {"type": "null"}]},
+        "dirty_policy": {"enum": ["block", "committed-base", "not-applicable"]},
         "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
@@ -56,5 +57,12 @@
         "max_total_prs": {"type": "integer", "minimum": 0}
       }
     }
-  }
+  },
+  "allOf": [
+    {"if": {"properties": {"schema_version": {"const": 1}}}, "then": {"properties": {"scope": {"not": {"required": ["repository_kind"]}, "properties": {"base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}, "dirty_policy": {"enum": ["block", "committed-base"]}}}}}},
+    {"if": {"properties": {"schema_version": {"const": 2}}}, "then": {"properties": {"scope": {"required": ["repository_kind"], "allOf": [
+      {"if": {"properties": {"repository_kind": {"const": "git"}}}, "then": {"properties": {"base_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}, "dirty_policy": {"enum": ["block", "committed-base"]}}}},
+      {"if": {"properties": {"repository_kind": {"const": "non-git"}}}, "then": {"properties": {"base_commit": {"type": "null"}, "dirty_policy": {"const": "not-applicable"}}}}
+    ]}}}}
+  ]
 }

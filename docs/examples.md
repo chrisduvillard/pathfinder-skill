@@ -16,11 +16,23 @@ Pathfinder detects Git and the remote type. The local bridge does not improvise 
 
 ## Non-Git folder
 
-Prompt-to-goal and source-first exploration work. Pathfinder saves a native/manual Goal and artifacts. Autonomous branch/commit/PR execution is unavailable.
+Prompt-to-goal and source-first exploration work. Pathfinder can hand off a native/manual Goal. A
+full controller install on POSIX saves canonical artifacts only under an explicit
+current-user-owned `0700` host work root outside the source folder, using `pathfinder/<run>` beneath
+that root. Other platforms fail closed pending equivalent ownership proof. It records a `non-git`
+scope with no invented commit. Autonomous branch/commit/PR execution is unavailable.
+
+## Dirty Git repository
+
+Goal saving blocks by default. If the user explicitly chooses committed-base mode, Pathfinder uses
+the controller-derived scope for the current `HEAD`, passes the separate
+`--acknowledge-committed-base` save gate, preserves all modified and untracked files, and prints
+that those files are excluded from execution. This choice does not authorize autonomy;
+the host still has to prove every runtime and receipt boundary.
 
 ## Monorepo
 
-The Goal Binding records the Git root, requested scoped root, exact base commit, dirty policy, and content fingerprint. Root intent remains in `.pathfinder/`; selecting `apps/api` reads and writes only `.pathfinder/scopes/apps/api/intent/`, while `apps/web` gets a separate namespace. A missing scoped model stays unresolved instead of borrowing the repository or sibling product model. Discovery/cache and changed-surface checks stay inside the selected scope unless the Goal explicitly names a cross-package dependency.
+The Goal Binding records the repository kind and opaque identity, requested scoped root, exact base commit, dirty policy, and controller-derived scope fingerprint. Root intent remains in `.pathfinder/`; selecting `apps/api` reads and writes only `.pathfinder/scopes/apps/api/intent/`, while `apps/web` gets a separate namespace. A missing scoped model stays unresolved instead of borrowing the repository or sibling product model. Discovery/cache and changed-surface checks stay inside the selected scope unless the Goal explicitly names a cross-package dependency.
 
 ## Protected path
 

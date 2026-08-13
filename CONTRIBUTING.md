@@ -26,11 +26,14 @@ The preflight needs [`jq`](https://jqlang.github.io/jq/) and
 [`ShellCheck`](https://www.shellcheck.net/) on your `PATH`
 (`apt-get install jq`, `brew install jq`, `choco install jq`, or `winget install jqlang.jq`);
 install ShellCheck with the same package manager. The checks exit early with an actionable
-error when either dependency is missing. The other checks need only `bash` and standard
+error when either dependency is missing. Most other checks need only `bash` and standard
 POSIX tools (`awk`, `sed`, `grep`).
 
-Controller tests require Python 3.11+ and the pinned packages in
-`requirements-controller.txt`. An ignored `.venv` is recommended:
+Controller tests and semantic GitHub-workflow validation require Python 3.11+
+and the pinned packages in `requirements-controller.txt`. `PyYAML` is used only
+by the offline repository validator; pinning it here makes local checks, package
+smoke, and all three CI hosts use the same parser version. The installed
+Pathfinder runtime does not import it. An ignored `.venv` is recommended:
 
 ```bash
 python3 -m venv .venv

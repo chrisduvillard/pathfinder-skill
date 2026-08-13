@@ -14,7 +14,8 @@
 # between Claude and Codex plugin manifests; (5) Codex default prompts cover the
 # supported entry paths; (6) neither marketplace.json declares a version anywhere
 # (plugin.json is the single source Claude Code resolves first); (7) the Codex
-# marketplace pins source.ref to the immutable release tag for the stable channel.
+# marketplace pins source.ref to the immutable release tag for the stable channel;
+# (8) the release workflow is manual-only, main-only, and version-confirmed.
 #
 # Usage: bash scripts/check-manifests.sh [ROOT]   (ROOT defaults to ".")
 # Exit 0 when all checks pass; non-zero otherwise.
@@ -23,6 +24,7 @@ set -uo pipefail
 
 root="${1:-.}"
 fail=0
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 jq_bin="${JQ:-}"
 if [ -z "$jq_bin" ]; then
@@ -184,6 +186,105 @@ if [ "$claude_ref" = "v$v" ] && [ "$claude_repo" = "chrisduvillard/pathfinder-sk
 else
   echo "::error file=$claude_market::stable source must be chrisduvillard/pathfinder-skill at v$v"
   fail=1
+fi
+
+# (8) A merge or VERSION.md edit must never create a tag or GitHub Release.
+# Parse every workflow semantically so YAML formatting, explicit keys, aliases, or
+# flow mappings cannot hide a trigger, job, or contents-write permission.
+release_workflow="$root/.github/workflows/release.yml"
+if [ -n "${PATHFINDER_CONTROLLER_PYTHON:-}" ]; then
+  release_python="$PATHFINDER_CONTROLLER_PYTHON"
+elif [ -x "$root/.venv/bin/python" ]; then
+  release_python="$root/.venv/bin/python"
+elif [ -x "$root/.venv/Scripts/python.exe" ]; then
+  release_python="$root/.venv/Scripts/python.exe"
+elif command -v python3 >/dev/null 2>&1; then
+  release_python="$(command -v python3)"
+elif command -v python >/dev/null 2>&1; then
+  release_python="$(command -v python)"
+else
+  echo "::error::Python 3.11+ is required to validate workflow release authority"
+  exit 1
+fi
+if ! "$release_python" -c 'import yaml' >/dev/null 2>&1; then
+  echo "::error::install workflow validation dependencies from requirements-controller.txt"
+  exit 1
+fi
+if ! "$release_python" "$script_dir/validate-release-workflows.py" "$root"; then
+  fail=1
+fi
+
+requested_binding_state=$(awk '
+  /^      - name: Create release if VERSION.md declares a new version[[:space:]]*$/ { in_step=1; next }
+  in_step && /^      - name:/ { exit }
+  in_step && /^        env:[[:space:]]*$/ { in_env=1; next }
+  in_env && /^        [^[:space:]]/ { in_env=0 }
+  in_env && /^          (REQUESTED_VERSION|DECLARED_VERSION):/ {
+    if ($0 ~ /^          REQUESTED_VERSION:/) {
+      requested_keys++
+      if ($0 ~ /^          REQUESTED_VERSION: \$\{\{ inputs\.version \}\}[[:space:]]*$/) requested_exact++
+    }
+    if ($0 ~ /^          DECLARED_VERSION:/) {
+      declared_keys++
+      if ($0 ~ /^          DECLARED_VERSION: \$\{\{ needs\.validate\.outputs\.version \}\}[[:space:]]*$/) declared_exact++
+    }
+  }
+  END {
+    print (requested_keys + 0) ":" (requested_exact + 0) ":" \
+      (declared_keys + 0) ":" (declared_exact + 0)
+  }
+' "$release_workflow")
+release_program=$(awk '
+  /^      - name: Create release if VERSION.md declares a new version[[:space:]]*$/ { in_step=1; next }
+  in_step && /^        run: \|[[:space:]]*$/ { in_run=1; next }
+  in_run && /^          / { sub(/^          /, ""); print; next }
+  in_run && /^[[:space:]]*$/ { print ""; next }
+  in_run { exit }
+' "$release_workflow")
+if [ "$requested_binding_state" != "1:1:1:1" ] || [ -z "$release_program" ]; then
+  echo "::error file=$release_workflow::release workflow must bind requested and validated versions and expose one executable release program"
+  fail=1
+else
+  release_probe_dir=$(mktemp -d)
+  release_probe_log="$release_probe_dir/gh.log"
+  printf '%s\n' '#!/usr/bin/env sh' \
+    'printf "%s\n" "$*" >> "$PATHFINDER_RELEASE_GH_LOG"' \
+    'if [ "$1 $2" = "release view" ]; then exit 0; fi' \
+    'exit 90' > "$release_probe_dir/gh"
+  chmod +x "$release_probe_dir/gh"
+
+  release_probe() {
+    probe_ref="$1"
+    probe_version="$2"
+    : > "$release_probe_log"
+    (
+      cd "$root" || exit 1
+      PATH="$release_probe_dir:$PATH" \
+      PATHFINDER_RELEASE_GH_LOG="$release_probe_log" \
+      GITHUB_REF="$probe_ref" \
+      GH_TOKEN="probe-no-secret" \
+      COMMIT_SHA="0000000000000000000000000000000000000000" \
+      DECLARED_VERSION="$v" \
+      REQUESTED_VERSION="$probe_version" \
+      REPO="example/pathfinder-probe" \
+      bash -c "$release_program"
+    ) >/dev/null 2>&1
+  }
+
+  if release_probe "refs/heads/not-main" "$v" || [ -s "$release_probe_log" ]; then
+    echo "::error file=$release_workflow::release program must reject a non-main ref before any GitHub release call"
+    fail=1
+  elif release_probe "refs/heads/main" "0.0.0-probe" || [ -s "$release_probe_log" ]; then
+    echo "::error file=$release_workflow::release program must reject a mismatched requested version before any GitHub release call"
+    fail=1
+  elif ! release_probe "refs/heads/main" "$v" \
+    || [ "$(cat "$release_probe_log")" != "release view v$v" ]; then
+    echo "::error file=$release_workflow::release program must reach only the idempotent release lookup for an exact main/version request"
+    fail=1
+  else
+    echo "ok: $release_workflow executable program rejects non-main and mismatched-version requests before GitHub access"
+  fi
+  rm -rf "$release_probe_dir"
 fi
 
 if [ "$fail" -eq 0 ]; then

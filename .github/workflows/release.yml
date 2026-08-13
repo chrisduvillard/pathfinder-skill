@@ -1,20 +1,23 @@
 name: release
 
-# Auto-cut a GitHub Release + tag when VERSION.md declares a new version on main.
+# Cut a GitHub Release + tag only after an explicit maintainer dispatch.
 #
 # VERSION.md is the single source of truth for the version (see manifests.yml).
-# When its version changes to one with no existing tag, this creates tag
-# v<version> at the merged commit and a release whose body is the matching
+# A maintainer must dispatch this workflow from main and type the exact declared
+# version. The workflow then creates tag v<version> at the selected main commit
+# and a release whose body is the matching
 # "Changes in v<version>:" changelog block. It is idempotent: if the tag/release
-# already exists (e.g. a changelog wording fix with no version bump), it does
-# nothing. The default marketplace resolves the matching immutable tag; `main`
-# remains the explicitly documented edge channel.
+# already exists, it does nothing. A push or VERSION.md edit can never trigger
+# this workflow. The default marketplace resolves the matching immutable tag;
+# `main` remains the explicitly documented edge channel.
 
 on:
-  push:
-    branches: [main]
-    paths: ["VERSION.md"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Exact VERSION.md value to release (for example, 3.2.0)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,12 +27,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: cut release from VERSION.md
+  validate:
+    name: validate release candidate
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: write # create the tag and the release
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -39,19 +43,48 @@ jobs:
       - name: Smoke-test the exact release archive
         run: bash scripts/package-smoke.sh . "" git
 
+      - name: Resolve validated version
+        id: version
+        shell: bash
+        run: |
+          version="$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }' VERSION.md | tr -d '\r')"
+          if [ -z "$version" ]; then
+            echo "::error file=VERSION.md::could not resolve validated version"
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: cut release from VERSION.md
+    needs: validate
+    if: github.ref == 'refs/heads/main' && needs.validate.outputs.version == inputs.version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the tag and the release
+    steps:
       - name: Create release if VERSION.md declares a new version
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.sha }}
+          DECLARED_VERSION: ${{ needs.validate.outputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
           REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
 
-          # Single full-line 'Version: X.Y.Z' is enforced by manifests.yml, so
-          # head -1 is safe here.
-          version="$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }' VERSION.md | tr -d '\r')"
-          if [ -z "${version:-}" ]; then
-            echo "::error file=VERSION.md::could not parse a full-line 'Version: X.Y.Z' line"
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::.github/workflows/release.yml must be dispatched from main, got $GITHUB_REF"
+            exit 1
+          fi
+
+          version="$DECLARED_VERSION"
+          if ! printf '%s\n' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error file=VERSION.md::validated job supplied an invalid version"
+            exit 1
+          fi
+          if [ "$REQUESTED_VERSION" != "$version" ]; then
+            echo "::error file=VERSION.md::requested version '$REQUESTED_VERSION' does not match VERSION.md '$version'"
             exit 1
           fi
           tag="v$version"
@@ -61,6 +94,21 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag already exists — nothing to do."
             exit 0
+          fi
+
+          # The write-capable job never checks out or runs repository code. Fetch
+          # only the validated commit's VERSION.md after all authorization checks.
+          if ! gh api \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$REPO/contents/VERSION.md?ref=$COMMIT_SHA" \
+            > VERSION.md; then
+            echo "::error file=VERSION.md::could not fetch VERSION.md at $COMMIT_SHA"
+            exit 1
+          fi
+          fetched_version="$(awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }' VERSION.md | tr -d '\r')"
+          if [ "$fetched_version" != "$version" ]; then
+            echo "::error file=VERSION.md::validated version '$version' does not match commit '$fetched_version'"
+            exit 1
           fi
 
           # Release notes = the 'Changes in v<version>:' block from VERSION.md, up

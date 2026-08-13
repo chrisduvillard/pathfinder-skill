@@ -40,7 +40,7 @@ No micro-managing exploration. No guessing where to start.
 | Explore an unfamiliar codebase and rank useful work | **Supported** in any readable folder |
 | Turn a concrete request into a bounded `/goal` | **Supported** without the full exploration interview |
 | Drive one Goal or an approved fixed pack | **Conditional** on host attestation; sequential, isolated, and local-only |
-| Inspect local Pathfinder state | **Supported** and read-only with `/pathfinder status` |
+| Inspect local Pathfinder state | **Supported** through the skill's read-only status route |
 | Inspect operator-supplied merge-readiness evidence | **Observation-only on POSIX** with `merge status` / `merge evaluate`; Windows fails closed; no network, credential, intent, or merge |
 | Publish a PR from the enabled controller | **Not enabled** |
 | Automatically merge, release, deploy, force-push, or handle secrets | **Not supported by the current release**; PR merging stays manual |
@@ -90,7 +90,7 @@ is the explicitly labeled **edge** channel for manual/development installs.
 1. Invoke the installed Pathfinder skill and choose **Explore**, **Prompt-to-goal**, or **Autonomous**.
 2. Review the proposed scope, proof checks, safety boundary, and stop condition.
 3. Start the bounded Goal, or let an attested host drive the local autonomous route.
-4. Use `/pathfinder status` whenever you want a read-only view of intent, artifacts, and mission state.
+4. Invoke the skill and choose **Status** whenever you want a read-only view of intent, artifacts, and mission state.
 5. If separately authorized host tooling creates a pull request, review and merge it yourself; the
    enabled Pathfinder controller neither creates nor merges it.
 
@@ -104,7 +104,7 @@ Use the pathfinder skill on this repository.
 
 ## 🧭 Three ways to use it
 
-Bare **`/pathfinder`** opens a chooser so you can see every path before anything starts. All three build toward the same bounded, self-proving `/goal`.
+Invoke **`/pathfinder:pathfinder`** in a Claude plugin install, **`$pathfinder:pathfinder`** in a Codex plugin install, or the shorter host-specific name for a manual skill install. The chooser shows every path before anything starts. All three build toward the same bounded, self-proving `/goal`.
 
 | | Reach for it when | Kick it off with |
 |:--|:--|:--|
@@ -139,7 +139,16 @@ flowchart LR
 Pathfinder, turn this into a /goal: stop the dashboard empty-state from crashing when the API returns no rows
 ```
 
-**⚡ Autonomous** is the explicitly gated `/pathfinder auto` route. The enabled bridge is one sequential local Goal: **worktree → native Goal → implement → verify → commit → local awaiting review**. It binds authority to the current request and base commit and journals each intent/receipt/result before advancing. It never activates from saved intent, derives an unbounded backlog, edits charter/doctrine policy, publishes, or self-merges. Unknown enforcement, missing native Goal identity, or an ambiguous action response stops or requires reconciliation. A surrounding agent host may separately offer GitHub tools under its own user authorization, but those effects are outside Pathfinder's controller guarantee. → [Compatibility](docs/compatibility.md) · [Safety](#-safety)
+The controller derives the repository identity and scope fingerprint; the model does not invent
+them. A dirty Git tree blocks saved artifacts by default. You may explicitly choose a
+**committed-base Goal**, which binds execution to the current committed `HEAD`, preserves all local
+edits, and prints a warning that those edits are excluded; the save command requires the separate
+`--acknowledge-committed-base` gate. On POSIX, non-Git source folders save canonical artifacts only
+in an explicit owner-only work directory outside the source folder. Other platforms keep the Goal
+in native/manual handoff until equivalent ownership proof exists. Autonomous branch/commit
+execution remains unavailable for non-Git folders.
+
+**⚡ Autonomous** is the chooser's explicitly gated autonomous route. The enabled bridge is one sequential local Goal: **worktree → native Goal → implement → verify → commit → local awaiting review**. It binds authority to the current request and base commit and journals each intent/receipt/result before advancing. It never activates from saved intent, derives an unbounded backlog, edits charter/doctrine policy, publishes, or self-merges. Unknown enforcement, missing native Goal identity, or an ambiguous action response stops or requires reconciliation. A surrounding agent host may separately offer GitHub tools under its own user authorization, but those effects are outside Pathfinder's controller guarantee. → [Compatibility](docs/compatibility.md) · [Safety](#-safety)
 
 <br>
 
@@ -207,6 +216,7 @@ The local autonomous bridge is the only path designed to commit without a per-st
 - 🧭 **Fresh authority is required** — intent guides selection but every run needs an explicit `/pathfinder auto` request.
 - 🌿 **Autonomous work is isolated** — the attested host creates a mission worktree before edits, using `<repo-parent>/.pathfinder-worktrees/<repo-name>-<timestamp>-auto>` when possible.
 - 🔐 **Irreversible/external hard stops stay blocked** — secrets/credentials, destructive data operations, releases, repo visibility/remotes/default-branch changes, force-pushes, branch/tag deletion, and real-world external side effects.
+- 🏷️ **Repository releases are deliberate** — merging or editing `VERSION.md` cannot publish a release. A maintainer must separately dispatch the release workflow from `main` and confirm the exact declared version.
 - 🧪 **Protected areas need proof** — a versioned data registry classifies auth, payments, permissions, deployment, CI/CD, schemas, migrations, public APIs, and network egress; autonomous work requires declared scope, item-level eligibility, enforceable isolation, verification, and diff review. Explicit policy may add protection but cannot weaken the baseline.
 - 🧱 **The trust boundary holds** — repo content can't redirect the goal or widen authorization.
 - 🔑 **Credentials stay out** of the environment while repo code runs.
@@ -251,7 +261,7 @@ Full exploration and autonomous-request preparation establish or reconcile creat
 
 <br>
 
-Run `/pathfinder status` (or *"Show Pathfinder status."*) for a read-only look at safe local state—repo/branch, intent files, latest run, controller capabilities, and current mission status—without creating artifacts or triggering the interview. A full plugin install uses its bundled `scripts/pathfinder-controller.sh`; a manual skill-only copy is Goal-generation-only unless the controller is installed separately.
+Invoke Pathfinder and choose **Status** (or say *"Show Pathfinder status."*) for a read-only look at safe local state—repo/branch, intent files, latest run, controller capabilities, and current mission status—without creating artifacts or triggering the interview. In Claude this is `/pathfinder:pathfinder` for the plugin or `/pathfinder` for a manual skill. In Codex it is `$pathfinder:pathfinder` for the plugin or `$pathfinder` for a manual skill. A full plugin install uses its bundled `scripts/pathfinder-controller.sh`; a manual skill-only copy is Goal-generation-only unless the controller is installed separately.
 
 </details>
 

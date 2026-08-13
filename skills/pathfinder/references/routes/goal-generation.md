@@ -66,7 +66,7 @@ Goal Binding
 - charter_roadmap_refs: <ids used, or none>
 - doctrine_refs: <doctrine sections used, or none>
 - capability_profile: <provider/tool profile used to choose /goal, native Codex goal, or fallback>
-- scope_fingerprint: <short prose summary of intended files/surfaces; not a cryptographic hash>
+- scope_fingerprint: <manual skill-only: short prose summary; full controller: show its derived scope.fingerprint hash separately>
 - proof_requirements: <exact checks/evidence the final report must surface>
 - protected_areas: <off-limits areas or none>
 - runtime_boundary_required: yes
