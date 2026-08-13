@@ -257,10 +257,15 @@ separately hashed provenance receipt bound to the evidence hash, credential/publ
 hashes, ownership proof, query hash, reconciled review ids, required checks, request-id hash, and
 collection window. Cross-surface request reuse or any split identity/policy/review/check/ownership
 input blocks. The composer owns no client, credential, storage, command, or caller, so it is not an
-installed production collector. The installed host must additionally authenticate the publication
-journal, ownership proof, and evidence/provenance pair in durable storage. The system must not
-substitute UI text or omit those facts. Conditional merge therefore remains unsupported for live
-use.
+installed production collector. A separate source-only store now defines the durable boundary: one
+immutable externally authenticated envelope contains the exact publication journal, publication and
+observer credential receipts, ownership proof, evidence, and provenance. It independently rechecks
+their canonical hashes and complete cross-document identities, uses a pinned owner-only POSIX host
+directory outside repository trust, and rejects partial, replaced, renamed, re-hashed, wrong-store,
+or unauthenticated records. The package ships no authenticator implementation/key loader and no
+caller constructs the store; Windows fails closed pending equivalent ACL proof. An installed trusted
+host must still inject the authenticator and live collector and persist these facts rather than UI
+text. Conditional merge therefore remains unsupported for live use.
 
 ## Typed block and result contract
 

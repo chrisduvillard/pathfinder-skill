@@ -542,6 +542,7 @@ class PublicationJournalSchemaTests(unittest.TestCase):
             {
                 "pathfinder_core/adapters/github_evidence_composer.py",
                 "pathfinder_core/adapters/github_merge_observer.py",
+                "pathfinder_core/host_artifact_store.py",
                 "pathfinder_core/merge_status.py",
             },
         )

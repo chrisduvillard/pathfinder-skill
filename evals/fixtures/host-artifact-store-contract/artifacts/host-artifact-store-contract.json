@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source": "authenticated-host-artifact-store",
+  "store_id": "host_artifact_store_contract1",
+  "document_names": [
+    "branch_ownership",
+    "evidence",
+    "observer_credential_receipt",
+    "provenance",
+    "publication_credential_receipt",
+    "publication_dispatch",
+    "publication_receipt",
+    "publication_request"
+  ],
+  "packaged_callers": 0
+}

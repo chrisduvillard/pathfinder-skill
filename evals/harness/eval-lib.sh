@@ -359,6 +359,17 @@ assert_publication_controller_contract() {
   )" || add_error "publication controller contract invalid: $validation_output"
 }
 
+assert_host_artifact_store_contract() {
+  local file validation_output
+  require_artifact "host-artifact-store-contract.json" || return
+  file="$(artifact_file "host-artifact-store-contract.json")"
+  validation_output="$(
+    "$PATHFINDER_EVAL_PYTHON" \
+      "${PATHFINDER_EVAL_VALIDATOR%/*}/validate-host-artifact-store-contract.py" \
+      "$file" "${PATHFINDER_SCHEMA_ROOT%/schemas}" 2>&1
+  )" || add_error "host artifact store contract invalid: $validation_output"
+}
+
 run_assertion() {
   case "$1" in
     goal-contract) assert_goal_contract ;;
@@ -381,6 +392,7 @@ run_assertion() {
     merge-writer-contract) assert_merge_writer_contract ;;
     merge-status-contract) assert_merge_status_contract ;;
     publication-controller-contract) assert_publication_controller_contract ;;
+    host-artifact-store-contract) assert_host_artifact_store_contract ;;
     replay-contract) assert_replay_contract ;;
     injection-surface-fixtures) assert_injection_surface_fixtures ;;
     mission-view-repair) assert_mission_view_repair ;;

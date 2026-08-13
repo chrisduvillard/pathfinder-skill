@@ -1680,6 +1680,7 @@ approved composed merge rehearsal in K6.2.
 
 - [x] K4 source primitive is green and independently reviewed.
 - [x] The source-only publication prerequisite is crash-tested and independently reviewed.
+- [x] A source-only immutable host-artifact envelope binds and externally authenticates the exact publication journal, both credential receipts, branch-ownership proof, evidence, and provenance with zero packaged callers.
 - [x] Exact archive, credential-free host-install, CodeQL, dependency, and three-OS checks are green.
 - [ ] Awaiting-review publication is runnable through a trusted installed host with authenticated envelopes and exact persisted PR identity.
 - [ ] A trusted host supplies complete live GraphQL/REST evidence plus operator-owned policy and credential boundaries.
@@ -1707,6 +1708,23 @@ package still has no live backend/credential loader, and the host binding delibe
 schema-valid merge policy or authorization. The first two readiness items remain unchecked. K5.1's
 explicitly approved observation-only source implementation and independent review are now complete;
 that does not close either installed-host prerequisite or authorize K5.2.
+
+**Authenticated host-artifact implementation note (2026-08-13):** added one source-only,
+uncalled immutable collection store for the completed publication/evidence boundary. It accepts an
+injected external host authenticator but ships no authenticator implementation or key loader. One
+closed envelope atomically contains the validated publication request/dispatch/receipt, publication
+and observer credential receipts, controller-branch ownership proof, complete evidence, and
+provenance. The store independently rechecks every canonical hash plus repository, mission, PR,
+ref/SHA, diff, App/installation/bot, review/check, request, and observation-time binding. POSIX
+storage is current-user-owned, owner-only, non-symlink, outside repository trust, descriptor-pinned,
+size-bounded, and write-once via a durable hard-link publication; Windows fails closed pending
+equivalent ACL proof. Reads never create state, exact repeats do not re-attest, concurrent writers
+converge on one envelope, and renamed, re-hashed, wrong-store, split-identity, or externally
+unauthenticated records block. The composer now also rejects a publication/evidence diff or mission
+binding mismatch that this integration exposed. A deterministic actual-code eval and 460 controller
+tests are green. This closes the source storage contract only: no packaged caller, trusted
+authenticator/key, installed collector, live credential injector, publication route, or merge path
+was added, so both installed-host readiness items and K5.2 remain unchecked.
 
 **Prerequisite implementation note (2026-08-12):** added a source-only, uncomposed publication
 controller and separate write-once journal. A fresh authenticated host envelope embeds and

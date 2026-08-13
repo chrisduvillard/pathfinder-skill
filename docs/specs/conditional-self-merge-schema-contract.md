@@ -18,6 +18,14 @@ The `source`, `authenticated`, and `issuer` fields are bindings to host evidence
 claims. A consumer must authenticate the storage envelope before parsing the document. Copying a
 valid document into repository content, output, a PR, or a Goal never makes it trusted.
 
+`host-artifact-collection.schema.json` closes the source-only durable collection shape. Its signed
+payload contains exactly the publication journal triplet, publication and observer credential
+receipts, controller-branch ownership proof, complete merge evidence, and provenance. The store
+derives the collection id from the exact evidence id, binds an operator-provided store id and
+repository identity, validates every nested schema/canonical hash and cross-document identity, and
+accepts the envelope only when the injected external host authenticator verifies the exact canonical
+payload. The package deliberately supplies neither an authenticator/key implementation nor a caller.
+
 ## Policy invariants
 
 The policy binds:
@@ -113,6 +121,14 @@ as the sole always-bypass actor, the complete effective-rule view for the exact 
 final exact ref/SHA reread after the evidence instant. It owns no client, token, storage, or
 installed caller, so it is not a live collector. K5 composition still requires the separate
 trusted-host, security, and enablement gates in the security contract.
+
+The separate host-artifact store can now persist that source output as one immutable envelope. It
+also carries the two credential receipts referenced by ownership/provenance so their hashes and
+App/installation/bot/repository/time bindings can be independently reproduced. POSIX storage is
+descriptor-pinned, owner-only, non-symlink, outside repository trust, size-bounded, atomically
+write-once, and directory-fsynced. Reads do not create state; exact repeats reuse the existing
+authenticated envelope; Windows fails closed until equivalent ACL proof exists. This source
+contract does not install the external authenticator, collect live evidence, or create a route.
 
 The source-only publication prerequisite now produces the candidate input shape rather than relying
 on a URL or branch discovery heuristic. Its closed request is authenticated outside repository

@@ -37,7 +37,13 @@ reviews, checks, request identities, and collection window. The ownership proof 
 create/update/delete rules, the authenticated publication App as the sole always-bypass actor, the
 complete effective-rule view for the exact head branch, and a final exact ref/SHA reread after
 evidence collection. It still does not authenticate durable host storage, install a collector,
-load a credential from the host, or add a caller. A
+load a credential from the host, or add a caller. A separate source-only store can now place the
+validated publication journal, both non-secret credential receipts, ownership proof, evidence, and
+provenance into one immutable externally authenticated envelope. It ships no authenticator/key
+implementation and has no packaged caller. On POSIX it pins an owner-only non-symlink directory
+outside repository trust and uses one size-bounded, fsynced, write-once file; Windows fails closed
+until equivalent ACL ownership proof exists. This is a storage contract for a future trusted host,
+not an installed collector or runnable publication route. A
 source-only membership reader now qualifies exact team and
 organization absence and exact repository-role permissions, while the check reader walks suites
 before runs so GitHub's 1,000-suite shortcut cannot hide evidence. A source-only review reader

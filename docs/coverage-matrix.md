@@ -16,6 +16,7 @@
 | No remote publication in enabled routes | package-wide caller guard rejects publication-controller and lower-level publisher construction, concrete generic/exact GitHub backends, publication commands, and installed-route imports |
 | No self-merge | publisher has no merge method; behavior guard; replay `self_merge: false` |
 | Source-only complete merge evidence | composer regressions bind observer/publication receipts, GraphQL/REST reviews, policy/check projections, every request id, a sole-publication-App branch-ownership proof, and canonical provenance; package caller guards remain zero |
+| Source-only authenticated host artifacts | immutable-envelope tests and the `host-artifact-store-contract` eval cover exact journal/credential/ownership/evidence/provenance bindings, external-authentication tamper rejection, wrong-store/renamed replay, owner/symlink/overlap checks, write interruption, concurrent write-once behavior, read-only load, and zero packaged callers; no authenticator/key or installed collector is claimed |
 | Actual Goal payload is bounded/provable | artifact evaluator parses the `/goal` line; negative laundering fixture |
 | Safe Git/worktrees | dirty-tree, hook-neutralization, symlink escape, and cleanup-refusal tests |
 | Optional live conversational quality | bounded advisory cases under `evals/live/`; explicitly non-required/non-guaranteeing |

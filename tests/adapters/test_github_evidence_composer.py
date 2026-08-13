@@ -74,6 +74,7 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         publication = json.loads(PUBLICATION_FIXTURE.read_text())
         journal = json.loads(JOURNAL_FIXTURE.read_text())
         self.context = observer["context"]
+        self.context["object_evidence"]["receipt_id"] = "object_evidence_example1"
         self.responses = observer["responses"]
         self.bindings = journal["evidence"]["bindings"]
         self.publication_request = publication["request"]
@@ -302,6 +303,9 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
             provenance["provenance_sha256"],
             canonical_sha256(provenance, "provenance_sha256"),
         )
+        self.assertEqual(evidence["diff"]["diff_sha256"], self.publication_receipt[
+            "diff"
+        ]["diff_sha256"])
         request_ids = [
             value["request_id"] for value in evidence["observation"]["requests"]
         ]
@@ -362,6 +366,17 @@ class GitHubCompleteEvidenceComposerTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(GitHubObservationError, "duplicated"):
             self.compose(branch_ownership=ownership)
+
+    def test_publication_diff_and_mission_binding_drift_fail_closed(self):
+        object_evidence = copy.deepcopy(self.context["object_evidence"])
+        object_evidence["receipt_id"] = "object_evidence_different1"
+        with self.assertRaisesRegex(GitHubObservationError, "diff or mission"):
+            self.compose(object_evidence=object_evidence)
+
+        bindings = copy.deepcopy(self.bindings)
+        bindings["binding_id"] = "binding_different1"
+        with self.assertRaisesRegex(GitHubObservationError, "diff or mission"):
+            self.compose(bindings=bindings)
 
     def test_malformed_identity_and_out_of_window_audit_fail_closed(self):
         malformed = replace(

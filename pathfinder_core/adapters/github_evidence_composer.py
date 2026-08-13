@@ -448,6 +448,29 @@ class GitHubCompleteEvidenceComposer:
                 result.detail,
             )
         evidence = result.evidence
+        expected_diff = publication_receipt["diff"]
+        observed_diff = {
+            "diff_sha256": evidence["diff"]["diff_sha256"],
+            "changed_files_sha256": evidence["diff"]["changed_files_sha256"],
+            "object_evidence_sha256": evidence["diff"]["object_evidence"][
+                "files_sha256"
+            ],
+        }
+        expected_mission = {
+            key: publication_receipt["mission"][key]
+            for key in ("mission_id", "binding_id", "mission_authorization_id")
+        }
+        if (
+            observed_diff != expected_diff
+            or any(
+                evidence["bindings"].get(key) != value
+                for key, value in expected_mission.items()
+            )
+        ):
+            raise _fail(
+                "evidence-composition",
+                "composed diff or mission binding differs from publication",
+            )
         requests = evidence["observation"]["requests"]
         request_ids = [value["request_id"] for value in requests]
         ownership_request_ids = ownership_observation["request_ids"]
