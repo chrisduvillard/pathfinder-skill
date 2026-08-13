@@ -380,6 +380,42 @@ class HostArtifactCollectionStoreTests(unittest.TestCase):
             )
         self.assertEqual(self.authenticator.verify_calls, 0)
 
+    def test_collection_input_rejects_authenticated_split_or_expired_authority(self):
+        store, _values = self.store()
+        split = copy.deepcopy(self.documents)
+        split["policy"]["repository"]["name"] = "different-repo"
+        split["policy"]["policy_sha256"] = canonical_sha256(
+            split["policy"], "policy_sha256"
+        )
+        split_envelope = collection_input_envelope(
+            split,
+            self.authenticator,
+            policy_read=self.input_policy_read,
+            object_evidence=self.input_object_evidence,
+        )
+        with self.assertRaisesRegex(StateError, "input document bindings differ"):
+            store.verify_collection_inputs(
+                split_envelope, authenticated_at=COLLECTION_STARTED
+            )
+
+        expired = copy.deepcopy(self.documents)
+        expired["authorization"]["expires_at"] = (
+            "2026-08-11T12:07:59+00:00"
+        )
+        expired["authorization"]["authorization_sha256"] = canonical_sha256(
+            expired["authorization"], "authorization_sha256"
+        )
+        expired_envelope = collection_input_envelope(
+            expired,
+            self.authenticator,
+            policy_read=self.input_policy_read,
+            object_evidence=self.input_object_evidence,
+        )
+        with self.assertRaisesRegex(StateError, "input authority is not current"):
+            store.verify_collection_inputs(
+                expired_envelope, authenticated_at=COLLECTION_STARTED
+            )
+
     def test_authenticated_pair_reader_requires_exact_shared_authority(self):
         initial = self.snapshot_variant("authpairinitial1")
         store, _values = self.store()

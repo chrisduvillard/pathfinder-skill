@@ -182,10 +182,49 @@ def main() -> int:
                 "re-hashed input tampering bypassed host authentication"
             )
 
+        split_input = copy.deepcopy(input_envelope)
+        split_input["payload"]["documents"]["policy"]["repository"][
+            "name"
+        ] = "different-repo"
+        split_input["payload"]["documents"]["policy"][
+            "policy_sha256"
+        ] = canonical_sha256(
+            split_input["payload"]["documents"]["policy"],
+            "policy_sha256",
+        )
+        split_payload = json.dumps(
+            split_input["payload"], sort_keys=True, separators=(",", ":")
+        ).encode()
+        split_input["attestation"] = dict(authenticator.attest(
+            split_payload,
+            authenticated_at="2026-08-11T12:08:00+00:00",
+        ))
+        split_input["envelope_sha256"] = canonical_sha256(
+            split_input, "envelope_sha256"
+        )
+        try:
+            store.verify_collection_inputs(
+                split_input,
+                authenticated_at="2026-08-11T12:08:00+00:00",
+            )
+        except Exception as error:
+            require(
+                "input document bindings differ" in str(error),
+                "authenticated split input failed for the wrong reason",
+            )
+        else:
+            raise ValueError(
+                "authenticated split input bypassed document binding checks"
+            )
+
+        attestations_before_persist = authenticator.attest_calls
         first = store.persist(**documents)
         second = store.persist(**documents)
         require(first == second, "repeat persistence changed the immutable envelope")
-        require(authenticator.attest_calls == 2, "repeat persistence re-attested")
+        require(
+            authenticator.attest_calls == attestations_before_persist + 1,
+            "repeat persistence re-attested",
+        )
 
         schema = load(
             root / "schemas/publication/host-artifact-collection.schema.json"

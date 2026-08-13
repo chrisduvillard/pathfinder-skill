@@ -266,7 +266,10 @@ closed externally authenticated input envelope first binds the exact journal, al
 credential receipts, operator authority, protected policy, policy-read receipt, full Git-object
 evidence, repository, evidence id, store id, and trusted collection-start time. The collector
 verifies that canonical envelope through the injected authenticator before parsing nested documents
-or making any GitHub read; loose, stale, re-hashed, wrong-store, or unauthenticated inputs block.
+or making any GitHub read. It then independently validates nested canonical hashes, exact
+publication/authority/credential/protected-policy bindings, distinct actor identities, and current
+policy/authorization windows; loose, split, expired, re-hashed, wrong-store, or unauthenticated
+inputs block before network.
 After collection, one
 immutable externally authenticated v3 envelope contains the exact publication journal, operator
 policy/current-run authorization/protected policy, publication, observer, and non-secret merge

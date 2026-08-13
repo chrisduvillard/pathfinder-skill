@@ -440,7 +440,7 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
         self.assertEqual(self.store.calls, [])
 
     @unittest.skipIf(os.name == "nt", "host ACL verification is POSIX-only")
-    def test_rejects_rehashed_input_tamper_before_any_github_read(self):
+    def test_rejects_rehashed_or_split_input_before_any_github_read(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             repository = root / "repository"
@@ -483,6 +483,28 @@ class GitHubAuthenticatedEvidenceCollectorTests(unittest.TestCase):
                 GitHubObservationError, "input attestation verification"
             ):
                 collector.collect_and_persist(**inputs)
+
+            split_documents = copy.deepcopy(self.input_documents)
+            split_documents["policy"]["repository"]["name"] = (
+                "different-repo"
+            )
+            split_documents["policy"]["policy_sha256"] = canonical_sha256(
+                split_documents["policy"], "policy_sha256"
+            )
+            split_envelope = collection_input_envelope(
+                split_documents,
+                authenticator,
+                store_id="host_artifact_store_collector1",
+                policy_read=self.helper.context["policy_read"],
+                object_evidence=self.helper.context["object_evidence"],
+            )
+            with self.assertRaisesRegex(
+                GitHubObservationError, "input document bindings differ"
+            ):
+                collector.collect_and_persist(
+                    policy_backend=inputs["policy_backend"],
+                    input_envelope=split_envelope,
+                )
 
             self.identity.verify_observer.assert_not_called()
             self.identity.verify_merge_actor.assert_not_called()

@@ -44,7 +44,9 @@ a caller. Before any GitHub read, the source collector now accepts only one clos
 whose exact canonical bytes, store/repository/evidence identity, and trusted-clock start are verified
 by the injected external host authenticator; it no longer accepts loose policy, authorization,
 receipt, or object-evidence arguments. Unsigned, altered, stale, malformed, or wrong-store input
-stops without a network read. After collection, the same source-only store can place the
+stops without a network read. A correctly signed but internally split or expired bundle also stops
+before network: the store rechecks nested hashes and the exact publication, authority, repository,
+mission, candidate, protected-policy, credential, actor, and time bindings. After collection, the same source-only store can place the
 validated publication journal, exact operator policy/current-run authorization/protected policy,
 all three non-secret credential receipts, ownership proof, evidence, and provenance into one immutable
 externally authenticated v3 envelope. It ships no authenticator/key implementation. Its packaged

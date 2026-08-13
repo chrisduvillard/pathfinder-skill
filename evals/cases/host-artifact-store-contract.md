@@ -9,7 +9,8 @@ Proves the source-only host store authenticates one closed collection-input enve
 atomically persists one externally authenticated output envelope that
 contains the exact publication journal, publication/observer credential receipts, operator policy,
 current-run authorization, protected-surface policy, controller-branch ownership proof, evidence,
-and provenance. Re-hashed input and output tampering must still fail external authentication, repeat
+and provenance. Re-hashed input and output tampering must still fail external authentication, a
+correctly signed but split input must fail semantic binding checks, repeat
 persistence must not re-attest, and the only packaged consumers must remain the unconstructed
 collector and two-snapshot read-only adapter; no credential loader, GitHub client, publication
 controller, or merge executor is allowed.

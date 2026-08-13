@@ -1768,8 +1768,10 @@ host authenticator must verify its canonical journal, publication/observer/merge
 receipts, policy, authorization, protected policy, policy-read receipt, full Git-object evidence,
 store/repository/evidence identity, and exact trusted-clock start before the collector parses a
 nested document or performs any GitHub read. Re-hashed tamper, stale authentication, wrong-store
-replay, malformed shape, and signature failure block at the input boundary; the output remains the
-same immutable v3 envelope. This adds no authenticator/key implementation, credential loader,
+replay, malformed shape, and signature failure block at the input boundary. A follow-up also rejects
+correctly signed inputs before network when nested publication, authority, protected-policy,
+credential, repository, mission, candidate, or actor bindings split, or when policy/authorization
+is already expired; the output remains the same immutable v3 envelope. This adds no authenticator/key implementation, credential loader,
 constructor route, publication mutation, merge token, intent, request, writer, or K5.2 authority,
 so both installed-host readiness items remain unchecked.
 

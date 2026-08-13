@@ -24,7 +24,10 @@ credential receipts, operator authority, protected-surface policy, policy-read r
 Git-object evidence. The collector accepts no loose document arguments: at its trusted-clock start
 it requires the injected external host authenticator to verify the exact canonical envelope before
 it parses any nested document or performs any GitHub read. Unsigned, re-hashed, stale, wrong-store,
-or malformed envelopes block as unknown input.
+or malformed envelopes block as unknown input. A valid signature is not sufficient by itself: the
+store first validates every nested authority/credential schema and canonical hash, requires exact
+publication/repository/mission/candidate/protected-policy/actor bindings across the documents, and
+proves policy and authorization are current at that trusted instant.
 
 `host-artifact-collection.schema.json` closes the source-only durable output shape. Its signed v3
 payload contains exactly the publication journal triplet, publication, observer, and merge

@@ -357,6 +357,112 @@ class HostArtifactCollectionStore:
                 "or additive override"
             ) from error
 
+    @staticmethod
+    def _validate_input_document_bindings(
+        documents: Mapping[str, object],
+        *,
+        effective_protected_sha256: str,
+        authenticated_at: str,
+    ) -> None:
+        try:
+            receipt = documents["publication_receipt"]
+            publication_credential = documents[
+                "publication_credential_receipt"
+            ]
+            observer_credential = documents["observer_credential_receipt"]
+            merge_credential = documents["merge_credential_receipt"]
+            policy = documents["policy"]
+            authorization = documents["authorization"]
+            policy_read = documents["policy_read"]
+            receipt_repository = receipt["repository"]
+            receipt_pull = receipt["pull_request"]
+            policy_repository = {
+                **{
+                    key: receipt_repository[key]
+                    for key in REPOSITORY_KEYS
+                },
+                "base_branch": receipt_pull["base_ref"],
+            }
+            candidate = {
+                "source": "authenticated-controller-publication",
+                "mission_state_sha256": receipt["mission"][
+                    "mission_state_sha256"
+                ],
+                "publication_receipt_id": receipt["publication_receipt_id"],
+                "pull_request": {
+                    key: receipt_pull[key] for key in PULL_KEYS
+                },
+                "diff": receipt["diff"],
+            }
+            bindings_differ = (
+                policy["repository"] != policy_repository
+                or authorization["repository"] != policy_repository
+                or authorization["policy"] != {
+                    "policy_id": policy["policy_id"],
+                    "policy_sha256": policy["policy_sha256"],
+                }
+                or authorization["mission"] != {
+                    **{
+                        key: receipt["mission"][key]
+                        for key in (
+                            "mission_id",
+                            "binding_id",
+                            "mission_authorization_id",
+                        )
+                    },
+                    "goal_scope": "single-goal",
+                }
+                or authorization["candidate"] != candidate
+                or policy["path_policy"]["protected_policy_sha256"]
+                != effective_protected_sha256
+                or policy_read["policy_id"] != policy["policy_id"]
+                or policy_read["policy_sha256"] != policy["policy_sha256"]
+                or publication_credential["repository_ids"]
+                != [receipt_repository["id"]]
+                or publication_credential["actor_id"]
+                != receipt["head_push"]["actor_id"]
+                or publication_credential["actor_node_id"]
+                != receipt["head_push"]["actor_node_id"]
+                or publication_credential["login"]
+                != receipt["head_push"]["login"]
+                or observer_credential["repository_ids"]
+                != [receipt_repository["id"]]
+                or merge_credential["repository_ids"]
+                != [receipt_repository["id"]]
+                or len({
+                    publication_credential["app_id"],
+                    observer_credential["app_id"],
+                    merge_credential["app_id"],
+                }) != 3
+                or len({
+                    publication_credential["installation_id"],
+                    observer_credential["installation_id"],
+                    merge_credential["installation_id"],
+                }) != 3
+                or len({
+                    publication_credential["actor_id"],
+                    observer_credential["actor_id"],
+                    merge_credential["actor_id"],
+                }) != 3
+            )
+            current = parse_aware_timestamp(authenticated_at)
+            authority_current = (
+                parse_aware_timestamp(policy["issued_at"])
+                <= current
+                < parse_aware_timestamp(policy["expires_at"])
+                and parse_aware_timestamp(authorization["issued_at"])
+                <= current
+                < parse_aware_timestamp(authorization["expires_at"])
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            raise StateError(
+                "host artifact input document bindings differ"
+            ) from error
+        if bindings_differ:
+            raise StateError("host artifact input document bindings differ")
+        if not authority_current:
+            raise StateError("host artifact input authority is not current")
+
     def _validate_documents(self, documents: Mapping[str, object]) -> None:
         try:
             receipt = documents["publication_receipt"]
@@ -636,7 +742,7 @@ class HostArtifactCollectionStore:
             raise StateError("host artifact input attestation verification failed")
 
         documents = payload["documents"]
-        self._validate_input_documents(documents)
+        effective_protected_sha256 = self._validate_input_documents(documents)
         if (
             payload["publication_request_id"]
             != documents["publication_request"]["publication_request_id"]
@@ -644,6 +750,11 @@ class HostArtifactCollectionStore:
             != documents["publication_receipt"]["repository"]
         ):
             raise StateError("host artifact input document bindings differ")
+        self._validate_input_document_bindings(
+            documents,
+            effective_protected_sha256=effective_protected_sha256,
+            authenticated_at=authenticated_at,
+        )
         return copy.deepcopy(payload)
 
     def _validate_envelope(
