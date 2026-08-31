@@ -1,0 +1,35 @@
+name: cancel-stale-rollout3
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/cancel-stale-rollout3.yml]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Cancel superseded rollout variants
+        run: |
+          set -euo pipefail
+          keep='^(prepare-v3\.3\.0-ready3|orchestrate-v3\.3\.0-ready3|prepare-v3\.4\.0-ready2|orchestrate-v3\.4\.0-ready2|prepare-v3\.5\.0-ready6|orchestrate-v3\.5\.0-ready6|verify-final-rollout|cleanup-rollout-branches|publish-rollout-attestation|cancel-stale-rollout3)$'
+          current="$GITHUB_RUN_ID"
+          gh run list --repo "$REPO" --branch codex/pathfinder-hardening-outcomes --limit 100 \
+            --json databaseId,workflowName,status \
+            --jq '.[] | select(.status == "queued" or .status == "in_progress") | [.databaseId, .workflowName] | @tsv' \
+            | while IFS=$'\t' read -r run_id workflow_name; do
+                [ -n "$run_id" ] || continue
+                if [ "$run_id" = "$current" ] || grep -Eq "$keep" <<<"$workflow_name"; then
+                  echo "keeping $workflow_name ($run_id)"
+                else
+                  gh run cancel "$run_id" --repo "$REPO" || true
+                fi
+              done
