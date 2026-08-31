@@ -1,0 +1,94 @@
+name: orchestrate-v3.3.0-ready2
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/orchestrate-v330-ready2.yml]
+
+permissions:
+  actions: write
+  checks: read
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_BRANCH: release/v3.3.0-ready2
+      VERSION: 3.3.0
+    steps:
+      - name: Wait for connector-opened pull request
+        id: pr
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 330); do
+            number=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number --limit 1 --jq '.[0].number // empty' 2>/dev/null || true)
+            if [ -n "$number" ]; then
+              echo "number=$number" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
+              echo "already_released=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Wait for protected checks and merge
+        if: steps.pr.outputs.already_released != 'true'
+        run: |
+          set -euo pipefail
+          pr='${{ steps.pr.outputs.number }}'
+          files=$(gh pr diff "$pr" --repo "$REPO" --name-only)
+          ! grep -Eq '^\.github/(pathfinder-v330-prepare\.py|workflows/(prepare|orchestrate)-v330.*\.yml|workflows/export-(source|devtools)\.yml)$' <<<"$files"
+          for attempt in $(seq 1 180); do
+            checks=$(gh pr checks "$pr" --repo "$REPO" --json name,state,bucket 2>/dev/null || echo '[]')
+            names=$(jq -r '.[].name' <<<"$checks")
+            if grep -qx 'version + JSON consistency' <<<"$names" \
+              && grep -qx 'CodeQL' <<<"$names" \
+              && grep -qx 'CodeQL Actions' <<<"$names" \
+              && grep -qx 'Dependency Review' <<<"$names"; then
+              break
+            fi
+            sleep 10
+          done
+          gh pr checks "$pr" --repo "$REPO" --watch --fail-fast --interval 10
+          gh pr merge "$pr" --repo "$REPO" --squash --delete-branch \
+            --subject 'Harden mission integrity and read-only operations for v3.3.0'
+
+      - name: Dispatch release when needed
+        run: |
+          set -euo pipefail
+          if gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
+            exit 0
+          fi
+          merged_sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          version=$(gh api "repos/$REPO/contents/VERSION.md?ref=main" --jq .content | base64 -d | sed -n 's/^Version:[[:space:]]*//p' | head -1)
+          [ "$version" = "$VERSION" ]
+          started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          gh workflow run release.yml --repo "$REPO" --ref main -f version="$VERSION"
+          run_id=''
+          for attempt in $(seq 1 90); do
+            runs=$(gh run list --repo "$REPO" --workflow release.yml --event workflow_dispatch --branch main --limit 10 --json databaseId,createdAt)
+            run_id=$(jq -r --arg started "$started" '[.[] | select(.createdAt >= $started)] | sort_by(.createdAt) | last | .databaseId // empty' <<<"$runs")
+            [ -n "$run_id" ] && break
+            sleep 5
+          done
+          [ -n "$run_id" ]
+          gh run watch "$run_id" --repo "$REPO" --exit-status
+          tag_sha=$(gh api "repos/$REPO/git/ref/tags/v$VERSION" --jq .object.sha)
+          [ "$tag_sha" = "$merged_sha" ]
+
+      - name: Record failure
+        if: failure()
+        run: |
+          gh issue create --repo "$REPO" --title 'v3.3.0 recovery-aware release blocked' \
+            --body "Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          The recovery-aware flow did not force-merge or publish a failing candidate." || true
