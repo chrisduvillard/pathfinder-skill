@@ -1,0 +1,125 @@
+name: publish-rollout-attestation
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/publish-rollout-attestation.yml]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      ATTESTATION_BRANCH: attestations/pathfinder-v3.5.0
+    steps:
+      - name: Wait for all staged releases
+        run: |
+          set -euo pipefail
+          for version in 3.3.0 3.4.0 3.5.0; do
+            found=0
+            for attempt in $(seq 1 720); do
+              if gh release view "v$version" --repo "$REPO" >/dev/null 2>&1; then
+                found=1
+                break
+              fi
+              sleep 10
+            done
+            [ "$found" -eq 1 ]
+          done
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install final validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes jq shellcheck
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Re-run the complete final gates
+        env:
+          PATHFINDER_CONTROLLER_PYTHON: python
+          PATHFINDER_DOCS_PYTHON: python
+          PATHFINDER_EVAL_PYTHON: python
+        run: |
+          set -euo pipefail
+          bash scripts/check-all.sh .
+          bash scripts/package-smoke.sh .
+          bash scripts/check-wheel.sh .
+          bash scripts/check-host-installs.sh .
+
+      - name: Build the closed rollout attestation
+        run: |
+          set -euo pipefail
+          main_sha=$(git rev-parse HEAD)
+          version=$(sed -n 's/^Version:[[:space:]]*//p' VERSION.md | head -1)
+          [ "$version" = '3.5.0' ]
+          previous=''
+          releases='[]'
+          for version in 3.3.0 3.4.0 3.5.0; do
+            tag="v$version"
+            tag_sha=$(git rev-list -n 1 "$tag")
+            [ -n "$tag_sha" ]
+            if [ -n "$previous" ]; then
+              git merge-base --is-ancestor "$previous" "$tag_sha"
+            fi
+            previous="$tag_sha"
+            release=$(gh release view "$tag" --repo "$REPO" --json tagName,url,isDraft,isPrerelease,publishedAt,targetCommitish)
+            releases=$(jq --argjson item "$release" '. + [$item]' <<<"$releases")
+          done
+          [ "$previous" = "$main_sha" ]
+          generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg main_sha "$main_sha" \
+            --arg generated_at "$generated_at" \
+            --arg workflow_run "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --argjson releases "$releases" \
+            '{
+              schema_version: 1,
+              project: "chrisduvillard/pathfinder-skill",
+              final_version: "3.5.0",
+              main_sha: $main_sha,
+              releases: $releases,
+              verification: {
+                repository_gate: "passed",
+                package_smoke: "passed",
+                wheel_installation: "passed",
+                credential_free_host_installation: "passed",
+                tag_ancestry: "passed",
+                marketplace_version_alignment: "passed"
+              },
+              workflow_run: $workflow_run,
+              generated_at: $generated_at
+            }' > /tmp/pathfinder-rollout-attestation.json
+
+      - name: Publish the attestation branch
+        run: |
+          set -euo pipefail
+          git checkout --orphan "$ATTESTATION_BRANCH"
+          git rm -rf .
+          cp /tmp/pathfinder-rollout-attestation.json ./pathfinder-rollout-attestation.json
+          git add pathfinder-rollout-attestation.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Attest verified Pathfinder v3.5.0 rollout'
+          git push --force origin HEAD:"$ATTESTATION_BRANCH"
+
+      - name: Record attestation failure
+        if: failure()
+        run: |
+          gh issue create --repo "$REPO" --title 'Pathfinder rollout attestation blocked' \
+            --body "Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          No success attestation was published." || true
