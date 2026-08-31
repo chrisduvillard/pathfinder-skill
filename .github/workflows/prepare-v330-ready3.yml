@@ -1,0 +1,82 @@
+name: prepare-v3.3.0-ready3
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/prepare-v330-ready3.yml]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      SOURCE_BRANCH: release/v3.3.0-hardening
+      READY_BRANCH: release/v3.3.0-ready3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes jq shellcheck
+          python -m pip install --disable-pip-version-check -r requirements-controller.txt
+
+      - name: Recover or apply the v3.3.0 implementation
+        run: |
+          set -euo pipefail
+          git fetch origin "+refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
+          if git show "origin/$SOURCE_BRANCH:pathfinder_core/storage.py" | grep -q 'def peek(self)'; then
+            git checkout -B "$READY_BRANCH" "origin/$SOURCE_BRANCH"
+          else
+            git show "origin/$SOURCE_BRANCH:.github/pathfinder-v330-prepare.py" > /tmp/pathfinder-v330-prepare.py
+            test -s /tmp/pathfinder-v330-prepare.py
+            git checkout -B "$READY_BRANCH" origin/main
+            python /tmp/pathfinder-v330-prepare.py
+          fi
+          rm -f \
+            .github/pathfinder-v330-prepare.py \
+            .github/workflows/prepare-v330.yml \
+            .github/workflows/export-source.yml \
+            .github/workflows/export-devtools.yml
+          test "$(sed -n 's/^Version:[[:space:]]*//p' VERSION.md | head -1)" = '3.3.0'
+          grep -q 'def peek(self)' pathfinder_core/storage.py
+          grep -q 'def repair(self)' pathfinder_core/storage.py
+
+      - name: Run the complete repository and exact-package gates
+        env:
+          PATHFINDER_CONTROLLER_PYTHON: python
+          PATHFINDER_DOCS_PYTHON: python
+          PATHFINDER_EVAL_PYTHON: python
+        run: |
+          set -euo pipefail
+          bash scripts/check-all.sh .
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'Harden mission integrity and read-only operations for v3.3.0'
+          fi
+          bash scripts/package-smoke.sh .
+          git push --force-with-lease origin HEAD:"$READY_BRANCH"
+
+      - name: Record preparation failure
+        if: failure()
+        run: |
+          gh issue create --repo "$REPO" --title 'v3.3.0 explicit-ref preparation failed' \
+            --body "Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          No pull request, merge, or release was attempted." || true
