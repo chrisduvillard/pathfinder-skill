@@ -1,0 +1,35 @@
+name: cancel-stale-rollout
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/cancel-stale-rollout.yml]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Cancel obsolete queued and running rollout variants
+        run: |
+          set -euo pipefail
+          keep='^(prepare-v3\.3\.0-ready3|orchestrate-v3\.3\.0-ready3|prepare-v3\.4\.0-ready|orchestrate-v3\.4\.0-ready|prepare-v3\.5\.0-ready5|orchestrate-v3\.5\.0-ready5|verify-final-rollout|cleanup-rollout-branches|cancel-stale-rollout)$'
+          gh run list --repo "$REPO" --branch codex/pathfinder-hardening-outcomes --limit 100 \
+            --json databaseId,workflowName,status \
+            --jq '.[] | select((.status == "queued" or .status == "in_progress") and .databaseId != env.GITHUB_RUN_ID) | [.databaseId, .workflowName] | @tsv' \
+            | while IFS=$'\t' read -r run_id workflow_name; do
+                [ -n "$run_id" ] || continue
+                if grep -Eq "$keep" <<<"$workflow_name"; then
+                  echo "keeping $workflow_name ($run_id)"
+                else
+                  echo "canceling obsolete $workflow_name ($run_id)"
+                  gh run cancel "$run_id" --repo "$REPO" || true
+                fi
+              done
