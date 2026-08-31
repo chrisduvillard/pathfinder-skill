@@ -1,0 +1,67 @@
+name: prepare-v3.4.0-ready2
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/prepare-v340-ready2.yml]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      READY_BRANCH: release/v3.4.0-ready2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: codex/pathfinder-hardening-outcomes
+
+      - name: Preserve the bounded semantic preparation
+        run: cp .github/pathfinder-v340-prepare.py /tmp/pathfinder-v340-prepare.py
+
+      - name: Wait for v3.3.0
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 240); do
+            gh release view v3.3.0 --repo "$REPO" >/dev/null 2>&1 && exit 0
+            sleep 10
+          done
+          exit 1
+
+      - name: Rebuild, verify, and publish the ready branch
+        env:
+          PATHFINDER_CONTROLLER_PYTHON: python
+          PATHFINDER_DOCS_PYTHON: python
+          PATHFINDER_EVAL_PYTHON: python
+        run: |
+          set -euo pipefail
+          git fetch origin "+refs/heads/main:refs/remotes/origin/main"
+          git checkout -B "$READY_BRANCH" origin/main
+          test "$(sed -n 's/^Version:[[:space:]]*//p' VERSION.md | head -1)" = '3.3.0'
+          sudo apt-get update
+          sudo apt-get install --yes jq shellcheck
+          python -m pip install --disable-pip-version-check -r requirements-controller.txt
+          python /tmp/pathfinder-v340-prepare.py
+          bash scripts/check-all.sh .
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Add semantic Goal contracts and outcome evaluation for v3.4.0'
+          bash scripts/package-smoke.sh .
+          git push --force-with-lease origin HEAD:"$READY_BRANCH"
+
+      - name: Record failure
+        if: failure()
+        run: |
+          gh issue create --repo "$REPO" --title 'v3.4.0 fresh retry preparation failed' \
+            --body "Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          No pull request, merge, or release was attempted." || true
