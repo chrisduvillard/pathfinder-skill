@@ -1,0 +1,115 @@
+name: orchestrate-v3.3.0-retry
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/orchestrate-v330-retry.yml]
+
+permissions:
+  actions: write
+  checks: read
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_BRANCH: release/v3.3.0-hardening
+      VERSION: 3.3.0
+    steps:
+      - name: Complete v3.3.0 idempotently
+        shell: bash
+        run: |
+          set -euo pipefail
+          issue_on_error() {
+            status=$?
+            prep=$(gh run list --repo "$REPO" --workflow prepare-v3.3.0 --branch "$HEAD_BRANCH" --limit 3 --json databaseId,url,status,conclusion,headSha 2>/dev/null || echo '[]')
+            prs=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state all --limit 3 --json number,url,state,mergeStateStatus,statusCheckRollup 2>/dev/null || echo '[]')
+            body=$(cat <<EOF
+          The automated v3.3.0 release watchdog stopped before a verified release.
+
+          Preparation runs:
+          \`\`\`json
+          $prep
+          \`\`\`
+
+          Pull request state:
+          \`\`\`json
+          $prs
+          \`\`\`
+
+          Exit status: $status. No failing candidate was force-merged or released.
+          EOF
+            )
+            existing=$(gh issue list --repo "$REPO" --state open --search 'v3.3.0 automated release blocked in:title' --json number --limit 1 --jq '.[0].number // empty' 2>/dev/null || true)
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --repo "$REPO" --body "$body" || true
+            else
+              gh issue create --repo "$REPO" --title 'v3.3.0 automated release blocked' --body "$body" || true
+            fi
+            exit "$status"
+          }
+          trap issue_on_error ERR
+
+          if gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
+            echo "v$VERSION is already released"
+            exit 0
+          fi
+
+          pr=''
+          for attempt in $(seq 1 120); do
+            pr=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number --limit 1 --jq '.[0].number // empty' 2>/dev/null || true)
+            [ -n "$pr" ] && break
+            merged=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state merged --json number --limit 1 --jq '.[0].number // empty' 2>/dev/null || true)
+            if [ -n "$merged" ]; then
+              break
+            fi
+            sleep 10
+          done
+
+          main_version=$(gh api "repos/$REPO/contents/VERSION.md?ref=main" --jq .content | base64 -d | sed -n 's/^Version:[[:space:]]*//p' | head -1)
+          if [ "$main_version" != "$VERSION" ]; then
+            [ -n "$pr" ]
+            files=$(gh pr diff "$pr" --repo "$REPO" --name-only)
+            ! grep -Eq '^\.github/(pathfinder-v330-prepare\.py|workflows/prepare-v330\.yml|workflows/export-(source|devtools)\.yml)$' <<<"$files"
+
+            # Wait until every required context exists before asking gh to watch it.
+            for attempt in $(seq 1 90); do
+              checks=$(gh pr checks "$pr" --repo "$REPO" --json name,state,bucket 2>/dev/null || echo '[]')
+              names=$(jq -r '.[].name' <<<"$checks")
+              if grep -qx 'version + JSON consistency' <<<"$names" \
+                && grep -qx 'CodeQL' <<<"$names" \
+                && grep -qx 'CodeQL Actions' <<<"$names" \
+                && grep -qx 'Dependency Review' <<<"$names"; then
+                break
+              fi
+              sleep 10
+            done
+            gh pr checks "$pr" --repo "$REPO" --watch --fail-fast --interval 10
+            gh pr merge "$pr" --repo "$REPO" --squash --delete-branch \
+              --subject 'Harden mission integrity and read-only operations for v3.3.0'
+          fi
+
+          merged_sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          main_version=$(gh api "repos/$REPO/contents/VERSION.md?ref=main" --jq .content | base64 -d | sed -n 's/^Version:[[:space:]]*//p' | head -1)
+          [ "$main_version" = "$VERSION" ]
+
+          started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          gh workflow run release.yml --repo "$REPO" --ref main -f version="$VERSION"
+          run_id=''
+          for attempt in $(seq 1 90); do
+            runs=$(gh run list --repo "$REPO" --workflow release.yml --event workflow_dispatch --branch main --limit 10 --json databaseId,createdAt)
+            run_id=$(jq -r --arg started "$started" '[.[] | select(.createdAt >= $started)] | sort_by(.createdAt) | last | .databaseId // empty' <<<"$runs")
+            [ -n "$run_id" ] && break
+            sleep 5
+          done
+          [ -n "$run_id" ]
+          gh run watch "$run_id" --repo "$REPO" --exit-status
+          gh release view "v$VERSION" --repo "$REPO" >/dev/null
+          tag_sha=$(gh api "repos/$REPO/git/ref/tags/v$VERSION" --jq .object.sha)
+          [ "$tag_sha" = "$merged_sha" ]
