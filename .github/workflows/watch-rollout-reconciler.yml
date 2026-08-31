@@ -1,0 +1,58 @@
+name: watch-rollout-reconciler
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/watch-rollout-reconciler.yml]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      TARGET_WORKFLOW: reconcile-complete-rollout-v2
+    steps:
+      - name: Retry only stopped, unattested reconciliations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for cycle in $(seq 1 20); do
+            if gh api "repos/$REPO/contents/pathfinder-rollout-attestation.json?ref=attestations%2Fpathfinder-v3.5.0" >/dev/null 2>&1; then
+              echo 'verified rollout attestation is present'
+              exit 0
+            fi
+
+            run=$(gh run list --repo "$REPO" --workflow "$TARGET_WORKFLOW" --branch codex/pathfinder-hardening-outcomes --limit 1 \
+              --json databaseId,status,conclusion,createdAt,url 2>/dev/null || echo '[]')
+            run_id=$(jq -r '.[0].databaseId // empty' <<<"$run")
+            status=$(jq -r '.[0].status // empty' <<<"$run")
+            conclusion=$(jq -r '.[0].conclusion // empty' <<<"$run")
+
+            if [ -z "$run_id" ]; then
+              echo 'reconciler run has not registered yet'
+            elif [ "$status" = 'completed' ]; then
+              echo "rerunning stopped reconciler $run_id with conclusion ${conclusion:-unknown}"
+              gh run rerun "$run_id" --repo "$REPO"
+            else
+              echo "reconciler $run_id remains $status"
+            fi
+            sleep 900
+          done
+
+          body="Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          The bounded transient-failure watchdog expired without observing the final rollout attestation. It did not bypass checks, merge a failing pull request, or publish an unverified release."
+          existing=$(gh issue list --repo "$REPO" --state open --search 'Pathfinder rollout watchdog expired in:title' --json number --limit 1 --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body" || true
+          else
+            gh issue create --repo "$REPO" --title 'Pathfinder rollout watchdog expired' --body "$body" || true
+          fi
+          exit 1
