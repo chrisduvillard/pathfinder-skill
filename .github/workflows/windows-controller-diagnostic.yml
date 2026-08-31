@@ -1,0 +1,39 @@
+name: windows-controller-diagnostic
+
+on:
+  push:
+    branches:
+      - codex/pathfinder-hardening-outcomes
+    paths:
+      - .github/workflows/windows-controller-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install controller dependencies
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
+      - name: Capture controller test output
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          python -m unittest discover -s tests -t . -p 'test_*.py' -v 2>&1 | Tee-Object -FilePath controller-tests.log
+          $code = $LASTEXITCODE
+          "exit_code=$code" | Out-File -FilePath controller-tests-tail.txt
+          Get-Content controller-tests.log -Tail 300 | Out-File -FilePath controller-tests-tail.txt -Append
+          exit 0
+      - name: Upload diagnostic log
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-controller-diagnostic
+          path: |
+            controller-tests.log
+            controller-tests-tail.txt
+          if-no-files-found: error
+          retention-days: 1
