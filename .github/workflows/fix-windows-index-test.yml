@@ -1,0 +1,52 @@
+name: fix-windows-index-test
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/fix-windows-index-test.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: codex/pathfinder-hardening-outcomes
+          fetch-depth: 0
+      - name: Make the Git index regression portable
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/core/test_repository.py')
+          source = path.read_text()
+          old = '''            index = root / ".git" / "index"
+            before = (index.read_bytes(), index.stat().st_size, index.stat().st_mtime_ns)
+'''
+          new = '''            git(root, "read-tree", "HEAD")
+            index_output = git(
+                root,
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-path",
+                "index",
+            ).stdout.strip()
+            index = Path(index_output)
+            self.assertTrue(index.is_file(), index)
+            before = (index.read_bytes(), index.stat().st_size, index.stat().st_mtime_ns)
+'''
+          if source.count(old) != 1:
+              raise SystemExit('expected Windows index test fragment not found exactly once')
+          path.write_text(source.replace(old, new, 1))
+          PY
+          rm .github/workflows/fix-windows-index-test.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git diff --cached --check
+          git commit -m 'Make the Git index regression portable'
+          git push origin HEAD:codex/pathfinder-hardening-outcomes
