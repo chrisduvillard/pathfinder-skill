@@ -1,0 +1,188 @@
+name: apply-chain-review-fix-v2
+
+on:
+  push:
+    branches:
+      - codex/pathfinder-hardening-outcomes
+    paths:
+      - .github/workflows/apply-chain-review-fix-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: codex/pathfinder-hardening-outcomes
+          fetch-depth: 0
+      - name: Install controller dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
+      - name: Apply committed-chain validation and regressions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          storage_path = Path("pathfinder_core/storage.py")
+          storage = storage_path.read_text(encoding="utf-8")
+          old_import = "from .state import transition\n"
+          new_import = "from .state import ALLOWED_TRANSITIONS, transition\n"
+          if storage.count(old_import) != 1:
+              raise SystemExit("storage state import did not match exactly once")
+          storage = storage.replace(old_import, new_import, 1)
+
+          marker = '''    def _previous_event_hash(self, sequence: int) -> str | None:
+'''
+          method = '''    def _validate_committed_event_chain(self, document: dict) -> None:
+        revision = int(document["revision"])
+        if revision == 0:
+            return
+        previous_event = None
+        previous_to_state = None
+        previous_state_after = None
+        for sequence in range(1, revision + 1):
+            path = self._event_path(sequence)
+            if not path.is_file():
+                raise StateError(f"event chain is missing committed event {sequence}")
+            event = read_json(path)
+            self._validate("mission/event.schema.json", event)
+            if event["event_type"] != "transition":
+                raise StateError("committed event chain contains a non-transition event")
+            if event["mission_id"] != document["mission_id"]:
+                raise StateError("committed event chain mission identity drift")
+            if event["sequence"] != sequence:
+                raise StateError("committed event chain sequence drift")
+            from_state = event["from_state"]
+            to_state = event["to_state"]
+            if from_state not in ALLOWED_TRANSITIONS:
+                raise StateError("committed event chain has an unknown source state")
+            if previous_to_state is not None and from_state != previous_to_state:
+                raise StateError("committed event chain state continuity drift")
+            if to_state not in ALLOWED_TRANSITIONS[from_state]:
+                raise StateError(
+                    "committed event chain contains a forbidden transition: "
+                    f"{from_state} -> {to_state}"
+                )
+            changes = dict(event.get("changes", {}))
+            self._validate_changes(from_state, to_state, changes)
+            if event["payload_sha256"] != canonical_sha256(changes):
+                raise StateError("committed event chain payload hash mismatch")
+            if event["schema_version"] >= 2:
+                expected_previous = (
+                    None if previous_event is None else canonical_sha256(previous_event)
+                )
+                if event["previous_event_sha256"] != expected_previous:
+                    raise StateError("committed event chain previous hash mismatch")
+                if (
+                    previous_state_after is not None
+                    and event["state_before_sha256"] != previous_state_after
+                ):
+                    raise StateError("committed event chain state hash continuity drift")
+                previous_state_after = event["state_after_sha256"]
+            elif previous_event is not None and previous_event["schema_version"] >= 2:
+                raise StateError("committed event chain cannot downgrade its schema version")
+            previous_event = event
+            previous_to_state = to_state
+        if previous_to_state != document["state"]:
+            raise StateError("committed event chain tip state drift")
+        if (
+            previous_event is not None
+            and previous_event["schema_version"] >= 2
+            and previous_event["state_after_sha256"] != canonical_sha256(document)
+        ):
+            raise StateError("committed event chain tip does not match canonical state")
+
+'''
+          if storage.count(marker) != 1:
+              raise SystemExit("previous-event method marker did not match exactly once")
+          storage = storage.replace(marker, method + marker, 1)
+
+          validation_fragment = '''        self._validate("mission/mission-state.schema.json", document)
+        return document
+'''
+          validation_replacement = '''        self._validate("mission/mission-state.schema.json", document)
+        self._validate_committed_event_chain(document)
+        return document
+'''
+          if storage.count(validation_fragment) != 1:
+              raise SystemExit("peek validation fragment did not match exactly once")
+          storage = storage.replace(validation_fragment, validation_replacement, 1)
+
+          load_fragment = '''        self._validate("mission/mission-state.schema.json", document)
+        if recover:
+            document = self._recover_interrupted_transition_locked(document)
+'''
+          load_replacement = '''        self._validate("mission/mission-state.schema.json", document)
+        self._validate_committed_event_chain(document)
+        if recover:
+            document = self._recover_interrupted_transition_locked(document)
+'''
+          if storage.count(load_fragment) != 1:
+              raise SystemExit("locked-load validation fragment did not match exactly once")
+          storage = storage.replace(load_fragment, load_replacement, 1)
+          storage_path.write_text(storage, encoding="utf-8")
+
+          test_path = Path("tests/core/test_state.py")
+          tests = test_path.read_text(encoding="utf-8")
+          insertion = '''
+    def test_committed_event_chain_rejects_older_event_tampering(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = MissionStore(Path(directory))
+            store.initialize(copy.deepcopy(initial_state()))
+            store.move(
+                "authorized",
+                changes={"authorization_id": "authorization_12345678"},
+            )
+            store.move("prepared")
+            first_path = store._event_path(1)
+            first = read_json(first_path)
+            first["changes"] = {"authorization_id": "authorization_87654321"}
+            first["payload_sha256"] = canonical_sha256(first["changes"])
+            write_atomic(first_path, first)
+            with self.assertRaisesRegex(StateError, "previous hash mismatch"):
+                store.peek()
+
+    def test_committed_event_chain_tip_is_bound_to_canonical_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = MissionStore(Path(directory))
+            store.initialize(copy.deepcopy(initial_state()))
+            store.move(
+                "authorized",
+                changes={"authorization_id": "authorization_12345678"},
+            )
+            state = read_json(store.state_path)
+            state["authorization_id"] = "authorization_87654321"
+            write_atomic(store.state_path, state)
+            with self.assertRaisesRegex(
+                StateError, "tip does not match canonical state"
+            ):
+                store.peek()
+
+'''
+          test_marker = '\n\nif __name__ == "__main__":\n'
+          if tests.count(test_marker) != 1:
+              raise SystemExit("test module footer did not match exactly once")
+          tests = tests.replace(test_marker, "\n" + insertion + test_marker, 1)
+          test_path.write_text(tests, encoding="utf-8")
+          PY
+          rm .github/workflows/apply-chain-review-fix.yml
+          rm .github/workflows/apply-chain-review-fix-v2.yml
+          git diff --check
+      - name: Run affected and complete controller tests
+        shell: bash
+        run: |
+          python -m unittest tests.core.test_state -v
+          bash scripts/check-controller.sh .
+      - name: Commit reviewed fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git diff --cached --check
+          git commit -m 'Validate the complete committed event chain'
+          git push origin HEAD:codex/pathfinder-hardening-outcomes
