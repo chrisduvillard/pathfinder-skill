@@ -1,0 +1,45 @@
+name: apply-v330-hardening
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths:
+      - .github/workflows/apply-v330.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'chore: activate v3.3.0 patch apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: codex/pathfinder-hardening-outcomes
+          fetch-depth: 0
+
+      - name: Reconstruct and apply verified patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .pathfinder-patch/chunk-* > /tmp/pathfinder-v330.patch.gz.b64
+          printf '%s  %s\n' \
+            'f5fdef5383d5b275845b399ff9a8b07a03ff57e915d1c30a4538302a85d3ac07' \
+            '/tmp/pathfinder-v330.patch.gz.b64' | sha256sum --check --strict
+          base64 --decode /tmp/pathfinder-v330.patch.gz.b64 \
+            | gzip --decompress --stdout > /tmp/pathfinder-v330.patch
+          printf '%s  %s\n' \
+            'fa3625ab9767f0f5473e8cf3a11bf63f521f6ae6e4ea61c78e5fff89b16be69d' \
+            '/tmp/pathfinder-v330.patch' | sha256sum --check --strict
+          git apply --check /tmp/pathfinder-v330.patch
+          git apply /tmp/pathfinder-v330.patch
+          rm -rf .pathfinder-patch .github/workflows/apply-v330.yml
+          git add --all
+          git diff --cached --check
+          test "$(git write-tree)" = 'c3cdd1dfdfce831d0b4a466eb180d4191af01fea'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Harden mission recovery and read-only operations'
+          git push origin HEAD:codex/pathfinder-hardening-outcomes
