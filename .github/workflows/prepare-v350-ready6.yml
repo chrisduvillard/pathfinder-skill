@@ -1,0 +1,79 @@
+name: prepare-v3.5.0-ready6
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/prepare-v350-ready6.yml]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      READY_BRANCH: release/v3.5.0-ready6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: codex/pathfinder-hardening-outcomes
+
+      - name: Preserve preparation and fixup programs
+        run: |
+          cp .github/pathfinder-v350-prepare.py /tmp/pathfinder-v350-prepare.py
+          cp .github/pathfinder-v350-fixup.py /tmp/pathfinder-v350-fixup.py
+          cp .github/pathfinder-v350-fixup2.py /tmp/pathfinder-v350-fixup2.py
+          cp .github/pathfinder-v350-fixup3.py /tmp/pathfinder-v350-fixup3.py
+          cp .github/pathfinder-v350-fixup4.py /tmp/pathfinder-v350-fixup4.py
+
+      - name: Wait for v3.4.0
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 420); do
+            gh release view v3.4.0 --repo "$REPO" >/dev/null 2>&1 && exit 0
+            sleep 10
+          done
+          exit 1
+
+      - name: Rebuild, verify, and publish the ready branch
+        env:
+          PATHFINDER_CONTROLLER_PYTHON: python
+          PATHFINDER_DOCS_PYTHON: python
+          PATHFINDER_EVAL_PYTHON: python
+        run: |
+          set -euo pipefail
+          git fetch origin "+refs/heads/main:refs/remotes/origin/main"
+          git checkout -B "$READY_BRANCH" origin/main
+          test "$(sed -n 's/^Version:[[:space:]]*//p' VERSION.md | head -1)" = '3.4.0'
+          sudo apt-get update
+          sudo apt-get install --yes jq shellcheck
+          python -m pip install --disable-pip-version-check -r requirements-controller.txt
+          python /tmp/pathfinder-v350-prepare.py
+          python /tmp/pathfinder-v350-fixup.py
+          python /tmp/pathfinder-v350-fixup2.py
+          python /tmp/pathfinder-v350-fixup3.py
+          python /tmp/pathfinder-v350-fixup4.py
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          bash scripts/format-python-quality-surface.sh .
+          bash scripts/check-all.sh .
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Add progressive policy-driven architecture and quality gates for v3.5.0'
+          bash scripts/package-smoke.sh .
+          bash scripts/check-wheel.sh .
+          git push --force-with-lease origin HEAD:"$READY_BRANCH"
+
+      - name: Record failure
+        if: failure()
+        run: |
+          gh issue create --repo "$REPO" --title 'v3.5.0 fresh retry preparation failed' \
+            --body "Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          No pull request, merge, or release was attempted." || true
