@@ -68,10 +68,10 @@ class GoalPackController:
         if path.exists():
             if not path.is_file() or read_json(path) != document:
                 raise StateError(f"different persisted goal pack contract: {path.name}")
-            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            path.chmod(stat.S_IRUSR)
             return
         write_atomic(path, document)
-        path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        path.chmod(stat.S_IRUSR)
 
     def _validate_bindings(
         self,
@@ -517,7 +517,7 @@ class GoalPackController:
                 raise StateError("goal pack child state cannot be a symlink")
             child_state_path = child_root / "state.json"
             if child_state_path.exists():
-                child_state = MissionStore(child_root).load()
+                child_state = MissionStore(child_root).repair()
                 if child_state["state"] in CHILD_TERMINAL_STATES:
                     updated = self._finish_active(state, child_state)
                     return {
@@ -561,7 +561,7 @@ class GoalPackController:
             child_state_path = child_root / "state.json"
             if child_state_path.exists():
                 store = MissionStore(child_root)
-                child_state = store.load()
+                child_state = store.repair()
                 if child_state["state"] not in CHILD_TERMINAL_STATES:
                     store.move("abandoned", attempt_id=child_state.get("attempt_id"))
             goals = copy.deepcopy(state["goals"])

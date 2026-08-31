@@ -33,6 +33,18 @@ class CapabilityTests(unittest.TestCase):
         self.assertIn("runner_available", report)
         self.assertEqual(report["runner_available"], report["controller_available"])
         self.assertIn("mission_runner_available", report)
+        self.assertEqual(
+            report["capabilities"]["installed_publication"]["status"],
+            "unavailable",
+        )
+        self.assertEqual(
+            report["capabilities"]["host_runtime_attestation"]["status"],
+            "unknown",
+        )
+        self.assertEqual(
+            report["capabilities"]["source_publication_primitives"]["status"],
+            "available",
+        )
 
     def test_callable_mission_runner_does_not_imply_unattended_execution(self):
         with mock.patch.object(capabilities.sys, "version_info", (3, 11)), mock.patch(

@@ -54,7 +54,7 @@ class MissionOrchestrator:
             raise StateError("runtime boundary is not eligible for unattended execution")
 
     def run(self) -> dict:
-        state = self.store.load()
+        state = self.store.repair()
         self._validate_contract(state)
         if state["state"] in {"awaiting-review", "merged", "blocked", "abandoned"}:
             return state

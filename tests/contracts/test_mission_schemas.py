@@ -229,6 +229,27 @@ class MissionSchemaTests(unittest.TestCase):
         instance["intent_snapshot"] = {"charter": None, "roadmap": None, "doctrine": None}
         validate("artifacts/goal-binding.schema.json", instance)
 
+    def test_v2_transition_event_requires_integrity_chain_fields(self):
+        event = copy.deepcopy(EVENT)
+        event.update(
+            schema_version=2,
+            previous_event_sha256=None,
+            state_before_sha256=HASH,
+            state_after_sha256="b" * 64,
+        )
+        validate("mission/event.schema.json", event)
+        for field in ("previous_event_sha256", "state_before_sha256", "state_after_sha256"):
+            with self.subTest(field=field), self.assertRaises(Exception):
+                changed = copy.deepcopy(event)
+                changed.pop(field)
+                validate("mission/event.schema.json", changed)
+
+    def test_v1_transition_event_rejects_v2_only_fields(self):
+        event = copy.deepcopy(EVENT)
+        event["state_before_sha256"] = HASH
+        with self.assertRaises(Exception):
+            validate("mission/event.schema.json", event)
+
     def test_malformed_timestamp_fails(self):
         instance = copy.deepcopy(EVENT)
         instance["recorded_at"] = "yesterday"

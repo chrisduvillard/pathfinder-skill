@@ -208,7 +208,7 @@ def _write_text_view(path: Path, content: str) -> None:
             stream.write(content.encode("utf-8"))
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        temporary.chmod(stat.S_IRUSR)
         if path.exists():
             path.chmod(stat.S_IRUSR | stat.S_IWUSR)
         os.replace(temporary, path)
@@ -250,7 +250,7 @@ def _validate_objective(objective: str, *, schema_version: int = 2) -> None:
 
 
 def _seal(path: Path) -> None:
-    path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    path.chmod(stat.S_IRUSR)
 
 
 def write_saved_prompt_goal(

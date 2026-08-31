@@ -150,6 +150,25 @@ class RepositoryTests(unittest.TestCase):
             command = run.call_args.args[0]
             self.assertIn(f"core.hooksPath={os.devnull}", command)
             self.assertIn("credential.helper=", command)
+            environment = run.call_args.kwargs["env"]
+            self.assertEqual(environment["GIT_OPTIONAL_LOCKS"], "0")
+
+    def test_repository_inspection_does_not_refresh_git_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            make_repository(root)
+            index = root / ".git" / "index"
+            before_bytes = index.read_bytes()
+            before_mode = index.stat().st_mode
+            before_time = 1_600_000_000_000_000_000
+            os.utime(index, ns=(before_time, before_time))
+
+            inspect_repository(root)
+
+            self.assertEqual(index.read_bytes(), before_bytes)
+            self.assertEqual(index.stat().st_mode, before_mode)
+            self.assertEqual(index.stat().st_mtime_ns, before_time)
+            self.assertFalse((root / ".git" / "index.lock").exists())
 
 
 if __name__ == "__main__":
