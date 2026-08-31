@@ -158,7 +158,16 @@ class RepositoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "repo"
             make_repository(root)
-            index = root / ".git" / "index"
+            git(root, "read-tree", "HEAD")
+            index_output = git(
+                root,
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-path",
+                "index",
+            ).stdout.strip()
+            index = Path(index_output)
+            self.assertTrue(index.is_file(), index)
             before = (index.read_bytes(), index.stat().st_size, index.stat().st_mtime_ns)
             inspect_repository(root)
             after = (index.read_bytes(), index.stat().st_size, index.stat().st_mtime_ns)
