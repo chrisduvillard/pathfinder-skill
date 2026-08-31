@@ -1,0 +1,66 @@
+name: controller-hang-diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/v330-controller-hang
+    paths:
+      - .github/workflows/controller-hang-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install controller dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
+      - name: Run full controller suite with a hard diagnostic timeout
+        shell: bash
+        run: |
+          python - <<'PY'
+          import subprocess
+          import sys
+
+          command = [
+              sys.executable,
+              "-u",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "tests",
+              "-t",
+              ".",
+              "-p",
+              "test_*.py",
+              "-v",
+          ]
+          try:
+              completed = subprocess.run(
+                  command,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+                  text=True,
+                  timeout=360,
+                  check=False,
+              )
+              output = completed.stdout
+              code = completed.returncode
+          except subprocess.TimeoutExpired as error:
+              raw = error.stdout or ""
+              output = raw.decode(errors="replace") if isinstance(raw, bytes) else raw
+              code = 124
+              output += "\nDIAGNOSTIC_TIMEOUT_AFTER_360_SECONDS\n"
+          lines = output.splitlines()
+          print("\n".join(lines[-500:]), flush=True)
+          print(f"DIAGNOSTIC_EXIT_CODE={code}", flush=True)
+          raise SystemExit(0)
+          PY
