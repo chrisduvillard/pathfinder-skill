@@ -1,0 +1,128 @@
+name: orchestrate-v3.3.0
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/orchestrate-v330.yml]
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_BRANCH: release/v3.3.0-hardening
+      VERSION: 3.3.0
+    steps:
+      - name: Wait for the verified preparation pull request
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            if pr_json=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number,url,headRefOid --limit 1) && [ "$(jq length <<<"$pr_json")" -eq 1 ]; then
+              number=$(jq -r '.[0].number' <<<"$pr_json")
+              url=$(jq -r '.[0].url' <<<"$pr_json")
+              echo "number=$number" >> "$GITHUB_OUTPUT"
+              echo "url=$url" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          latest=$(gh run list --repo "$REPO" --workflow prepare-v3.3.0 --branch "$HEAD_BRANCH" --limit 1 --json databaseId,url,status,conclusion 2>/dev/null || echo '[]')
+          body=$(cat <<EOF
+          The isolated v3.3.0 preparation did not produce a pull request within 15 minutes.
+
+          Latest preparation run:
+          
+          \`\`\`json
+          $latest
+          \`\`\`
+
+          No merge or release was attempted.
+          EOF
+          )
+          gh issue create --repo "$REPO" --title "v3.3.0 preparation blocked" --body "$body" || true
+          exit 1
+
+      - name: Reject temporary or unbounded files
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=$(gh pr diff "${{ steps.locate.outputs.number }}" --repo "$REPO" --name-only)
+          printf '%s\n' "$files"
+          if grep -Eq '^\.github/(pathfinder-v330-prepare\.py|workflows/prepare-v330\.yml|workflows/export-(source|devtools)\.yml)$' <<<"$files"; then
+            echo 'temporary workflow leaked into the release diff' >&2
+            exit 1
+          fi
+          grep -qx 'VERSION.md' <<<"$files"
+          grep -qx 'pathfinder_core/storage.py' <<<"$files"
+          grep -qx 'schemas/mission/event.schema.json' <<<"$files"
+
+      - name: Wait for every protected-branch check
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr checks "${{ steps.locate.outputs.number }}" --repo "$REPO" --watch --fail-fast --interval 10
+
+      - name: Squash-merge the verified pull request
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr merge "${{ steps.locate.outputs.number }}" \
+            --repo "$REPO" \
+            --squash \
+            --delete-branch \
+            --subject 'Harden mission integrity and read-only operations for v3.3.0'
+
+      - name: Verify the merged default branch
+        id: merged
+        shell: bash
+        run: |
+          set -euo pipefail
+          encoded=$(gh api "repos/$REPO/contents/VERSION.md?ref=main" --jq .content)
+          printf '%s' "$encoded" | base64 -d > /tmp/VERSION.md
+          grep -Eq '^Version:[[:space:]]+3\.3\.0[[:space:]]*$' /tmp/VERSION.md
+          sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch the deliberate v3.3.0 release
+        id: dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "started=$started" >> "$GITHUB_OUTPUT"
+          gh workflow run release.yml --repo "$REPO" --ref main -f version="$VERSION"
+
+      - name: Wait for the release workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=''
+          for attempt in $(seq 1 60); do
+            runs=$(gh run list --repo "$REPO" --workflow release.yml --event workflow_dispatch --branch main --limit 10 --json databaseId,createdAt,status,conclusion)
+            run_id=$(jq -r --arg started "${{ steps.dispatch.outputs.started }}" '[.[] | select(.createdAt >= $started)] | sort_by(.createdAt) | last | .databaseId // empty' <<<"$runs")
+            [ -n "$run_id" ] && break
+            sleep 5
+          done
+          [ -n "$run_id" ]
+          gh run watch "$run_id" --repo "$REPO" --exit-status
+
+      - name: Verify published release and tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "v$VERSION" --repo "$REPO" --json tagName,isDraft,isPrerelease,targetCommitish,url > /tmp/release.json
+          jq -e --arg tag "v$VERSION" --arg sha "${{ steps.merged.outputs.sha }}" '.tagName == $tag and .isDraft == false and .isPrerelease == false' /tmp/release.json
+          tag_sha=$(gh api "repos/$REPO/git/ref/tags/v$VERSION" --jq .object.sha)
+          [ "$tag_sha" = "${{ steps.merged.outputs.sha }}" ]
+          cat /tmp/release.json
