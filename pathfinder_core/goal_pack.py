@@ -11,7 +11,7 @@ from .mission_host import HostMissionController, document_sha256
 from .policy import ExecutionPolicy
 from .protected_surfaces import BASELINE_PATH, ProtectedSurfaceRegistry
 from .state import utc_now
-from .storage import MissionLock, MissionStore, read_json, write_atomic
+from .storage import SEALED_FILE_MODE, MissionLock, MissionStore, read_json, write_atomic
 
 
 TERMINAL_STATES = {"awaiting-review", "blocked", "abandoned"}
@@ -68,10 +68,10 @@ class GoalPackController:
         if path.exists():
             if not path.is_file() or read_json(path) != document:
                 raise StateError(f"different persisted goal pack contract: {path.name}")
-            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            path.chmod(SEALED_FILE_MODE)
             return
         write_atomic(path, document)
-        path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        path.chmod(SEALED_FILE_MODE)
 
     def _validate_bindings(
         self,

@@ -113,9 +113,20 @@ GOAL_PACK_STATE = {
 }
 
 EVENT = {
-    "schema_version": 1, "event_id": "event_12345678", "mission_id": "mission_12345678", "sequence": 1,
-    "event_type": "transition", "from_state": "planned", "to_state": "authorized", "attempt_id": None,
-    "recorded_at": NOW, "changes": {}, "payload_sha256": HASH,
+    "schema_version": 2,
+    "event_id": "event_12345678",
+    "mission_id": "mission_12345678",
+    "sequence": 1,
+    "event_type": "transition",
+    "from_state": "planned",
+    "to_state": "authorized",
+    "attempt_id": None,
+    "recorded_at": NOW,
+    "changes": {},
+    "payload_sha256": HASH,
+    "previous_event_sha256": None,
+    "state_before_sha256": HASH,
+    "state_after_sha256": HASH,
 }
 
 
@@ -234,6 +245,29 @@ class MissionSchemaTests(unittest.TestCase):
         instance["recorded_at"] = "yesterday"
         with self.assertRaises(Exception):
             validate("mission/event.schema.json", instance)
+
+
+    def test_v2_event_requires_chain_and_state_hashes(self):
+        for field in (
+            "previous_event_sha256",
+            "state_before_sha256",
+            "state_after_sha256",
+        ):
+            with self.subTest(field=field), self.assertRaises(Exception):
+                instance = copy.deepcopy(EVENT)
+                instance.pop(field)
+                validate("mission/event.schema.json", instance)
+
+    def test_legacy_v1_event_remains_schema_valid(self):
+        instance = copy.deepcopy(EVENT)
+        instance["schema_version"] = 1
+        for field in (
+            "previous_event_sha256",
+            "state_before_sha256",
+            "state_after_sha256",
+        ):
+            instance.pop(field)
+        validate("mission/event.schema.json", instance)
 
     def test_stale_version_fails(self):
         instance = copy.deepcopy(STATE)

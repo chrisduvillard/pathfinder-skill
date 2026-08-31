@@ -42,7 +42,7 @@ Failed or non-observed actions terminate the mission as `blocked`. `abandoned` i
 
 # Checkpoint Ordering
 
-For each step, `next` journals an immutable operation intent before returning the [typed host action](/runtime/host-protocol.md). `record` validates and persists the receipt, records the operation result, and only then advances mission state. If an intent exists without a trustworthy receipt, the controller returns `reconcile-required` instead of replaying the side effect.[^mission-host]
+For each step, `next` journals an immutable operation intent before returning the [typed host action](/runtime/host-protocol.md). `record` validates and persists the receipt, records the operation result, and only then advances mission state. Each new transition event binds its payload, predecessor event, state before, and state after. If an intent exists without a trustworthy receipt, the controller returns `reconcile-required` instead of replaying the side effect.[^mission-host]
 
 # Budgets and Protected Changes
 
@@ -50,7 +50,7 @@ The wall deadline is derived from the original persisted creation time and the n
 
 # Operator Interface
 
-The command surface provides `mission start`, `next`, `record`, `resume`, `status`, and `abandon`, plus a sequential pack wrapper. Packs activate one child Goal at a time and stop the entire queue on a blocker.[^operator-guide]
+The command surface provides `mission start`, `next`, `record`, `resume`, `status`, `repair`, and `abandon`, plus a sequential pack wrapper. `status` is observation-only and can report a pending recovery without applying it. `repair` is the explicit locked operation that validates and applies one interrupted transition. Packs activate one child Goal at a time and stop the entire queue on a blocker.[^operator-guide]
 
 [^mission-host]: Host mission controller source.
 [^mission-state]: Mission state transition source.

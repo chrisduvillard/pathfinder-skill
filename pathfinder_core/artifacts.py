@@ -14,7 +14,7 @@ from jsonschema.exceptions import SchemaError, ValidationError
 from .errors import PolicyError, StateError
 from .rendering import render_final_summary, render_goal_command
 from .repository import GitRunner, goal_scope
-from .storage import read_json, write_atomic
+from .storage import SEALED_FILE_MODE, ensure_private_directory, fsync_directory, read_json, write_atomic
 
 
 SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "schemas"
@@ -208,10 +208,11 @@ def _write_text_view(path: Path, content: str) -> None:
             stream.write(content.encode("utf-8"))
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        temporary.chmod(0o600)
         if path.exists():
             path.chmod(stat.S_IRUSR | stat.S_IWUSR)
         os.replace(temporary, path)
+        fsync_directory(path.parent)
     except OSError as error:
         if previous_mode is not None and path.exists():
             path.chmod(previous_mode)
@@ -250,7 +251,7 @@ def _validate_objective(objective: str, *, schema_version: int = 2) -> None:
 
 
 def _seal(path: Path) -> None:
-    path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    path.chmod(SEALED_FILE_MODE)
 
 
 def write_saved_prompt_goal(
@@ -273,6 +274,7 @@ def write_saved_prompt_goal(
         repository_kind=request["scope"].get("repository_kind", "git"),
         host_work_root=host_work_root,
     )
+    ensure_private_directory(output)
     if consume_request and (
         request_path.parent != output or request_path.name != REQUEST_NAME
     ):

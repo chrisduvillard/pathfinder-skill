@@ -2,19 +2,55 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pathfinder.local/schemas/mission/event.schema.json",
   "title": "Pathfinder Mission Event",
-  "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "event_id", "mission_id", "sequence", "event_type", "from_state", "to_state", "attempt_id", "recorded_at", "changes", "payload_sha256"],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "mission_id",
+    "sequence",
+    "event_type",
+    "from_state",
+    "to_state",
+    "attempt_id",
+    "recorded_at",
+    "changes",
+    "payload_sha256"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {"enum": [1, 2]},
     "event_id": {"type": "string", "pattern": "^event_[a-z0-9][a-z0-9_-]{7,63}$"},
     "mission_id": {"type": "string", "pattern": "^mission_[a-z0-9][a-z0-9_-]{7,63}$"},
     "sequence": {"type": "integer", "minimum": 1},
     "event_type": {"enum": ["transition", "command-started", "command-finished", "reconciled", "blocked"]},
-    "from_state": {"type": ["string", "null"], "enum": [null, "planned", "authorized", "prepared", "running", "verifying", "verified", "committed", "published", "awaiting-review", "merged", "blocked", "abandoned"]},
+    "from_state": {
+      "type": ["string", "null"],
+      "enum": [null, "planned", "authorized", "prepared", "running", "verifying", "verified", "committed", "published", "awaiting-review", "merged", "blocked", "abandoned"]
+    },
     "to_state": {"enum": ["planned", "authorized", "prepared", "running", "verifying", "verified", "committed", "published", "awaiting-review", "merged", "blocked", "abandoned"]},
     "attempt_id": {"type": ["string", "null"], "pattern": "^attempt_[a-z0-9][a-z0-9_-]{7,63}$"},
     "recorded_at": {"type": "string", "format": "date-time"},
     "changes": {"type": "object"},
-    "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-  }
+    "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "previous_event_sha256": {
+      "oneOf": [
+        {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        {"type": "null"}
+      ]
+    },
+    "state_before_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "state_after_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"schema_version": {"const": 2}}},
+      "then": {
+        "required": [
+          "previous_event_sha256",
+          "state_before_sha256",
+          "state_after_sha256"
+        ]
+      }
+    }
+  ]
 }

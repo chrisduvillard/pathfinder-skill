@@ -12,7 +12,7 @@ from .operations import OperationJournal
 from .policy import ExecutionPolicy
 from .protected_surfaces import BASELINE_PATH, ProtectedSurfaceRegistry
 from .state import transition, utc_now
-from .storage import MissionLock, MissionStore, read_json, write_atomic
+from .storage import SEALED_FILE_MODE, MissionLock, MissionStore, read_json, write_atomic
 
 
 ACTION_BY_STATE = {
@@ -129,10 +129,10 @@ class HostMissionController:
         if path.exists():
             if read_json(path) != document:
                 raise StateError(f"different persisted mission contract: {name}")
-            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            path.chmod(SEALED_FILE_MODE)
             return
         write_atomic(path, document)
-        path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        path.chmod(SEALED_FILE_MODE)
 
     def _attempt_id(self, binding: dict) -> str:
         seed = f"{binding['mission_id']}:{binding['scope']['base_commit']}"
@@ -352,10 +352,10 @@ class HostMissionController:
             if path.exists():
                 if read_json(path) != receipt:
                     raise StateError("different host receipt already exists")
-                path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+                path.chmod(SEALED_FILE_MODE)
                 return
             write_atomic(path, receipt)
-            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            path.chmod(SEALED_FILE_MODE)
 
     def _operation_result(self, intent: dict, receipt: dict) -> dict:
         outcome = receipt["outcome"]

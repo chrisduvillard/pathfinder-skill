@@ -10,6 +10,7 @@ from .artifacts import validated_output_dir
 from .errors import PolicyError, StateError
 from .projections import build_mission_projection
 from .rendering import render_mission_final_summary, render_run_log
+from .storage import SEALED_FILE_MODE, ensure_private_directory, fsync_directory
 
 
 def _validate_target(path: Path) -> None:
@@ -32,6 +33,7 @@ def _write_view(path: Path, content: bytes) -> None:
         if path.exists():
             path.chmod(stat.S_IRUSR | stat.S_IWUSR)
         os.replace(temporary, path)
+        fsync_directory(path.parent)
     except OSError as error:
         if previous_mode is not None and path.exists():
             path.chmod(previous_mode)
@@ -46,11 +48,12 @@ def _json_bytes(document: dict) -> bytes:
 
 
 def _seal(path: Path) -> None:
-    path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    path.chmod(SEALED_FILE_MODE)
 
 
 def write_mission_views(repo_root: str | Path, state_dir: str | Path, output_dir: str | Path) -> dict:
     output = validated_output_dir(Path(repo_root), Path(output_dir))
+    ensure_private_directory(output)
     projection = build_mission_projection(state_dir)
     run_log_markdown = render_run_log(projection).encode()
     summary = projection["final_summary"]

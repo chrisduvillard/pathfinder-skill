@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-08-13
+Generated: 2026-08-31
 
-Version: 3.2.0
+Version: 3.3.0
 
 ## Versioning & distribution
 
@@ -17,6 +17,16 @@ channel and pins `source.ref` to the versioned `v<version>` release tag. Reposit
 `main` is the explicitly labeled edge channel for development/manual installs.
 The stable tag becomes installable only after the release workflow smoke-tests
 the exact archive and creates the tag; tags are never rewritten.
+
+Changes in v3.3.0:
+- Made `mission status` strictly observation-only and added an explicit locked `mission repair` command for one validated interrupted transition.
+- Upgraded newly written mission transition events to a tamper-evident v2 format with payload, previous-event, state-before, and state-after hashes while retaining schema support for existing v1 events.
+- Added transition-specific change-field policy, immutable-state protection, exact mission/attempt/sequence/source-state checks, and fail-closed recovery for event-log drift or injection.
+- Disabled Git optional locks during controller-owned read-only inspection so `git status` cannot refresh the repository index.
+- Changed malformed, truncated, invalid-UTF-8, and transiently unreadable discovery-cache entries into safe cache misses, with best-effort quarantine for corrupt entries.
+- Split capability reporting into importability, dependency, mission-protocol, installed-publication, source-primitives, and unattended-execution states; installed publication now reports unavailable rather than unknown.
+- Hardened local privacy and durability with owner-only state/run directories, owner-only mutable files, read-only sealed artifacts, and parent-directory synchronization after atomic replacement on POSIX.
+- Added direct regressions for read-only status, Git-index immutability, event tampering, immutable-field injection, cache corruption, permission modes, and explicit repair.
 
 Changes in v3.2.0:
 - Reworked the README around an explicit current-capability table and first-run path. It now separates supported Goal creation, host-attested local execution, POSIX owner-only observation of operator-supplied merge evidence, default-off future-host building blocks, and the current manual PR-merge boundary; it also records the specialized-agent development-review model without presenting that quorum as runtime merge authority or local owner-only storage as external authentication.

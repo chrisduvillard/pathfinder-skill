@@ -215,7 +215,7 @@ Security-sensitive Pathfinder development uses fixed-target standards, specifica
 
 <br>
 
-Invoke Pathfinder and choose **Status**, or say `Show Pathfinder status.` The route reads repository and branch identity, local intent, the latest run, controller capabilities, and mission state without creating artifacts or triggering an interview.
+Invoke Pathfinder and choose **Status**, or say `Show Pathfinder status.` The route reads repository and branch identity, local intent, the latest run, controller capabilities, and mission state without creating artifacts, repairing state, or triggering an interview. When a validated interrupted transition is present it reports `recovery_required: true`; an operator must separately run `mission repair` to apply it under the mission lock.
 
 A full plugin install includes the local controller. A manual skill-only copy remains Goal-generation-only unless the controller is installed separately.
 

@@ -1,6 +1,6 @@
 {
   "name": "pathfinder",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Map an unfamiliar repository, create a bounded Goal, or safely prepare a guarded autonomous request.",
   "author": {
     "name": "Chris Duvillard",
@@ -21,7 +21,9 @@
     "longDescription": "Pathfinder opens a chooser for source-first repo exploration, a fast prompt-to-goal route, guarded autonomous local missions, creator model refresh, and status/help. It saves a bounded native Goal or fallback implementation goal. With complete doctrine, the local bridge journals typed start/next/record/resume actions in a mission worktree only when the active host proves its runtime boundary and stable Goal lifecycle; otherwise it stops at a saved Goal. Publication is disabled.",
     "developerName": "Chris Duvillard",
     "category": "Productivity",
-    "capabilities": ["Instructions"],
+    "capabilities": [
+      "Instructions"
+    ],
     "websiteURL": "https://github.com/chrisduvillard/pathfinder-skill",
     "defaultPrompt": [
       "Show the Pathfinder options.",

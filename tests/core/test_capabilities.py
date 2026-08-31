@@ -29,10 +29,20 @@ class CapabilityTests(unittest.TestCase):
 
     def test_json_report_is_machine_readable(self):
         report = json.loads(capabilities.capabilities_json())
-        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(report["schema_version"], 2)
         self.assertIn("runner_available", report)
         self.assertEqual(report["runner_available"], report["controller_available"])
         self.assertIn("mission_runner_available", report)
+        self.assertEqual(
+            report["capabilities"]["installed_publication"]["status"],
+            "unavailable",
+        )
+        self.assertEqual(
+            report["capabilities"]["publication"]["status"],
+            "unavailable",
+        )
+        self.assertIn("controller_dependencies", report["capabilities"])
+        self.assertIn("source_publication_primitives", report["capabilities"])
 
     def test_callable_mission_runner_does_not_imply_unattended_execution(self):
         with mock.patch.object(capabilities.sys, "version_info", (3, 11)), mock.patch(

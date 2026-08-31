@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import secrets
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from .errors import StateError
+from .storage import PRIVATE_FILE_MODE, ensure_private_directory, fsync_directory
 
 
 SCHEMA_VERSION = 1
@@ -49,20 +51,37 @@ class DiscoveryCache:
     def __init__(self, directory: str | Path, schema_root: str | Path | None = None):
         self.directory = Path(directory)
         root = Path(schema_root) if schema_root else Path(__file__).resolve().parents[1] / "schemas"
-        schema = json.loads((root / "cache/discovery-cache.schema.json").read_text())
+        schema = json.loads(
+            (root / "cache/discovery-cache.schema.json").read_text(encoding="utf-8")
+        )
         self.validator = Draft202012Validator(schema, format_checker=FormatChecker())
 
     def _path(self, identity: CacheIdentity) -> Path:
         return self.directory / f"{identity.key()}.json"
+
+    def _quarantine(self, path: Path) -> None:
+        """Best-effort quarantine. Cache corruption must never block discovery."""
+        try:
+            ensure_private_directory(self.directory)
+            quarantine = path.with_name(
+                f".{path.name}.invalid-{secrets.token_hex(4)}"
+            )
+            os.replace(path, quarantine)
+            fsync_directory(self.directory)
+        except OSError:
+            pass
 
     def load(self, identity: CacheIdentity) -> dict | None:
         path = self._path(identity)
         if not path.is_file():
             return None
         try:
-            entry = json.loads(path.read_text(), object_pairs_hook=self._unique_pairs)
-        except (OSError, ValueError) as error:
-            raise StateError(f"invalid discovery cache entry: {error}") from error
+            entry = json.loads(
+                path.read_text(encoding="utf-8"), object_pairs_hook=self._unique_pairs
+            )
+        except (OSError, UnicodeError, ValueError):
+            self._quarantine(path)
+            return None
         errors = sorted(self.validator.iter_errors(entry), key=lambda item: list(item.path))
         if errors:
             return None
@@ -73,16 +92,26 @@ class DiscoveryCache:
         return entry["payload"]
 
     def store(self, identity: CacheIdentity, payload: dict, created_at: str) -> Path:
-        entry = {"schema_version": SCHEMA_VERSION, "cache_key": identity.key(), **identity.fields(), "created_at": created_at, "payload": payload}
+        entry = {
+            "schema_version": SCHEMA_VERSION,
+            "cache_key": identity.key(),
+            **identity.fields(),
+            "created_at": created_at,
+            "payload": payload,
+        }
         self.validator.validate(entry)
-        self.directory.mkdir(parents=True, exist_ok=True)
+        ensure_private_directory(self.directory)
         fd, name = tempfile.mkstemp(prefix=".discovery-", dir=self.directory)
         try:
+            os.fchmod(fd, PRIVATE_FILE_MODE)
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 json.dump(entry, handle, sort_keys=True, separators=(",", ":"))
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(name, self._path(identity))
+            fsync_directory(self.directory)
+            if os.name == "posix":
+                self._path(identity).chmod(PRIVATE_FILE_MODE)
         finally:
             if os.path.exists(name):
                 os.unlink(name)

@@ -68,9 +68,16 @@ def _parser() -> argparse.ArgumentParser:
     resume = mission_commands.add_parser("resume", help="resume without replaying pending work")
     resume.add_argument("--state-dir", required=True)
     resume.add_argument("--json", action="store_true", dest="as_json")
-    status = mission_commands.add_parser("status", help="show current mission state")
+    status = mission_commands.add_parser(
+        "status", help="show current mission state without performing recovery"
+    )
     status.add_argument("--state-dir", required=True)
     status.add_argument("--json", action="store_true", dest="as_json")
+    repair = mission_commands.add_parser(
+        "repair", help="repair one validated interrupted transition under lock"
+    )
+    repair.add_argument("--state-dir", required=True)
+    repair.add_argument("--json", action="store_true", dest="as_json")
     abandon = mission_commands.add_parser("abandon", help="mark an active mission abandoned")
     abandon.add_argument("--state-dir", required=True)
     abandon.add_argument("--json", action="store_true", dest="as_json")
@@ -265,15 +272,29 @@ def main(argv=None) -> int:
                 print("state: abandoned")
             return 0
         if args.command == "mission" and args.mission_command == "status":
-            state = MissionStore(args.state_dir).load()
+            store = MissionStore(args.state_dir)
+            state = store.peek()
+            report = {**state, "recovery_required": store.recovery_required(state)}
             if args.as_json:
-                print(json.dumps(state, indent=2, sort_keys=True))
+                print(json.dumps(report, indent=2, sort_keys=True))
             else:
                 print(f"mission: {state['mission_id']}")
                 print(f"state: {state['state']}")
                 print(f"goal: {state['goal_id']}")
                 print(f"branch: {state['branch_name'] or 'not prepared'}")
                 print(f"pull_request: {state['pr_url'] or 'none'}")
+                print(f"recovery_required: {str(report['recovery_required']).lower()}")
+            return 0
+        if args.command == "mission" and args.mission_command == "repair":
+            store = MissionStore(args.state_dir)
+            state, repaired = store.repair_with_status()
+            report = {**state, "repaired": repaired}
+            if args.as_json:
+                print(json.dumps(report, indent=2, sort_keys=True))
+            else:
+                print(f"mission: {state['mission_id']}")
+                print(f"state: {state['state']}")
+                print(f"repaired: {str(repaired).lower()}")
             return 0
         if args.command == "mission" and args.mission_command == "start":
             state = HostMissionController(args.state_dir).start(
