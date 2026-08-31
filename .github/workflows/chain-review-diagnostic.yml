@@ -1,0 +1,57 @@
+name: chain-review-diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/v330-chain-review
+    paths:
+      - .github/workflows/chain-review-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install controller dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-controller.txt
+      - name: Apply the pending workflow transformation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/apply-chain-review-fix.yml').read_text(encoding='utf-8')
+          start_marker = "          from pathlib import Path\n"
+          end_marker = "\n          PY\n"
+          start = workflow.index(start_marker)
+          end = workflow.index(end_marker, start)
+          block = workflow[start:end]
+          code = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in block.splitlines()
+          )
+          exec(compile(code, '<embedded-review-fix>', 'exec'), {})
+          PY
+          git diff --check
+      - name: Capture affected test output
+        shell: bash
+        run: |
+          set +e
+          python -m unittest tests.core.test_state -v > chain-review-tests.log 2>&1
+          code=$?
+          printf 'exit_code=%s\n' "$code" > chain-review-result.txt
+          tail -400 chain-review-tests.log >> chain-review-result.txt
+          exit 0
+      - name: Upload diagnostic
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: chain-review-diagnostic
+          path: |
+            chain-review-tests.log
+            chain-review-result.txt
+          if-no-files-found: error
+          retention-days: 1
