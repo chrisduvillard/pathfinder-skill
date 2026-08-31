@@ -102,9 +102,12 @@ class DiscoveryCache:
         self.validator.validate(entry)
         ensure_private_directory(self.directory)
         fd, name = tempfile.mkstemp(prefix=".discovery-", dir=self.directory)
+        descriptor_open = True
         try:
-            os.fchmod(fd, PRIVATE_FILE_MODE)
+            if os.name == "posix" and hasattr(os, "fchmod"):
+                os.fchmod(fd, PRIVATE_FILE_MODE)
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                descriptor_open = False
                 json.dump(entry, handle, sort_keys=True, separators=(",", ":"))
                 handle.flush()
                 os.fsync(handle.fileno())
@@ -113,6 +116,8 @@ class DiscoveryCache:
             if os.name == "posix":
                 self._path(identity).chmod(PRIVATE_FILE_MODE)
         finally:
+            if descriptor_open:
+                os.close(fd)
             if os.path.exists(name):
                 os.unlink(name)
         return self._path(identity)
