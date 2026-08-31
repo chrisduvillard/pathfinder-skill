@@ -1,0 +1,122 @@
+name: verify-final-rollout
+
+on:
+  push:
+    branches: [codex/pathfinder-hardening-outcomes]
+    paths: [.github/workflows/verify-final-rollout.yml]
+
+permissions:
+  actions: read
+  contents: write
+  issues: write
+  pull-requests: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Wait for all three releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          for version in 3.3.0 3.4.0 3.5.0; do
+            found=0
+            for attempt in $(seq 1 720); do
+              if gh release view "v$version" --repo "$REPO" >/dev/null 2>&1; then
+                found=1
+                break
+              fi
+              sleep 10
+            done
+            [ "$found" -eq 1 ]
+          done
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install complete release-validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes jq shellcheck
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Verify tag, version, and release chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sed -n 's/^Version:[[:space:]]*//p' VERSION.md | head -1)" = '3.5.0'
+          test "$(jq -r .version .claude-plugin/plugin.json)" = '3.5.0'
+          test "$(jq -r .version .codex-plugin/plugin.json)" = '3.5.0'
+          test "$(jq -r '.plugins[] | select(.name == "pathfinder") | .source.ref' .claude-plugin/marketplace.json)" = 'v3.5.0'
+          test "$(jq -r '.plugins[] | select(.name == "pathfinder") | .source.ref' .agents/plugins/marketplace.json)" = 'v3.5.0'
+          main_sha=$(git rev-parse HEAD)
+          previous=''
+          for version in 3.3.0 3.4.0 3.5.0; do
+            gh release view "v$version" --repo "$REPO" --json tagName,isDraft,isPrerelease >/tmp/release.json
+            jq -e --arg tag "v$version" '.tagName == $tag and .isDraft == false and .isPrerelease == false' /tmp/release.json
+            sha=$(git rev-list -n 1 "v$version")
+            [ -n "$sha" ]
+            if [ -n "$previous" ]; then
+              git merge-base --is-ancestor "$previous" "$sha"
+            fi
+            previous="$sha"
+          done
+          [ "$previous" = "$main_sha" ]
+
+      - name: Re-run the complete default-branch and package gates
+        env:
+          PATHFINDER_CONTROLLER_PYTHON: python
+          PATHFINDER_DOCS_PYTHON: python
+          PATHFINDER_EVAL_PYTHON: python
+        run: |
+          bash scripts/check-all.sh .
+          bash scripts/package-smoke.sh .
+          bash scripts/check-wheel.sh .
+          bash scripts/check-host-installs.sh .
+
+      - name: Record verified rollout and clean controller branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          body=$(cat <<EOF
+          Pathfinder v3.3.0, v3.4.0, and v3.5.0 were merged and published sequentially.
+
+          Final main commit: \`$sha\`
+
+          Final verification reran:
+          - complete repository gate
+          - exact package smoke test
+          - clean wheel installation
+          - credential-free host installation checks
+          - version, marketplace, release, tag, and ancestry checks
+          EOF
+          )
+          issue=$(gh issue create --repo "$REPO" --title 'Pathfinder v3.5.0 rollout verified' --body "$body")
+          number=${issue##*/}
+          gh issue close "$number" --repo "$REPO" --reason completed
+          gh api --method DELETE "repos/$REPO/git/refs/heads/codex/pathfinder-hardening-outcomes"
+
+      - name: Record rollout verification failure
+        if: failure()
+        shell: bash
+        run: |
+          body="Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          The final rollout verifier did not confirm all three releases. It did not alter main or create a release. Review the dependent v3.3.0, v3.4.0, and v3.5.0 pipeline runs."
+          existing=$(gh issue list --repo "$REPO" --state open --search 'final rollout verification blocked in:title' --json number --limit 1 --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body" || true
+          else
+            gh issue create --repo "$REPO" --title 'Pathfinder final rollout verification blocked' --body "$body" || true
+          fi
