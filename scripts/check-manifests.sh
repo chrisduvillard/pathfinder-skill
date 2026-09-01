@@ -247,20 +247,33 @@ if [ "$requested_binding_state" != "1:1:1:1" ] || [ -z "$release_program" ]; the
 else
   release_probe_dir=$(mktemp -d)
   release_probe_log="$release_probe_dir/gh.log"
+  release_probe_source="$release_probe_dir/source-version.md"
+  cp "$root/VERSION.md" "$release_probe_source"
   printf '%s\n' '#!/usr/bin/env sh' \
     'printf "%s\n" "$*" >> "$PATHFINDER_RELEASE_GH_LOG"' \
-    'if [ "$1 $2" = "release view" ]; then exit 0; fi' \
+    'if [ "$1 $2" = "release view" ]; then' \
+    '  if [ "${PATHFINDER_RELEASE_EXISTS:-1}" = "1" ]; then exit 0; fi' \
+    '  exit 1' \
+    'fi' \
+    'if [ "$1" = "api" ]; then cat "$PATHFINDER_RELEASE_VERSION_FILE"; exit 0; fi' \
+    'if [ "$1 $2" = "release create" ]; then exit 0; fi' \
     'exit 90' > "$release_probe_dir/gh"
   chmod +x "$release_probe_dir/gh"
 
   release_probe() {
     probe_ref="$1"
     probe_version="$2"
+    probe_existing="${3:-1}"
+    release_probe_work="$release_probe_dir/work"
+    rm -rf "$release_probe_work"
+    mkdir -p "$release_probe_work"
     : > "$release_probe_log"
     (
-      cd "$root" || exit 1
+      cd "$release_probe_work" || exit 1
       PATH="$release_probe_dir:$PATH" \
       PATHFINDER_RELEASE_GH_LOG="$release_probe_log" \
+      PATHFINDER_RELEASE_VERSION_FILE="$release_probe_source" \
+      PATHFINDER_RELEASE_EXISTS="$probe_existing" \
       GITHUB_REF="$probe_ref" \
       GH_TOKEN="probe-no-secret" \
       COMMIT_SHA="0000000000000000000000000000000000000000" \
@@ -271,18 +284,30 @@ else
     ) >/dev/null 2>&1
   }
 
+  existing_expected="release view v$v --repo example/pathfinder-probe"
+  create_expected=$(cat <<EOF
+release view v$v --repo example/pathfinder-probe
+api -H Accept: application/vnd.github.raw+json repos/example/pathfinder-probe/contents/VERSION.md?ref=0000000000000000000000000000000000000000
+release create v$v --repo example/pathfinder-probe --target 0000000000000000000000000000000000000000 --title Pathfinder v$v --notes-file release-notes.md
+EOF
+)
+
   if release_probe "refs/heads/not-main" "$v" || [ -s "$release_probe_log" ]; then
     echo "::error file=$release_workflow::release program must reject a non-main ref before any GitHub release call"
     fail=1
   elif release_probe "refs/heads/main" "0.0.0-probe" || [ -s "$release_probe_log" ]; then
     echo "::error file=$release_workflow::release program must reject a mismatched requested version before any GitHub release call"
     fail=1
-  elif ! release_probe "refs/heads/main" "$v" \
-    || [ "$(cat "$release_probe_log")" != "release view v$v" ]; then
-    echo "::error file=$release_workflow::release program must reach only the idempotent release lookup for an exact main/version request"
+  elif ! release_probe "refs/heads/main" "$v" 1 \
+    || [ "$(cat "$release_probe_log")" != "$existing_expected" ]; then
+    echo "::error file=$release_workflow::idempotent release lookup must bind the explicit repository and stop when the release exists"
+    fail=1
+  elif ! release_probe "refs/heads/main" "$v" 0 \
+    || [ "$(cat "$release_probe_log")" != "$create_expected" ]; then
+    echo "::error file=$release_workflow::release creation must bind the explicit repository and exact validated commit"
     fail=1
   else
-    echo "ok: $release_workflow executable program rejects non-main and mismatched-version requests before GitHub access"
+    echo "ok: $release_workflow executable program is main/version gated and repository-bound without a checkout"
   fi
   rm -rf "$release_probe_dir"
 fi

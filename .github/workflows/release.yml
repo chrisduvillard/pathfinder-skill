@@ -91,7 +91,7 @@ jobs:
 
           # Idempotent: do nothing if this version was already released (e.g. the
           # push only edited the changelog wording, not the version).
-          if gh release view "$tag" >/dev/null 2>&1; then
+          if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
             echo "Release $tag already exists — nothing to do."
             exit 0
           fi
@@ -129,6 +129,7 @@ jobs:
           # the step would go green without cutting the release. Check its exit code so
           # a failure fails the step.
           if ! gh release create "$tag" \
+            --repo "$REPO" \
             --target "$COMMIT_SHA" \
             --title "Pathfinder $tag" \
             --notes-file release-notes.md; then
