@@ -71,6 +71,11 @@ def _parser() -> argparse.ArgumentParser:
     status = mission_commands.add_parser("status", help="show current mission state")
     status.add_argument("--state-dir", required=True)
     status.add_argument("--json", action="store_true", dest="as_json")
+    repair = mission_commands.add_parser(
+        "repair", help="recover one interrupted transition under the mission lock"
+    )
+    repair.add_argument("--state-dir", required=True)
+    repair.add_argument("--json", action="store_true", dest="as_json")
     abandon = mission_commands.add_parser("abandon", help="mark an active mission abandoned")
     abandon.add_argument("--state-dir", required=True)
     abandon.add_argument("--json", action="store_true", dest="as_json")
@@ -265,15 +270,34 @@ def main(argv=None) -> int:
                 print("state: abandoned")
             return 0
         if args.command == "mission" and args.mission_command == "status":
-            state = MissionStore(args.state_dir).load()
+            snapshot = MissionStore(args.state_dir).peek()
+            state = snapshot["state"]
+            result = {
+                **state,
+                "recovery_required": snapshot["recovery_required"],
+                "pending_event": snapshot["pending_event"],
+            }
             if args.as_json:
-                print(json.dumps(state, indent=2, sort_keys=True))
+                print(json.dumps(result, indent=2, sort_keys=True))
             else:
                 print(f"mission: {state['mission_id']}")
                 print(f"state: {state['state']}")
                 print(f"goal: {state['goal_id']}")
                 print(f"branch: {state['branch_name'] or 'not prepared'}")
                 print(f"pull_request: {state['pr_url'] or 'none'}")
+                print(
+                    "recovery_required: "
+                    f"{str(snapshot['recovery_required']).lower()}"
+                )
+            return 0
+        if args.command == "mission" and args.mission_command == "repair":
+            state = MissionStore(args.state_dir).repair()
+            if args.as_json:
+                print(json.dumps(state, indent=2, sort_keys=True))
+            else:
+                print(f"mission: {state['mission_id']}")
+                print(f"state: {state['state']}")
+                print("recovery_required: false")
             return 0
         if args.command == "mission" and args.mission_command == "start":
             state = HostMissionController(args.state_dir).start(
@@ -318,7 +342,7 @@ def main(argv=None) -> int:
             return 0
         if args.command == "mission" and args.mission_command == "abandon":
             store = MissionStore(args.state_dir)
-            state = store.load()
+            state = store.repair()
             if state["state"] in {"awaiting-review", "merged", "blocked", "abandoned"}:
                 raise StateError(f"cannot abandon terminal mission in {state['state']}")
             state = store.move("abandoned", attempt_id=state.get("attempt_id"))

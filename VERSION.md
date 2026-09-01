@@ -1,8 +1,8 @@
 # Pathfinder Skill Version
 
-Generated: 2026-08-13
+Generated: 2026-09-01
 
-Version: 3.2.0
+Version: 3.3.0
 
 ## Versioning & distribution
 
@@ -17,6 +17,15 @@ channel and pins `source.ref` to the versioned `v<version>` release tag. Reposit
 `main` is the explicitly labeled edge channel for development/manual installs.
 The stable tag becomes installable only after the release workflow smoke-tests
 the exact archive and creates the tag; tags are never rewritten.
+
+Changes in v3.3.0:
+- Made mission status strictly observation-only and added an explicit locked mission repair operation.
+- Added full replay validation for applied transition history, including mission identity, sequence, transition legality, change-field policy, payload hashes, event chaining, state-before/state-after hashes, attempt identity, and recorded timestamps.
+- Disabled Git optional locks for controller-owned read-only inspection so status probing cannot refresh the repository index.
+- Changed malformed, truncated, invalid-UTF-8, and transiently unreadable discovery-cache entries into safe cache misses with best-effort quarantine.
+- Split capability reporting into controller importability, dependency readiness, mission protocol availability, host attestation, installed publication, source-only primitives, and unattended execution.
+- Hardened local privacy and durability with owner-only POSIX directories and mutable files plus parent-directory synchronization after atomic replacement.
+- Added cross-platform regressions for read-only status, index immutability, event tampering, cache corruption, capability boundaries, and explicit repair.
 
 Changes in v3.2.0:
 - Reworked the README around an explicit current-capability table and first-run path. It now separates supported Goal creation, host-attested local execution, POSIX owner-only observation of operator-supplied merge evidence, default-off future-host building blocks, and the current manual PR-merge boundary; it also records the specialized-agent development-review model without presenting that quorum as runtime merge authority or local owner-only storage as external authentication.

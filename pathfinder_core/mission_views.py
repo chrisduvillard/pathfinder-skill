@@ -46,7 +46,7 @@ def _json_bytes(document: dict) -> bytes:
 
 
 def _seal(path: Path) -> None:
-    path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    path.chmod(stat.S_IRUSR)
 
 
 def write_mission_views(repo_root: str | Path, state_dir: str | Path, output_dir: str | Path) -> dict:

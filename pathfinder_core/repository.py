@@ -93,6 +93,9 @@ class GitRunner:
             "LC_ALL": os.environ.get("LC_ALL", "C"),
             "GIT_TERMINAL_PROMPT": "0",
             "GIT_CONFIG_NOSYSTEM": "1",
+            # Read-only inspection must not refresh the Git index or take an
+            # optional index lock as an optimization.
+            "GIT_OPTIONAL_LOCKS": "0",
         }
         completed = subprocess.run(
             command, capture_output=True, text=True, env=environment, timeout=30, check=False

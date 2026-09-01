@@ -172,7 +172,7 @@ or ordinary `/goal`, mission, Goal-pack, publication, or resume route can escala
 bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" doctor --json
 ```
 
-`controller_available` means the supported Python runtime and schema validators are available. `runner_available` is a compatibility alias with the same limited meaning. `mission_runner_available` reports whether the local host-driven start/next/record/resume protocol is callable. `unattended_execution_eligible` remains false in the read-only doctor because it does not fabricate or probe host filesystem, process, network, or credential enforcement. A real host attestation is validated again by `mission start`.
+`controller_importable`, `controller_dependencies`, and `mission_protocol` report separate facts. `controller_available` and `runner_available` remain compatibility aliases for satisfied local controller dependencies, while `mission_runner_available` reports whether the local start/next/record/resume protocol is callable. `host_runtime_attestation` remains `unknown` until a host supplies enforcement evidence. `installed_publication` is explicitly `unavailable`; `source_publication_primitives` only reports that default-off source components exist without an installed caller or credentials. `unattended_execution_eligible` remains false in the read-only doctor because it does not fabricate or probe host filesystem, process, network, or credential enforcement. A real host attestation is validated again by `mission start`.
 
 Before saving a prompt Goal, derive its exact scope rather than inventing repository identity or a
 fingerprint:
@@ -237,7 +237,15 @@ The wall deadline is derived from the original persisted mission creation time a
 bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission status --state-dir <mission-state-dir> --json
 ```
 
-This command inspects state without advancing it. Do not infer unattended eligibility from a valid state file or manually edit state. Terminal missions are idempotent. Local receipt/result/transition crashes recover from persisted evidence; ambiguous side effects without receipts require host reconciliation.
+This command is observation-only. It validates the current state and event chain, reports `recovery_required` plus the pending transition when an event was durably written before `state.json`, and never creates, rewrites, renames, chmods, or deletes a file. Do not infer unattended eligibility from a valid state file or manually edit state. Terminal missions are idempotent. Ambiguous side effects without receipts require host reconciliation.
+
+Recover a validated interrupted state transition explicitly:
+
+```bash
+bash "<trusted-plugin-root>/scripts/pathfinder-controller.sh" mission repair --state-dir <mission-state-dir> --json
+```
+
+Repair acquires the mission lock, revalidates mission identity, sequence, transition legality, allowed change fields, payload hash, state-before/state-after hashes, and the previous-event chain before replacing `state.json`. A mismatch fails without changing state. Mutating mission operations use the same locked recovery path.
 
 If the lease exists, first confirm no Pathfinder process is using the mission. A stale lease may be reclaimed only through the controller's explicit stale-lease path; never delete a live lease by guesswork.
 
