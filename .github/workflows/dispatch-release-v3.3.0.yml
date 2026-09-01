@@ -1,0 +1,38 @@
+name: dispatch-release-v3.3.0
+
+on:
+  push:
+    branches:
+      - dispatch/release-v3.3.0-20260901
+    paths:
+      - .github/workflows/dispatch-release-v3.3.0.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify exact main candidate and dispatch canonical release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_MAIN_SHA: 834803e288df895507464756a37ba8edeb57fc10
+          RELEASE_VERSION: 3.3.0
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)"
+          if [ "$actual_sha" != "$EXPECTED_MAIN_SHA" ]; then
+            echo "::error::main moved: expected $EXPECTED_MAIN_SHA, got $actual_sha"
+            exit 1
+          fi
+          declared="$(gh api -H 'Accept: application/vnd.github.raw+json' "repos/$REPO/contents/VERSION.md?ref=$actual_sha" | awk '/^Version:[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }')"
+          if [ "$declared" != "$RELEASE_VERSION" ]; then
+            echo "::error::VERSION.md declares $declared, expected $RELEASE_VERSION"
+            exit 1
+          fi
+          gh workflow run release.yml --repo "$REPO" --ref main -f version="$RELEASE_VERSION"
