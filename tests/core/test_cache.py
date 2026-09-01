@@ -52,6 +52,29 @@ class DiscoveryCacheTests(unittest.TestCase):
             path.write_text(json.dumps(entry))
             self.assertIsNone(cache.load(identity))
 
+    def test_malformed_json_is_quarantined_and_treated_as_a_miss(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = DiscoveryCache(directory)
+            identity = self.identity()
+            path = cache.store(identity, {"cached": True}, NOW)
+            path.write_text("{truncated", encoding="utf-8")
+
+            self.assertIsNone(cache.load(identity))
+            self.assertFalse(path.exists())
+            self.assertTrue(list(Path(directory).glob(".*.corrupt-*.json")))
+            self.assertTrue(cache.warnings)
+
+    def test_invalid_utf8_is_quarantined_and_treated_as_a_miss(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = DiscoveryCache(directory)
+            identity = self.identity()
+            path = cache.store(identity, {"cached": True}, NOW)
+            path.write_bytes(b"\xff\xfe")
+
+            self.assertIsNone(cache.load(identity))
+            self.assertFalse(path.exists())
+            self.assertTrue(cache.warnings)
+
 
 if __name__ == "__main__":
     unittest.main()

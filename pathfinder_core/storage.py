@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
 import secrets
 from contextlib import contextmanager
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -12,7 +13,44 @@ from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError, ValidationError
 
 from .errors import StateError
-from .state import transition, utc_now
+from .state import transition
+
+
+IMMUTABLE_STATE_FIELDS = frozenset(
+    {
+        "schema_version",
+        "mission_id",
+        "goal_id",
+        "binding_id",
+        "state",
+        "revision",
+        "base_commit",
+        "dirty_policy",
+        "created_at",
+        "updated_at",
+    }
+)
+
+_TRANSITION_CHANGE_FIELDS = {
+    ("planned", "authorized"): frozenset({"authorization_id"}),
+    ("authorized", "prepared"): frozenset(
+        {"attempt_id", "worktree_id", "worktree_path", "branch_id", "branch_name"}
+    ),
+    ("prepared", "running"): frozenset({"native_goal_id"}),
+    ("running", "verifying"): frozenset(),
+    ("verifying", "running"): frozenset(),
+    ("verifying", "verified"): frozenset(),
+    ("verified", "committed"): frozenset({"commit_ids"}),
+    ("committed", "published"): frozenset({"pr_id", "pr_url"}),
+    ("committed", "awaiting-review"): frozenset(),
+    ("published", "awaiting-review"): frozenset(),
+    ("awaiting-review", "merged"): frozenset(),
+}
+
+_TERMINAL_CHANGE_FIELDS = {
+    "blocked": frozenset({"terminal_reason"}),
+    "abandoned": frozenset(),
+}
 
 
 def _reject_duplicate_keys(pairs):
@@ -37,17 +75,58 @@ def read_json(path: Path) -> dict:
         raise StateError(f"cannot read valid JSON from {path}: {error}") from error
 
 
+def ensure_private_directory(path: Path) -> None:
+    """Create a controller-owned directory and keep it owner-only on POSIX."""
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if os.name == "posix" and hasattr(os, "getuid"):
+        try:
+            metadata = path.stat()
+            if metadata.st_uid == os.getuid():
+                path.chmod(0o700)
+        except OSError as error:
+            raise StateError(f"cannot secure directory {path}: {error}") from error
+
+
+def fsync_directory(path: Path) -> None:
+    """Persist a directory entry update where the platform supports it."""
+    if os.name != "posix":
+        return
+    flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    try:
+        descriptor = os.open(path, flags)
+    except OSError:
+        return
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        # Some filesystems do not support directory fsync. The file itself has
+        # already been synced, so retain the strongest available guarantee.
+        pass
+    finally:
+        os.close(descriptor)
+
+
 def write_atomic(path: Path, document: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_private_directory(path.parent)
     temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
     data = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
+    descriptor = None
     try:
-        with temporary.open("xb") as stream:
+        descriptor = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = None
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
+        if os.name == "posix":
+            path.chmod(0o600)
+        fsync_directory(path.parent)
     finally:
+        if descriptor is not None:
+            os.close(descriptor)
         if temporary.exists():
             temporary.unlink()
 
@@ -83,19 +162,23 @@ class MissionLock:
         }
 
     def acquire(self, *, break_stale: bool = False) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_private_directory(self.path.parent)
         for _attempt in range(2):
             try:
-                descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                descriptor = os.open(
+                    self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
+                )
             except FileExistsError:
                 if not break_stale or not self._is_stale():
                     raise StateError(f"mission lock is already held: {self.path}")
                 self.path.unlink()
+                fsync_directory(self.path.parent)
                 continue
             with os.fdopen(descriptor, "w") as stream:
                 json.dump(self._lease(), stream, sort_keys=True)
                 stream.flush()
                 os.fsync(stream.fileno())
+            fsync_directory(self.path.parent)
             self.acquired = True
             return
         raise StateError(f"could not acquire mission lock: {self.path}")
@@ -115,6 +198,7 @@ class MissionLock:
         if lease.get("owner") != self.owner:
             raise StateError("mission lock ownership changed before release")
         self.path.unlink()
+        fsync_directory(self.path.parent)
         self.acquired = False
 
     def __enter__(self):
@@ -162,17 +246,250 @@ class MissionStore:
         self._validate("mission/mission-state.schema.json", document)
         write_atomic(self.state_path, document)
 
-    def load(self) -> dict:
-        document = read_json(self.state_path)
-        document = self._recover_interrupted_transition(document)
-        self._validate("mission/mission-state.schema.json", document)
-        return document
-
     def _event_path(self, sequence: int) -> Path:
         return self.events_path / f"{sequence:08d}.json"
 
+    @staticmethod
+    def _allowed_change_fields(source: str, target: str) -> frozenset[str]:
+        if target in _TERMINAL_CHANGE_FIELDS:
+            return _TERMINAL_CHANGE_FIELDS[target]
+        return _TRANSITION_CHANGE_FIELDS.get((source, target), frozenset())
+
+    def _validate_changes(self, source: str, target: str, changes: dict) -> None:
+        supplied = set(changes)
+        immutable = sorted(supplied & IMMUTABLE_STATE_FIELDS)
+        if immutable:
+            raise StateError(
+                f"transition changes cannot overwrite immutable field: {immutable[0]}"
+            )
+        allowed = self._allowed_change_fields(source, target)
+        unexpected = sorted(supplied - allowed)
+        if unexpected:
+            raise StateError(
+                f"transition {source} -> {target} cannot change field: {unexpected[0]}"
+            )
+
+    def _validate_event_payload(self, event: dict) -> None:
+        expected = canonical_sha256(event["changes"])
+        if event["payload_sha256"] != expected:
+            raise StateError("mission event payload hash mismatch")
+
+    @staticmethod
+    def _initial_history_candidates(document: dict, events: list[dict]) -> list[dict]:
+        """Build the bounded set of canonical revision-zero states for replay."""
+        initial = deepcopy(document)
+        initial.update(
+            {
+                "authorization_id": None,
+                "state": "planned",
+                "revision": 0,
+                "worktree_id": None,
+                "worktree_path": None,
+                "branch_id": None,
+                "branch_name": None,
+                "commit_ids": [],
+                "pr_id": None,
+                "pr_url": None,
+                "updated_at": document["created_at"],
+            }
+        )
+        initial["attempt_id"] = (
+            None
+            if any("attempt_id" in event["changes"] for event in events)
+            else document.get("attempt_id")
+        )
+
+        optional_fields = ("native_goal_id", "terminal_reason")
+        for field in optional_fields:
+            initial.pop(field, None)
+        candidates = [initial]
+        for field in optional_fields:
+            if field not in document and not any(
+                field in event["changes"] for event in events
+            ):
+                continue
+            candidates = [
+                candidate
+                for existing in candidates
+                for candidate in (
+                    existing,
+                    {**existing, field: None},
+                )
+            ]
+        return candidates
+
+    def _replay_history(self, initial: dict, events: list[dict]) -> dict:
+        reconstructed = deepcopy(initial)
+        self._validate("mission/mission-state.schema.json", reconstructed)
+        previous = None
+        saw_v2 = False
+        for event in events:
+            if event["from_state"] != reconstructed["state"]:
+                raise StateError("mission event state chain mismatch")
+            self._validate_changes(event["from_state"], event["to_state"], event["changes"])
+
+            if event["schema_version"] >= 2:
+                saw_v2 = True
+                expected_previous = canonical_sha256(previous) if previous else None
+                if event["previous_event_sha256"] != expected_previous:
+                    raise StateError("mission event chain hash mismatch")
+                if event["state_before_sha256"] != canonical_sha256(reconstructed):
+                    raise StateError("mission event state-before hash mismatch")
+            elif saw_v2:
+                raise StateError("mission event history cannot downgrade from v2 to v1")
+
+            try:
+                candidate = transition(
+                    reconstructed,
+                    event["to_state"],
+                    at=event["recorded_at"],
+                )
+            except StateError as error:
+                raise StateError("mission event contains a forbidden transition") from error
+            candidate.update(event["changes"])
+            self._validate("mission/mission-state.schema.json", candidate)
+
+            if event["schema_version"] >= 2:
+                if event["attempt_id"] != candidate.get("attempt_id"):
+                    raise StateError("mission event attempt identity mismatch")
+                if event["state_after_sha256"] != canonical_sha256(candidate):
+                    raise StateError("mission event state-after hash mismatch")
+
+            reconstructed = candidate
+            previous = event
+        return reconstructed
+
+    def _validate_history(self, document: dict) -> dict | None:
+        events = []
+        for sequence in range(1, document["revision"] + 1):
+            path = self._event_path(sequence)
+            if not path.is_file():
+                raise StateError(f"mission event history is missing sequence {sequence}")
+            event = read_json(path)
+            self._validate("mission/event.schema.json", event)
+            self._validate_event_payload(event)
+            if event["mission_id"] != document["mission_id"]:
+                raise StateError("mission event identity mismatch")
+            if event["sequence"] != sequence:
+                raise StateError("mission event sequence mismatch")
+            if event["event_type"] != "transition":
+                raise StateError("mission state history contains a non-transition event")
+            events.append(event)
+
+        errors = []
+        for initial in self._initial_history_candidates(document, events):
+            try:
+                reconstructed = self._replay_history(initial, events)
+            except StateError as error:
+                errors.append(error)
+                continue
+            if reconstructed == document:
+                return events[-1] if events else None
+            errors.append(
+                StateError("mission state does not match reconstructed event history")
+            )
+
+        if errors:
+            raise errors[-1]
+        raise StateError("mission event history has no valid revision-zero state")
+
+    def _candidate_from_event(self, document: dict, event: dict) -> dict:
+        self._validate("mission/event.schema.json", event)
+        self._validate_event_payload(event)
+        expected_sequence = document["revision"] + 1
+        if event["mission_id"] != document["mission_id"]:
+            raise StateError("pending mission event identity mismatch")
+        if event["sequence"] != expected_sequence:
+            raise StateError("pending mission event sequence mismatch")
+        if event["event_type"] != "transition":
+            raise StateError("pending mission event is not a transition")
+        if event["from_state"] != document["state"]:
+            raise StateError("event log and mission state cannot be reconciled")
+        self._validate_changes(event["from_state"], event["to_state"], event["changes"])
+        candidate = transition(
+            document, event["to_state"], at=event["recorded_at"]
+        )
+        candidate.update(event["changes"])
+        self._validate("mission/mission-state.schema.json", candidate)
+        expected_attempt = candidate.get("attempt_id")
+        if event["schema_version"] >= 2 and event["attempt_id"] != expected_attempt:
+            raise StateError("pending mission event attempt identity mismatch")
+        if event["schema_version"] >= 2:
+            if event["state_before_sha256"] != canonical_sha256(document):
+                raise StateError("pending mission event state-before hash mismatch")
+            if event["state_after_sha256"] != canonical_sha256(candidate):
+                raise StateError("pending mission event state-after hash mismatch")
+            previous = (
+                read_json(self._event_path(document["revision"]))
+                if document["revision"] > 0
+                else None
+            )
+            expected_previous = canonical_sha256(previous) if previous else None
+            if event["previous_event_sha256"] != expected_previous:
+                raise StateError("pending mission event previous-event hash mismatch")
+        return candidate
+
+    def _read_state(self) -> dict:
+        document = read_json(self.state_path)
+        self._validate("mission/mission-state.schema.json", document)
+        self._validate_history(document)
+        return document
+
+    def _pending_event(self, document: dict) -> tuple[dict, dict] | None:
+        path = self._event_path(document["revision"] + 1)
+        if not path.exists():
+            return None
+        if not path.is_file():
+            raise StateError("pending mission event must be a regular file")
+        event = read_json(path)
+        candidate = self._candidate_from_event(document, event)
+        return event, candidate
+
+    def peek(self) -> dict:
+        """Return a validated, observation-only mission snapshot."""
+        document = self._read_state()
+        pending = self._pending_event(document)
+        event = pending[0] if pending else None
+        return {
+            "state": deepcopy(document),
+            "recovery_required": event is not None,
+            "pending_event": (
+                {
+                    "event_id": event["event_id"],
+                    "sequence": event["sequence"],
+                    "from_state": event["from_state"],
+                    "to_state": event["to_state"],
+                    "recorded_at": event["recorded_at"],
+                }
+                if event
+                else None
+            ),
+        }
+
+    def load(self) -> dict:
+        """Read current state without writing; require explicit repair when needed."""
+        snapshot = self.peek()
+        if snapshot["recovery_required"]:
+            raise StateError("mission repair required before state can be loaded")
+        return snapshot["state"]
+
+    def _repair_locked(self) -> dict:
+        document = self._read_state()
+        pending = self._pending_event(document)
+        if pending is None:
+            return document
+        _event, recovered = pending
+        write_atomic(self.state_path, recovered)
+        return recovered
+
+    def repair(self) -> dict:
+        """Recover one interrupted transition under the mission lock."""
+        with self.locked():
+            return self._repair_locked()
+
     def _append_event(self, event: dict) -> None:
         self._validate("mission/event.schema.json", event)
+        self._validate_event_payload(event)
         path = self._event_path(event["sequence"])
         if path.exists():
             if read_json(path) == event:
@@ -180,50 +497,50 @@ class MissionStore:
             raise StateError(f"event sequence already exists: {event['sequence']}")
         write_atomic(path, event)
 
-    def _recover_interrupted_transition(self, document: dict) -> dict:
-        next_event_path = self._event_path(document["revision"] + 1)
-        if not next_event_path.exists():
-            return document
-        event = read_json(next_event_path)
-        if event.get("event_type") != "transition" or event.get("from_state") != document["state"]:
-            raise StateError("event log and mission state cannot be reconciled")
-        recovered = transition(document, event["to_state"], at=event["recorded_at"])
-        recovered.update(event.get("changes", {}))
-        self._validate("mission/mission-state.schema.json", recovered)
-        write_atomic(self.state_path, recovered)
-        return recovered
-
     def move(
         self, target: str, *, attempt_id: str | None = None, changes: dict | None = None
     ) -> dict:
         changes = dict(changes or {})
         with self.locked():
-            current = self.load()
+            current = self._repair_locked()
             if target == current["state"]:
-                drift = {key: value for key, value in changes.items() if current.get(key) != value}
+                drift = {
+                    key: value
+                    for key, value in changes.items()
+                    if current.get(key) != value
+                }
                 if drift:
                     raise StateError("idempotent transition cannot apply new state changes")
                 return current
+            self._validate_changes(current["state"], target, changes)
             updated = transition(current, target)
             updated.update(changes)
+            self._validate("mission/mission-state.schema.json", updated)
             sequence = updated["revision"]
-            payload_hash = hashlib.sha256(
-                json.dumps(changes, sort_keys=True, separators=(",", ":")).encode()
-            ).hexdigest()
+            previous = (
+                read_json(self._event_path(sequence - 1)) if sequence > 1 else None
+            )
+            event_attempt_id = updated.get("attempt_id")
+            if attempt_id is not None and attempt_id != event_attempt_id:
+                raise StateError("transition attempt identity does not match updated state")
             event = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event_id": f"event_{current['mission_id'][8:]}_{sequence:08d}",
                 "mission_id": current["mission_id"],
                 "sequence": sequence,
                 "event_type": "transition",
                 "from_state": current["state"],
                 "to_state": target,
-                "attempt_id": attempt_id,
+                "attempt_id": event_attempt_id,
                 "recorded_at": updated["updated_at"],
                 "changes": changes,
-                "payload_sha256": payload_hash,
+                "payload_sha256": canonical_sha256(changes),
+                "previous_event_sha256": (
+                    canonical_sha256(previous) if previous is not None else None
+                ),
+                "state_before_sha256": canonical_sha256(current),
+                "state_after_sha256": canonical_sha256(updated),
             }
             self._append_event(event)
-            self._validate("mission/mission-state.schema.json", updated)
             write_atomic(self.state_path, updated)
             return updated

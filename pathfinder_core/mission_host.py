@@ -129,10 +129,10 @@ class HostMissionController:
         if path.exists():
             if read_json(path) != document:
                 raise StateError(f"different persisted mission contract: {name}")
-            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            path.chmod(stat.S_IRUSR)
             return
         write_atomic(path, document)
-        path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        path.chmod(stat.S_IRUSR)
 
     def _attempt_id(self, binding: dict) -> str:
         seed = f"{binding['mission_id']}:{binding['scope']['base_commit']}"
@@ -195,7 +195,7 @@ class HostMissionController:
             self._write_contract("runtime-boundary", runtime_boundary)
             self._write_contract("protected-surfaces", protected_registry.to_document())
             if self.store.state_path.exists():
-                state = self.store.load()
+                state = self.store.repair()
             else:
                 state = self._initial_state(binding, attempt_id, self.clock())
                 self.store.initialize(state)
@@ -286,7 +286,7 @@ class HostMissionController:
         return request, intent
 
     def next(self) -> dict:
-        state = self.store.load()
+        state = self.store.repair()
         if state["state"] in TERMINAL_STATES:
             return {"status": "terminal", "state": state}
         if state["state"] not in ACTION_BY_STATE:
@@ -352,10 +352,10 @@ class HostMissionController:
             if path.exists():
                 if read_json(path) != receipt:
                     raise StateError("different host receipt already exists")
-                path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+                path.chmod(stat.S_IRUSR)
                 return
             write_atomic(path, receipt)
-            path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            path.chmod(stat.S_IRUSR)
 
     def _operation_result(self, intent: dict, receipt: dict) -> dict:
         outcome = receipt["outcome"]
@@ -471,7 +471,7 @@ class HostMissionController:
         if not isinstance(operation_id, str):
             raise StateError("host receipt requires an operation_id")
         loaded = self.journal.load(operation_id)
-        state = self.store.load()
+        state = self.store.repair()
         self._validate_receipt_for_state(state, loaded["intent"], receipt)
         self._persist_receipt(receipt)
         return self._finish_receipt(state, loaded["intent"], receipt)
