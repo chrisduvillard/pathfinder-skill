@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError, ValidationError
 
 from .errors import StateError
-from .state import transition
+from .state import ALLOWED_TRANSITIONS, transition
 
 
 PRIVATE_DIRECTORY_MODE = 0o700
@@ -242,6 +242,7 @@ class MissionStore:
         """Read and validate canonical state without performing recovery or writes."""
         document = read_json(self.state_path)
         self._validate("mission/mission-state.schema.json", document)
+        self._validate_committed_event_chain(document)
         return document
 
     def recovery_required(self, document: dict | None = None) -> bool:
@@ -273,12 +274,77 @@ class MissionStore:
     def _load_locked(self, *, recover: bool) -> dict:
         document = read_json(self.state_path)
         self._validate("mission/mission-state.schema.json", document)
+        self._validate_committed_event_chain(document)
         if recover:
             document = self._recover_interrupted_transition_locked(document)
         return document
 
     def _event_path(self, sequence: int) -> Path:
         return self.events_path / f"{sequence:08d}.json"
+
+    def _validate_committed_event_chain(self, document: dict) -> None:
+        """Validate every committed event and bind the v2 tip to canonical state."""
+        revision = int(document["revision"])
+        if revision == 0:
+            return
+        previous_event = None
+        previous_to_state = None
+        previous_v2_state_after = None
+        seen_v2 = False
+        tracked_attempt_id = None
+        for sequence in range(1, revision + 1):
+            path = self._event_path(sequence)
+            if not path.is_file():
+                raise StateError(f"event chain is missing committed event {sequence}")
+            event = read_json(path)
+            self._validate("mission/event.schema.json", event)
+            if event["event_type"] != "transition":
+                raise StateError("committed event chain contains a non-transition event")
+            if event["mission_id"] != document["mission_id"]:
+                raise StateError("committed event chain mission identity drift")
+            if event["sequence"] != sequence:
+                raise StateError("committed event chain sequence drift")
+            if sequence == 1 and event["from_state"] != "planned":
+                raise StateError("committed event chain does not begin at planned")
+            if previous_to_state is not None and event["from_state"] != previous_to_state:
+                raise StateError("committed event chain state continuity drift")
+            if event["to_state"] not in ALLOWED_TRANSITIONS[event["from_state"]]:
+                raise StateError(
+                    "committed event chain contains a forbidden transition: "
+                    f"{event['from_state']} -> {event['to_state']}"
+                )
+            changes = dict(event.get("changes", {}))
+            self._validate_changes(event["from_state"], event["to_state"], changes)
+            if event["payload_sha256"] != canonical_sha256(changes):
+                raise StateError("committed event chain payload hash mismatch")
+            if tracked_attempt_id is not None and event.get("attempt_id") != tracked_attempt_id:
+                raise StateError("committed event chain attempt identity drift")
+            if event["schema_version"] >= 2:
+                expected_previous = (
+                    None if previous_event is None else canonical_sha256(previous_event)
+                )
+                if event["previous_event_sha256"] != expected_previous:
+                    raise StateError("committed event chain previous hash mismatch")
+                if seen_v2 and event["state_before_sha256"] != previous_v2_state_after:
+                    raise StateError("committed event chain state hash continuity drift")
+                previous_v2_state_after = event["state_after_sha256"]
+                seen_v2 = True
+            elif seen_v2:
+                raise StateError("committed event chain cannot downgrade its schema version")
+            if "attempt_id" in changes:
+                tracked_attempt_id = changes["attempt_id"]
+            previous_event = event
+            previous_to_state = event["to_state"]
+        if previous_to_state != document["state"]:
+            raise StateError("committed event chain tip state drift")
+        if tracked_attempt_id != document.get("attempt_id"):
+            raise StateError("committed event chain attempt tip drift")
+        if (
+            previous_event is not None
+            and previous_event["schema_version"] >= 2
+            and previous_event["state_after_sha256"] != canonical_sha256(document)
+        ):
+            raise StateError("committed event chain tip does not match canonical state")
 
     def _previous_event_hash(self, sequence: int) -> str | None:
         if sequence == 1:

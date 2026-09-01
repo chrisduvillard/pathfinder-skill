@@ -366,5 +366,49 @@ class StateTests(unittest.TestCase):
             self.assertEqual(store._event_path(1).stat().st_mode & 0o777, 0o400)
 
 
+    def test_committed_event_chain_rejects_older_event_tampering(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = MissionStore(Path(directory))
+            store.initialize(copy.deepcopy(initial_state()))
+            store.move(
+                "authorized",
+                changes={"authorization_id": "authorization_12345678"},
+            )
+            store.move(
+                "prepared",
+                attempt_id="attempt_12345678",
+                changes={
+                    "attempt_id": "attempt_12345678",
+                    "worktree_id": "worktree_12345678",
+                    "worktree_path": "/tmp/worktree",
+                    "branch_id": "branch_12345678",
+                    "branch_name": "pathfinder/auto/test",
+                },
+            )
+            first_path = store._event_path(1)
+            first = read_json(first_path)
+            first["changes"] = {"authorization_id": "authorization_87654321"}
+            first["payload_sha256"] = canonical_sha256(first["changes"])
+            write_atomic(first_path, first)
+            with self.assertRaisesRegex(StateError, "previous hash mismatch"):
+                store.peek()
+
+    def test_committed_event_chain_tip_is_bound_to_canonical_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = MissionStore(Path(directory))
+            store.initialize(copy.deepcopy(initial_state()))
+            store.move(
+                "authorized",
+                changes={"authorization_id": "authorization_12345678"},
+            )
+            state = read_json(store.state_path)
+            state["authorization_id"] = "authorization_87654321"
+            write_atomic(store.state_path, state)
+            with self.assertRaisesRegex(
+                StateError, "tip does not match canonical state"
+            ):
+                store.peek()
+
+
 if __name__ == "__main__":
     unittest.main()
